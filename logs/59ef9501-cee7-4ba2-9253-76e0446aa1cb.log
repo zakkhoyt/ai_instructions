@@ -1,0 +1,5 @@
+2025-10-08T10:58:47.721Z [INFO] Starting Copilot CLI: 0.0.336
+Commit: 75151b8
+2025-10-08T10:58:47.722Z [INFO] Node.js version: v24.9.0
+2025-10-08T10:58:47.761Z [ERROR] Classic PATs are not supported. Please use fine-grained PATs or other supported token types.
+2025-10-08T10:58:48.057Z [ERROR] Classic PATs are not supported. Please use fine-grained PATs or other supported token types.
