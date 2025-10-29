@@ -174,8 +174,12 @@ done
 * [ ] docstrings
 * [ ] `function <name>` vs `<name>()` vs `function name()`
 * [ ] code documentation conventions, libraries, etc... Like quickhelp or python's 
+
+
+
 * [ ] `print_usage`
   * formatting: `--help` vs `man`
+    * SYNOPSIS style
   * ansi vs none
   * contexts:
     * script header comment

@@ -19,8 +19,10 @@ When writing or modifying **ANY** Zsh script in this repository, ensure:
 - ✅ **Shellcheck directives present** - Standard 3 directives after shebang
 - ✅ **Header comments complete** - "About this Script" section with description
 - ✅ **Source utilities correctly** - Use `source_dirs` array pattern (see [Source Scripting Utilities](#source-scripting-utilities))
-- ✅ **zparseopts used** - With `-D --` flags (see [Script Argument Parsing](#script-argument-parsing))
-  - Must include `--help=flag_help` and `{d,-debug}+=flag_debug`
+- ✅ **zparseopts used in 3 stages** - Standard pattern: help/debug/dry-run, trap control, script-specific (see [Script Argument Parsing](#script-argument-parsing))
+  - Stage 1: `--help`, `-d/--debug`, `--dry-run` (required)
+  - Stage 2: `--trap-err`, `--trap-exit` (recommended)
+  - Stage 3: Script-specific arguments (as needed)
 - ✅ **Logging functions used** - `slog_*` functions (or `log_*` for setup scripts)
 - ✅ **Function syntax correct** - Use `function name { }` (not `name() { }`)
 - ✅ **Functions use named arguments** - Prefer `zparseopts` over positional parameters (see [Function Arguments](#function-arguments-named-vs-positional))
@@ -1066,6 +1068,48 @@ Some directories use different logging functions:
 
 ## Script Argument Parsing
 
+### Three-Stage zparseopts Pattern (Standard)
+
+**ALL scripts must use this three-stage zparseopts pattern** for consistency and proper trap handling:
+
+```zsh
+# Stage 1: Parse standard arguments (help, debug, dry-run) - REQUIRED
+# Note: -D removes parsed opts, no -E to allow unrecognized opts to pass through
+zparseopts -D -- \
+  -help=flag_help \
+  {d,-debug}+=flag_debug \
+  -dry-run=flag_dry_run
+
+if [[ -n "${flag_help:-}" ]]; then
+  print_usage
+  exit 0
+fi
+
+flag_debug_level=${#flag_debug[@]}
+if [[ $flag_debug_level -gt 0 ]]; then
+  export IS_DEBUG=true
+fi
+
+# Stage 2: Parse trap control flags - RECOMMENDED
+# Note: -D removes parsed opts, no -E to allow unrecognized opts to pass through
+zparseopts -D -- \
+  {-trap-err,-debug-err}=flag_debug_err \
+  {-trap-exit,-debug-exit}=flag_debug_exit
+
+# Set up traps based on flags...
+
+# Stage 3: Parse script-specific arguments - AS NEEDED
+# Note: -D -E here to error on any remaining unrecognized options
+zparseopts -D -E -- \
+  -mode:=opt_mode \
+  -other-arg:=opt_other_arg
+```
+
+**Stage Summary:**
+- **Stage 1 (Required)**: Core flags (`--help`, `-d/--debug`, `--dry-run`) - uses `-D` only
+- **Stage 2 (Recommended)**: Trap debugging control - uses `-D` only
+- **Stage 3 (As Needed)**: Script-specific arguments - uses `-D -E` to catch errors
+
 ### Use zparseopts
 
 Script arguments should be handled using `zparseopts` where possible, or where conversion is easy. If converting requires a significant refactor, retain the current approach.
@@ -1101,11 +1145,11 @@ zparseopts -D -- \
   # other script relevant args
 ```
 
-### Optional: Trap Debugging Support
+### Stage 2: Trap Debugging Support (Recommended)
 
-**When to use**: Scripts that need advanced debugging capabilities with ERR and EXIT trap handlers.
+**Recommended for most scripts.** Only omit for trivial scripts with no error handling needs.
 
-**Usage**: Add this zparseopts block AFTER the main script arguments block. To enable: prompt AI with "implement trap args" or "add trap debugging support".
+**Purpose**: Enables advanced debugging with ERR and EXIT trap handlers.
 
 **Implementation Pattern:**
 
@@ -1172,7 +1216,7 @@ Always prefer long-form arguments for clarity:
 function print_usage {
   cat << 'EOF'
 SYNOPSIS
-    script_name.zsh [OPTIONS]
+    script_name.zsh [OPTIONS] [DEVELOPMENT OPTIONS]
 
 OPTIONS
     --required-arg <value>
@@ -1180,21 +1224,36 @@ OPTIONS
     --optional-arg <value>
                         Description of optional argument (optional)
 
-META OPTIONS
     --help              Display this help message and exit
-    --debug             Enable debug logging
+
+    --dry-run           Show what would be done without making changes
+
+DEVELOPMENT OPTIONS
+    -d, --debug
+        Enable debug output (can be specified multiple times for more verbosity)
+          -d           Basic debug output
+          -dd          Enable ERR trap debugging (see --trap-err)
+                       (also: -d -d, -d2)
+          -ddd         Enable ERR and EXIT trap debugging (see --trap-exit)
+                       (also: -d -d -d, -d3)
+
+    --trap-err, --debug-err
+        Enable ERR trap handler (shows line numbers on script failures)
+
+    --trap-exit, --debug-exit
+        Enable EXIT trap handler (shows exit status information)
 
 ENVIRONMENT
     REQUIRED_VAR        Description of required environment variable
     OPTIONAL_VAR        Description of optional environment variable (optional)
 
-EXIT VALUES
+EXIT STATUS
     0                   Success
     1                   General error
     40-49               Validation/verification failures
     50-59               Configuration errors
 
-STDOUT
+OUTPUT
     Description of what gets written to stdout on success
 
 STDERR
@@ -1205,8 +1264,11 @@ EOF
   echo_pretty "    # Example command" --default
   echo_pretty "    " --code "./script_name.zsh --required-arg value" --default
   echo ""
-  echo_pretty "    # Example with optional flags" --default
+  echo_pretty "    # Example with debug output" --default
   echo_pretty "    " --code "./script_name.zsh --required-arg value --debug" --default
+  echo ""
+  echo_pretty "    # Example with full trap debugging" --default
+  echo_pretty "    " --code "./script_name.zsh --required-arg value -ddd" --default
 
   cat << 'EOF'
 
@@ -1221,17 +1283,18 @@ EOF
 1.  **Section Headers**: Use UPPERCASE without colons
     -   ✅ `SYNOPSIS`
     -   ✅ `OPTIONS`
+    -   ✅ `DEVELOPMENT OPTIONS`
     -   ✅ `ENVIRONMENT`
     -   ❌ `Synopsis:` (lowercase and colon)
     -   ❌ `Usage:` (use SYNOPSIS instead)
 
 2.  **Section Order**:
     1.  `SYNOPSIS` - Brief command syntax
-    2.  `OPTIONS` - Main arguments
-    3.  `META OPTIONS` / `DEV OPTIONS` - Secondary arguments
+    2.  `OPTIONS` - Script-specific arguments (Stage 3) plus `--help` and `--dry-run` (Stage 1)
+    3.  `DEVELOPMENT OPTIONS` - Debug and trap control flags (Stage 1 & 2)
     4.  `ENVIRONMENT` / `ENV VARS` - Environment variables
-    5.  `EXIT VALUES` / `RETURN VALUES` - Exit codes
-    6.  `STDOUT` - What gets written to stdout
+    5.  `EXIT STATUS` / `EXIT VALUES` - Exit codes
+    6.  `OUTPUT` / `STDOUT` - What gets written to stdout
     7.  `STDERR` - What gets written to stderr
     8.  `EXAMPLES` - Example usage
     9.  `REFERENCES` - Links to documentation
