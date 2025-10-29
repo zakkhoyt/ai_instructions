@@ -9,9 +9,13 @@
 # zsh
 
 
+
 * rather using tail / head, redire4ct stdout / stderr ot a file
 * when logging values, wrap them in single quotes (unless empty)
 * when logging values, if value is nil, represent it with `<nil>` (without single quotes)
+
+# Vars
+* for every var / array defined in the script, include `slog_var_se_d "var" "$var"` or `slog_array_se_d "var" "${var{@}}"` after the initial value is assigned
 
 
 # Dependencies

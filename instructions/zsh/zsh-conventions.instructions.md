@@ -424,6 +424,34 @@ config_dir="/etc/myapp"
 status="complete"  # DON'T DO THIS
 ```
 
+### Variable Debugging Pattern (Required)
+
+**For every variable or array defined in a script, immediately log its value using debug functions:**
+
+```zsh
+# For scalar variables
+my_var="some_value"
+slog_var_se_d "my_var" "$my_var"
+
+# For arrays
+my_array=("item1" "item2" "item3")
+slog_array_se_d "my_array" "${my_array[@]}"
+
+# For result variables
+result=$(some_command)
+result_rval=$?
+slog_var_se_d "result" "$result"
+slog_var_se_d "result_rval" "$result_rval"
+```
+
+**Why this pattern:**
+- Provides complete variable visibility when `--debug` flag is used
+- Makes debugging significantly easier by showing all variable assignments
+- No performance cost when debug mode is off (functions no-op)
+- Creates a self-documenting record of variable flow
+
+**Rule:** Every variable assignment should be followed by its corresponding `slog_var_se_d` or `slog_array_se_d` call.
+
 ---
 
 ## Function Syntax
@@ -1080,15 +1108,20 @@ zparseopts -D -- \
   {d,-debug}+=flag_debug \
   -dry-run=flag_dry_run
 
+# Display help if requested (early exit)
 if [[ -n "${flag_help:-}" ]]; then
   print_usage
   exit 0
 fi
 
+# Set up debug mode if requested
 flag_debug_level=${#flag_debug[@]}
 if [[ $flag_debug_level -gt 0 ]]; then
   export IS_DEBUG=true
 fi
+
+# Extract dry-run flag immediately
+is_dry_run=${flag_dry_run:+true}
 
 # Stage 2: Parse trap control flags - RECOMMENDED
 # Note: -D removes parsed opts, no -E to allow unrecognized opts to pass through
@@ -1096,19 +1129,38 @@ zparseopts -D -- \
   {-trap-err,-debug-err}=flag_debug_err \
   {-trap-exit,-debug-exit}=flag_debug_exit
 
-# Set up traps based on flags...
+# Set up error handling traps
+if [[ -n "${flag_debug_err:-}" ]]; then
+  trap 'slog_error_se "Script failed at line $LINENO with exit code $?"' ERR
+fi
+
+if [[ -n "${flag_debug_exit:-}" ]]; then
+  trap 'slog_se_d "Script exiting with status $?"' EXIT
+fi
 
 # Stage 3: Parse script-specific arguments - AS NEEDED
 # Note: -D -E here to error on any remaining unrecognized options
 zparseopts -D -E -- \
   -mode:=opt_mode \
   -other-arg:=opt_other_arg
+
+# Extract option values with defaults (use [-1] to get last/value element)
+mode="${opt_mode[-1]:-default_value}"
+other_arg="${opt_other_arg[-1]:-default_value}"
 ```
 
 **Stage Summary:**
 - **Stage 1 (Required)**: Core flags (`--help`, `-d/--debug`, `--dry-run`) - uses `-D` only
+  - Extract values immediately after parsing (e.g., `is_dry_run`, `flag_debug_level`)
 - **Stage 2 (Recommended)**: Trap debugging control - uses `-D` only
+  - Set up trap handlers immediately after parsing
 - **Stage 3 (As Needed)**: Script-specific arguments - uses `-D -E` to catch errors
+  - Extract values immediately after parsing using `${var[-1]:-default}` pattern
+
+**Key Points:**
+- Use `${array[-1]:-default}` to extract values from zparseopts arrays (gets last element)
+- Extract and process variables immediately after each zparseopts stage
+- Only Stage 3 uses `-E` flag to error on unrecognized options
 
 ### Use zparseopts
 
