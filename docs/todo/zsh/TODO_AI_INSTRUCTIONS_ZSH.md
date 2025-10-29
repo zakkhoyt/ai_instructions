@@ -9,6 +9,7 @@
 # zsh
 
 
+* rather using tail / head, redire4ct stdout / stderr ot a file
 * when logging values, wrap them in single quotes (unless empty)
 * when logging values, if value is nil, represent it with `<nil>` (without single quotes)
 

@@ -41,9 +41,10 @@ When writing or modifying **ANY** Zsh script in this repository, ensure:
 6. [Variable Naming Conventions](#variable-naming-conventions)
 7. [Function Syntax](#function-syntax)
 8. [Zsh Expansion (Required)](#zsh-expansion-required)
-9. [Error Handling and Logging Pattern](#error-handling-and-logging-pattern)
-10. [Context Logging](#context-logging)
-11. [Recommendations](#recommendations)
+9. [Output and Logging](#output-and-logging)
+10. [Error Handling and Logging Pattern](#error-handling-and-logging-pattern)
+11. [Context Logging](#context-logging)
+12. [Recommendations](#recommendations)
 
 ---
 
@@ -696,6 +697,202 @@ opt_label_values=(${opt_labels_array:#--label})
 
 # Count occurrences of the flag
 opt_labels_count=${#${(M)opt_labels_array:#--label}}
+```
+
+---
+
+## Output and Logging
+
+**CRITICAL**: All output in Zsh scripts must use the standardized logging and formatting functions provided by `.zsh_scripting_utilities`. These are available after sourcing via the `source_dirs` array pattern.
+
+### Core Logging Functions
+
+After sourcing utilities (see [Source Scripting Utilities](#source-scripting-utilities)), scripts have access to two primary output function families:
+
+| Function          | Destination  | When                                     |
+| ----------------- | ------------ | ---------------------------------------- |
+| `slog`            | stdout       | Standard output                          |
+| `slog_se`         | stderr       | Standard error output                    |
+| `slog_d`          | stdout       | Debug output (when `IS_DEBUG` set)       |
+| `slog_se_d`       | stderr       | Debug error output (when `IS_DEBUG` set) |
+| `echo_pretty`     | configurable | Decorated output with colors/formatting  |
+
+### Function Naming Patterns
+
+All `slog_*` functions follow consistent naming conventions:
+
+- **`_se` suffix**: Writes to **stderr** (standard error)
+  - Without `_se`: Writes to **stdout** (standard output)
+  
+- **`_d` suffix**: Only writes when `IS_DEBUG` environment variable is set
+  - Examples: `slog_d`, `slog_se_d`
+  
+- **`_v` suffix**: Only writes when `IS_VERBOSE` environment variable is set
+  - Examples: `slog_v`, `slog_se_v`
+
+### Modern Contextual Logging: slog_step_se
+
+**PREFERRED**: Use `slog_step_se` for all contextual logging instead of the deprecated context-specific functions.
+
+**Synopsis:**
+```zsh
+slog_step_se [--context <context_value>] [--exit-code <exit_code>] [message ...]
+```
+
+**Context Values:**
+- `todo` - Task to be completed
+- `fixme` - Code that needs fixing
+- `idea` - Suggestion or potential improvement
+- `trace` - Execution trace information
+- `info` - Informational message
+- `will` - Intent (what will be done)
+- `did` - Completion (what was done)
+- `success` - Successful operation
+- `warning` - Warning condition
+- `error` - Error condition
+- `fatal` - Fatal error
+- `severe` - Severe issue
+- `critical` - Critical failure
+- `finished` - Task completion marker
+
+**Parameters:**
+- `--context <value>`: (also accepted as `--step`) Specifies the logging context from the list above
+- `--exit-code <code>`: Optional exit code to display with the message
+- `message`: Zero or more arguments compatible with `echo_pretty` syntax (text, colors, decorators)
+
+**Examples:**
+```zsh
+# Simple info message
+slog_step_se --context info "Starting deployment process"
+
+# Intent logging
+slog_step_se --step will "download packages from repository"
+
+# Success with decorated output
+slog_step_se --context success "created file: " --url "$output_path" --default
+
+# Error with exit code
+slog_step_se --context error --exit-code 1 "Failed to connect to " --code "$hostname" --default
+
+# Warning with multi-color formatting
+slog_step_se --step warning --red "Authentication failed" --default ", retrying with token"
+```
+
+### Deprecated Context-Specific Functions
+
+The following functions still exist but should **NOT** be used in new code. Use `slog_step_se` instead:
+
+| Deprecated Function | Replacement                              |
+| ------------------- | ---------------------------------------- |
+| `slog_info_se`      | `slog_step_se --context info`           |
+| `slog_success_se`   | `slog_step_se --context success`        |
+| `slog_warning_se`   | `slog_step_se --context warning`        |
+| `slog_error_se`     | `slog_step_se --context error`          |
+
+### echo_pretty: Formatted Output
+
+`echo_pretty` provides rich ANSI formatting through argument-based syntax. It supports extensive color and text decoration options.
+
+**Basic Syntax:**
+```zsh
+echo_pretty [formatting_args...] "text" [more_formatting_args...] "more text"
+```
+
+**Foreground Colors (8-bit):**
+```zsh
+--black, --red, --green, --yellow, --blue, --magenta, --cyan, --white
+--bright-black, --bright-red, --bright-green, --bright-yellow
+--bright-blue, --bright-magenta, --bright-cyan, --bright-white
+```
+
+**Background Colors (8-bit):**
+```zsh
+--bg-black, --bg-red, --bg-green, --bg-yellow, --bg-blue, --bg-magenta
+--bg-cyan, --bg-white, --bg-bright-black, --bg-bright-red, etc.
+```
+
+**Extended Colors:**
+```zsh
+--color-8bit <0-255>        # 8-bit color palette
+--bg-color-8bit <0-255>     # 8-bit background
+--color-24bit <r> <g> <b>   # RGB foreground (0-255 each)
+--bg-color-24bit <r> <g> <b> # RGB background
+```
+
+**Font Decorators:**
+```zsh
+--bold, --dim, --italic, --underline, --blink
+--reverse, --hidden, --strikethrough
+```
+
+**Special Formatting:**
+```zsh
+--default         # Reset all formatting to defaults
+--code            # Format as inline code (colored, distinct)
+--url             # Format as URL/file path (colored, underlined)
+```
+
+**Cursor Control:**
+```zsh
+--cursor-up <n>, --cursor-down <n>, --cursor-forward <n>, --cursor-back <n>
+--cursor-save, --cursor-restore, --cursor-hide, --cursor-show
+--clear-line, --clear-screen
+```
+
+**Examples:**
+```zsh
+# Basic colored output
+echo_pretty --green "Success" --default ": Operation completed"
+
+# Code formatting
+echo_pretty "Run: " --code "brew install package" --default
+
+# URL formatting  
+echo_pretty "Visit: " --url "https://example.com" --default
+
+# Complex multi-color
+echo_pretty --bold --blue "STATUS:" --default " " \
+            --green "✓" --default " Deployment " \
+            --yellow "ready" --default
+
+# 24-bit RGB color
+echo_pretty --color-24bit 255 100 50 "Custom orange text" --default
+```
+
+**Integration with slog_step_se:**
+```zsh
+# slog_step_se accepts echo_pretty arguments
+slog_step_se --context info \
+  "Processing file: " --url "$file_path" --default \
+  " (size: " --code "${file_size}KB" --default ")"
+```
+
+### Output Best Practices
+
+**Rule 1: Never use plain `echo` for informational output**
+
+After sourcing utilities, always use `slog_*` or `echo_pretty` for any script output. The only acceptable uses of `echo` are:
+
+1. **Heredoc boundaries** (unavoidable syntax requirement)
+2. **Test scripts** explicitly testing output formatting
+3. **Return values** from functions meant to be captured (use with caution)
+
+For all other cases, the enhanced logging functions provide better formatting, consistency, and debugging capability.
+
+**Examples:**
+
+✅ **Good:**
+```zsh
+slog_se "Starting backup process"
+slog_step_se --context will "create directory: " --url "$backup_dir" --default
+echo_pretty --green "Backup complete" --default
+```
+
+❌ **Bad:**
+```zsh
+echo "Starting backup process"  # Don't use echo
+echo "Creating directory: $backup_dir"  # Don't use echo
+echo "Backup complete"  # Don't use echo
 ```
 
 ---
