@@ -44,7 +44,7 @@ When writing or modifying **ANY** Zsh script in this repository, ensure:
 7. [Function Syntax](#function-syntax)
 8. [Zsh Expansion (Required)](#zsh-expansion-required)
 9. [Output and Logging](#output-and-logging)
-10. [Error Handling and Logging Pattern](#error-handling-and-logging-pattern)
+10. [Step Pattern: Structured Operation Logging](#step-pattern-structured-operation-logging)
 11. [Context Logging](#context-logging)
 12. [Recommendations](#recommendations)
 
@@ -927,9 +927,19 @@ echo "Backup complete"  # Don't use echo
 
 ---
 
-## Error Handling and Logging Pattern
+## Step Pattern: Structured Operation Logging
 
-**DEFAULT**: All Zsh scripts should use `slog_*` functions (from `.zsh_scripting_utilities`) for logging. Path-specific instruction files may override this to use alternative logging functions (e.g., `log_*` in setup scripts).
+**CRITICAL**: All operations that can succeed or fail must use the Step Pattern for consistent, traceable execution logging.
+
+### Overview
+
+The **Step Pattern** is a three-phase structure for operations:
+
+1. **Intent**: Log what will be done (before the operation)
+2. **Operation**: Perform the operation with error handling
+3. **Result**: Log success or failure (after the operation)
+
+This pattern provides complete visibility into script execution and makes debugging significantly easier.
 
 ### Error Handling Context
 
@@ -938,7 +948,7 @@ All scripts in this repository run with error handling enabled (via shebang or p
 -   `set -u` / `-u`: Treat unset variables as an error
 -   `set -o pipefail` / `-o pipefail`: Pipeline exits with status of last failing command
 
-**Therefore**: Always add error handling around commands that can fail using the patterns below.
+**Therefore**: Always add error handling around commands that can fail using the Step Pattern.
 
 ### Safe Variable Checking
 
@@ -958,133 +968,233 @@ if [[ -z "$some_file" ]]; then  # Will error if some_file is unset
 fi
 ```
 
-### The Three-Step Pattern
+### Modern Logging API: slog_step_se
 
-Every operation that can succeed or fail must follow this pattern:
+**PREFERRED**: Use `slog_step_se --context <type>` for all step logging. This modern API replaces the older context-specific functions.
 
-1.  **Intent**: Log what will be done (before the operation)
-2.  **Operation**: Perform the operation with error handling
-3.  **Result**: Log success or failure (after the operation)
-
-### Error Message Format
-
-**CRITICAL**: Always format error and warning messages with the exit code in brackets at the front:
-
+**Synopsis:**
 ```zsh
-# Correct format
-slog_error_se "[$exit_code] Failed to install package"
-slog_warning_se "[$exit_code] Failed to set preference"
-
-# Wrong formats - don't use these
-slog_error_se "Failed to install package (exit code: $exit_code)"  # ❌
-slog_error_se "Error $exit_code: Failed to install package"        # ❌
-slog_error_se "Failed to install package - exit $exit_code"        # ❌
+slog_step_se [--context <context>] [--exit-code <code>] [message ...]
 ```
 
-**Why this format:**
--   Consistent parsing in logs and monitoring tools
--   Exit code is immediately visible
--   Easy to grep/search: `grep '\[42\]' logs/*.log`
--   Follows standard error message conventions
+**Context Values:**
+- `will` - Intent (what will be done)
+- `success` - Successful operation
+- `fatal` - Fatal error (script must exit)
+- `warning` - Warning condition (script continues)
+- `error` - Error condition (deprecated, use `fatal` or `warning`)
+- `info` - Informational message
+- `trace` - Execution trace information
+- `did` - Completion (what was done)
+- `todo` - Task to be completed
+- `fixme` - Code that needs fixing
+- `idea` - Suggestion or potential improvement
+- `finished` - Task completion marker
+- `severe` - Severe issue
+- `critical` - Critical failure
 
-### Pattern 1: Fatal Errors (Critical Operations)
+**Parameters:**
+- `--context <value>`: (also accepted as `--step`) Specifies the logging context
+- `--exit-code <code>`: (also accepted as `--rval`) Exit code to display with the message (automatically formats as `[$exit_code]` at front)
+- `message`: Zero or more arguments compatible with `echo_pretty` syntax (text, colors, decorators like `--code`, `--url`, `--default`)
 
-Use the **dangling `|| { ... exit }` pattern** when failure should stop script execution:
+### Step Pattern Structure
+
+**Complete pattern with all required elements:**
 
 ```zsh
-# 1. Log intent
-slog_info_se "Installing package X..."
+# [step] Comment marker for searchability
+slog_step_se --context will "operation description" --code "$variable" --default
 
-# 2. Perform operation with error handling
-some_command || {
+result=$(command_with_args) || {
   exit_code=$?
-  slog_error_se "[$exit_code] Failed to install package X"
+  slog_step_se --context fatal --exit-code "$exit_code" "operation description"
+  exit $exit_code  # Use 'exit' in script root scope, 'return' in functions
+}
+
+slog_var_se_d "result" "$result"
+slog_step_se --context success "operation completed" --code "$result" --default
+```
+
+**Key Components:**
+
+1. **Comment marker**: `# [step]` - Makes steps easily searchable
+2. **Intent log**: `--context will` - Describes what will happen
+3. **Operation**: Command with error handler using `|| { }`
+4. **Exit code capture**: `exit_code=$?` - Preserve exact exit status
+5. **Error log**: `--context fatal` with `--exit-code` - Reports failure
+6. **Scope-aware exit**: `exit` for script root, `return` for functions
+7. **Debug log**: `slog_var_se_d` - Log result variable for debugging
+8. **Success log**: `--context success` - Reports successful completion
+
+### Pattern 1: Fatal Steps (Critical Operations)
+
+Use `--context fatal` when failure should stop script execution:
+
+```zsh
+# [step] Read repository's default branch
+slog_step_se --context will "read repository's default branch"
+
+git_default_branch="$(git rev-parse --abbrev-ref "$(git remote)"/HEAD | sed 's|origin/||g')" || {
+  exit_code=$?
+  slog_step_se --context fatal --exit-code "$exit_code" "read repository's default branch"
   exit $exit_code
 }
 
-# 3. Log success (only reached if command succeeded)
-slog_success_se "Successfully installed package X"
+slog_var_se_d "git_default_branch" "$git_default_branch"
+slog_step_se --context success "Read repository's default branch: " --code "$git_default_branch" --default
 ```
 
-**Key Points**:
--   Use `|| { slog_error_se; exit }` to keep success path clean
--   Success message follows error handler (only reached if command succeeds)
--   Capture `$?` immediately to preserve exit status
--   Exit with captured exit code (or unique code for specific failures)
--   **Format error messages as**: `[$exit_code] <description>` (exit code in brackets at front)
-
-**Use for**:
+**Use for:**
 -   Installing required packages
--   Creating critical directories
--   Configuring essential system settings
--   Downloading required resources
+-   Reading critical configuration
+-   Creating essential directories
+-   Validating prerequisites
+-   Git operations in automated workflows
+-   API calls that must succeed
 
-**Alternative syntax for explicit validation:**
+**Scope-Aware Exit Handling:**
 ```zsh
-# Check condition first, then handle error
-if ! some_command; then
+# In script root scope - use 'exit'
+command || {
   exit_code=$?
-  slog_error_se "[$exit_code] Command failed"
-  exit $exit_code
-fi
+  slog_step_se --context fatal --exit-code "$exit_code" "operation failed"
+  exit $exit_code  # ✅ Correct for script scope
+}
 
-slog_success_se "Command succeeded"
+# In function scope - use 'return'
+function my_function {
+  command || {
+    exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "operation failed"
+    return $exit_code  # ✅ Correct for function scope
+  }
+}
 ```
 
-### Pattern 2: Non-Fatal Warnings (Best-Effort Operations)
+### Pattern 2: Warning Steps (Best-Effort Operations)
 
-Use the **if/then/else/fi pattern** when failure should be logged but script continues:
+Use `--context warning` with `if/then/else/fi` when failure should be logged but script continues:
 
 ```zsh
-# 1. Log intent
-slog_info_se "Configuring optional preference..."
+# [step] Configure optional preference
+slog_step_se --context will "configure dock tile size"
 
-# 2. Perform operation - success logs in if branch, warning logs in else branch
 if defaults write com.apple.dock tilesize -int 52; then
-  slog_success_se "Set dock tile size"
+  slog_step_se --context success "Configured dock tile size"
 else
   exit_code=$?
-  slog_warning_se "[$exit_code] Failed to set dock tile size"
+  slog_step_se --context warning --exit-code "$exit_code" "Failed to configure dock tile size (optional)"
 fi
-# Script continues regardless of success/failure
+# Script continues regardless
 ```
 
-**CRITICAL**: Success logs in the `if` branch, warning logs in the `else` branch.
-
-**Key Points**:
--   Use `if/then/else/fi` to log both success and failure cases
--   Success message in `if` branch, warning in `else` branch
--   Capture `$?` in else branch to preserve exit status
--   Script execution continues after else branch
--   **Format warning messages as**: `[$exit_code] <description>` (exit code in brackets at front)
-
-**Use for**:
+**Use for:**
 -   User preferences (Dock size, Finder settings)
 -   Optional configurations (Safari debug menu)
 -   Cosmetic settings (desktop wallpaper, dark mode)
 -   Creating convenience symlinks
+-   Non-essential Git operations
 
-### ❌ Common Mistake
+**Key Differences from Fatal Pattern:**
+-   Uses `if/then/else/fi` instead of `|| { }`
+-   Uses `--context warning` instead of `--context fatal`
+-   No `exit` or `return` - script continues after `fi`
+-   Success log in `if` branch, warning in `else` branch
 
-**DON'T** use `|| { }` for non-fatal operations (doesn't log success):
+### Pattern 3: Validation Steps
+
+Use conditional logic for validations that don't execute external commands:
 
 ```zsh
-# BAD: Using || with braces for non-fatal operations
-defaults write com.apple.dock tilesize -int 52 || {
-  exit_code=$?
-  slog_warning_se "[$exit_code] Failed to set dock tile size"
-}
-# This doesn't log success - violates "log success and failure" requirement
+# [step] Validate current branch is default branch
+slog_step_se --context will "validate current branch (" --code "$git_current_branch" --default ") is default branch (" --code "$git_default_branch" --default ")"
+
+if [[ "$git_current_branch" != "$git_default_branch" ]]; then 
+  slog_step_se --context fatal "Current branch (" --code "$git_current_branch" --default ") is not default branch (" --code "$git_default_branch" --default "). Cannot create feature branch from non-default branch."
+  exit 1
+fi
+
+slog_step_se --context success "Validated current branch (" --code "$git_current_branch" --default ") is default branch"
 ```
+
+**Use for:**
+-   Validating environment variables
+-   Checking file/directory existence
+-   Comparing values
+-   Verifying prerequisites
+
+### Exit Code Formatting
+
+**CRITICAL**: The `--exit-code` parameter automatically formats error messages with `[$exit_code]` at the front. Never manually format exit codes.
+
+✅ **Good (automatic formatting):**
+```zsh
+slog_step_se --context fatal --exit-code "$exit_code" "Failed to install package"
+# Output: "[42] Failed to install package"
+```
+
+❌ **Bad (manual formatting):**
+```zsh
+slog_step_se --context fatal "[$exit_code] Failed to install package"  # Don't do this
+slog_step_se --context fatal "Failed to install package (exit code: $exit_code)"  # Don't do this
+```
+
+**Why automatic formatting:**
+-   Consistent across all error messages
+-   Exit code is immediately visible
+-   Easy to grep/search: `grep '\[42\]' logs/*.log`
+-   Prevents formatting inconsistencies
+
+### Deprecated Functions
+
+The following older functions still exist but should **NOT** be used in new code. They delegate to `slog_step_se`:
+
+| Deprecated Function | Modern Replacement |
+|---------------------|-------------------|
+| `slog_info_se` | `slog_step_se --context info` |
+| `slog_success_se` | `slog_step_se --context success` |
+| `slog_warning_se` | `slog_step_se --context warning` |
+| `slog_error_se` | `slog_step_se --context fatal` or `warning` |
+
+**Migration:** When refactoring existing code, prefer converting to the modern `slog_step_se` API for consistency.
+
+### Complete Step Example
+
+From `jira_notes.zsh`:
+
+```zsh
+# [step] Fetch Jira ticket JSON
+slog_step_se --context will "fetch JSON for jira ticket " --code "$jira_ticket" --default
+
+jira_json=$(get_jira_ticket "$jira_ticket" "$IS_DEBUG") || {
+  exit_code=$?
+  slog_step_se --context fatal --exit-code "$exit_code" "fetch JSON for jira ticket " --code "$jira_ticket" --default
+  exit $exit_code
+}
+
+slog_var_se_d "jira_json" "$jira_json"
+slog_step_se --context success "Fetched JSON for jira ticket " --code "$jira_ticket" --default
+```
+
+**This example demonstrates:**
+-   `# [step]` comment marker for searchability
+-   Intent logging with decorated output (`--code` for variable, `--default` for reset)
+-   Error handling with exit code capture
+-   Fatal error logging with automatic `[$exit_code]` formatting
+-   Scope-aware exit (script root scope uses `exit`)
+-   Debug variable logging
+-   Success logging with decorated output
 
 ### Quick Decision Guide
 
-**When to use which pattern:**
+**Choose the right pattern:**
 
-| Pattern | Use When | Exit on Failure? |
-|---------|----------|------------------|
-| `\|\| { exit }` | Operation is **critical** to script success | Yes |
-| `if/else` | Operation is **optional** or best-effort | No |
+| Pattern | Context | Exit on Failure? | When to Use |
+|---------|---------|------------------|-------------|
+| Fatal Step | `fatal` | Yes (`exit` or `return`) | Operation is **critical** to script success |
+| Warning Step | `warning` | No (continues) | Operation is **optional** or best-effort |
+| Validation Step | `fatal` | Yes (`exit` or `return`) | Condition **must** be true to proceed |
 
 ### Path-Specific Overrides
 

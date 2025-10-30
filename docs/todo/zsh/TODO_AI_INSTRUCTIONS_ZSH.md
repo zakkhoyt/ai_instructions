@@ -6,16 +6,100 @@
 
 
 
+
+## inputs
+* --handle-error <fatal | warning>
+* --command <command>
+  
+```zsh
+
+function step {
+  zparseopts -D -- \
+    {m,-message}:=opt_message \
+    {-handle,-handle-error}:=opt_handle_error \
+    -cmd:=opt_cmd
+
+  command_args=("$@")
+
+  slog_array_se "opt_message" "${opt_message[@]}"
+  slog_array_se "opt_handle_error" "${opt_handle_error[@]}"
+  slog_array_se "opt_cmd" "${opt_cmd[@]}"
+  slog_array_se "command_args" "${command_args[@]}"
+
+
+  # opt_handle_error="${opt_handle_error[-1]:-fatal}"
+
+
+  # slog_step_se --context will "${opt_message}"
+  # case $opt_handle_error in 
+  # fatal)
+  #   ;;
+  # warning)
+  #   ;;
+  # *)
+  #   ;;
+  # esac
+
+
+  # zparseopts -D -E -- \
+  #   {d,-debug}+=flag_debug \
+  #   {-trap-err,-debug-err}=flag_debug_err \
+  #   {-trap-exit,-debug-exit}=flag_debug_exit
+  
+  # # Count # of -d, --debug (or shorthand)
+  # flag_debug_level=${#flag_debug[@]}
+  
+  # if [[ -n $flag_debug || $flag_debug_level -ge 1 ]]; then
+  #   # legacy
+  #   IS_DEBUG="$flag_debug"
+  # fi
+  
+  # if [[ -n "${flag_debug_err:-}" || $flag_debug_level -ge 2 ]]; then 
+  #   source "$HOME/.zsh_home/utilities/.zsh_debug_err"
+  #   # source "$HOME/.zsh_home/utilities/.zsh_debug_err" --disable
+  # fi
+  
+  # if [[ -n "${flag_debug_exit:-}" || $flag_debug_level -ge 3  ]]; then 
+  #   source "$HOME/.zsh_home/utilities/.zsh_debug_exit"
+  #   # source "$HOME/.zsh_home/utilities/.zsh_debug_exit" --disable
+  # fi
+  
+  
+}
+
+
+```
+
+
+## work
+
+* will: Log that the command will occur
+* Depending on success
+
+*  **Intent**: The command to be executed in full (all args, etc..)
+*  **Operation**: Perform the operation with error handling
+*  **Outcome**: Log success or failure (after the operation)
+
+
+```zsh
+zsh code
+```
+
+
+
+## output(s)
+* stdout
+ -->
+
+
+
+
 # zsh
-
-
-
 * rather using tail / head, redire4ct stdout / stderr ot a file
 * when logging values, wrap them in single quotes (unless empty)
 * when logging values, if value is nil, represent it with `<nil>` (without single quotes)
 
 # Vars
-* for every var / array defined in the script, include `slog_var_se_d "var" "$var"` or `slog_array_se_d "var" "${var{@}}"` after the initial value is assigned
 
 
 # Dependencies
@@ -74,19 +158,90 @@ Do not execute the command twice, rather store the command in a variable, then u
 
 `command_output=$(eval "$command_string")`. Consider writing a helper function for this (which we reuse by moving to `.zsh_scripting_utils` or similar)
 
-## Flow / Step convention
+# Flow / Step convention
 
 
-* [ ] `step` - wrapper around a shell command
-  * [ ] will
-    * [ ] error
-    * [ ] warning
-  * [ ] did
-* [ ] `flow` - A sequential chain of `step` operations
-  * [ ] will
-    * [ ] error
-    * [ ] warning
-  * [ ] success
+
+# step
+
+Logging and error handling around an atomic piece of work (typically calling a function or running a command)
+
+
+## inputs
+* the "command" to execute. 
+  * This can be anything that is legal in an `if <command>; then <action>; fi` statemement (without `[]` or `[[]]`) 
+    * including `<command>`, `my_var=$(<command>)`, `my_var=$(<command> 2>/dev/null)`, etc.
+* how to handle errors:
+  * fatal (default unless otherwise mentioned or implied via code)
+    * The code after this step cannot be executed because of some dependency on this step
+    * Log error/rval then exit/return non-0 (base on if script or function)
+  * as warning:
+    * failure is okay on this step (we will continue to the next step)
+    * log error/rval as a WARNING, then continue to the next step
+
+## Action
+Peform the command with error handling. That error handling will depend on how we want to handle an error:
+* fatal: use the syntax: `command || { # err handler}` sytnax (not `if/fi`) (examples below)
+* treat as warning: use the syntax: `if command; then <a>; else <b>; fi` sytnax (examples below)
+
+## logging
+Using variants of `slog_step_se_d` log:
+* what this step will attemmpt
+* the outcome of the the command (Depends on outcome)
+  * success
+  * error (treate as warning and continue)
+  * error (treat as fatal)
+
+### log decorating
+* The message should include the `command` using  decorations `--code` and `--default` in the will step at least
+* Depending on outcome:
+  * error (treate as warning and continue): 
+    * collect the exit status (aka rval)
+    * log as `slog_step_se --context warning --exit-code rval <message>`
+  * error (treat as fatal)
+    * collect the exit status (aka rval)
+    * log as `slog_step_se --context fatal --exit-code rval <message>`
+    * exit $rval / return $rval
+  * success
+    * log as `slog_step_se --context success --exit-code rval <message>`
+## Examples
+
+Example step where error is handled as fatal
+```zsh
+# [instructions] "step" will
+slog_step_se --context will "convert jira_ticket (" --code "$jira_ticket" --default ") to URL format"
+jira_ticket_url=$(jira_ticket_to_url $jira_ticket) || {
+  rval=$?
+  # [instructions] "step" outcome (error, handle as fatal)
+  slog_step_se --context fatal --rval "$rval" "convert jira_ticket (" --code "$jira_ticket" --default ") to URL format"
+  exit $rval
+}
+# [instructions] debug log variable assignment
+slog_var_se_d "jira_ticket_url" "$jira_ticket_url" 
+# [instructions] "step" outcome (success)
+slog_step_se --context success "Converted jira_ticket: " --code "$jira_ticket" --default " to URL: " --url "$jira_ticket_url" --default
+```
+
+Example step where error is handled as warning
+```zsh
+# [instructions] "step" will
+slog_step_se --context will "convert jira_ticket (" --code "$jira_ticket" --default ") to URL format"
+
+# [instructions] use if/else/fi because we are handling error as warning
+if ! jira_ticket_url=$(jira_ticket_to_url $jira_ticket); then
+  # [instructions] "step" outcome (error, handle as warning)
+  slog_step_se --context warning "Failed to convert jira_ticket: " --code "$jira_ticket" --default " to URL format"
+else
+  # [instructions] debug log variable assignment
+  slog_var_se_d "jira_ticket_url" "$jira_ticket_url" 
+  # [instructions] "step" outcome (success)
+  slog_step_se --context success "Converted jira_ticket: " --code "$jira_ticket" --default " to URL: " --url "$jira_ticket_url" --default
+fi
+```
+
+# flow
+
+A flow is a themed sequence of steps. 
 
 
 ```zsh
