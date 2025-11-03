@@ -22,6 +22,7 @@
 
 # Helper function to strip decorator arguments (--url, --code, --bold, --default, etc.)
 # for use in plain echo fallback and log file writing
+# Usage: strip_decorators "message" --url "path" --default
 function strip_decorators {
   local -a retained_args=()
   for arg in "$@"; do
@@ -91,8 +92,8 @@ ANSI_YELLOW2_FG=${ANSI_YELLOW2_FG:-'\033[93m'}
 ANSI_INFO_GRAY_FG=${ANSI_INFO_GRAY_FG:-'\033[90m'}
 ANSI_DEFAULT=${ANSI_DEFAULT:-'\033[0m'}
 
-# ---- ---- ----     Dry-Run Helper     ---- ---- ----
-
+# Execute a command or print what would be executed in dry-run mode
+# Usage: execute_or_dry_run "rm '$file'" "remove file"
 function execute_or_dry_run {
   local command_string="$1"
   local description="${2:-command}"
@@ -112,6 +113,7 @@ zparseopts -D -F -- \
   -help=flag_help \
   {d,-debug}+=flag_debug \
   -dry-run=flag_dry_run \
+  -dev-link=flag_dev_sym_link \
   -source-dir:=opt_source_dir \
   -target-dir:=opt_target_dir \
   -ai-platform:=opt_ai_platform \
@@ -148,6 +150,8 @@ META OPTIONS
     --help                  Display this help message and exit
     --debug                 Enable debug logging
     --dry-run               Show what would be done without making changes
+    --dev-link              Create symlink to AI development directory in target repo
+                              (useful for accessing docs/todo and other repo files)
 
 ENVIRONMENT
     Z2K_AI_DIR             Override default source directory location
@@ -251,6 +255,8 @@ fi
 
 # ---- ---- ----     Platform Configuration     ---- ---- ----
 
+# Determine platform-specific directory paths based on AI platform
+# Usage: get_platform_paths "copilot" "/path/to/project"
 function get_platform_paths {
   local platform="$1"
   local target_base="$2"
@@ -324,6 +330,8 @@ fi
 
 checksums_file="$target_dir/.ai-checksums"
 
+# Calculate SHA256 checksum of a file
+# Usage: get_file_checksum "/path/to/file"
 function get_file_checksum {
   local file_path="$1"
   if [[ -f "$file_path" ]]; then
@@ -333,6 +341,8 @@ function get_file_checksum {
   fi
 }
 
+# Store checksum in tracking file for comparison on future runs
+# Usage: update_checksum "filename.md" "sha256hash..."
 function update_checksum {
   local file_name="$1"
   local checksum="$2"
@@ -348,6 +358,8 @@ function update_checksum {
   echo "$file_name:$checksum" >> "$checksums_file"
 }
 
+# Retrieve previously stored checksum for a file
+# Usage: get_stored_checksum "filename.md"
 function get_stored_checksum {
   local file_name="$1"
   if [[ -f "$checksums_file" ]]; then
@@ -359,9 +371,15 @@ function get_stored_checksum {
 
 # ---- ---- ----     Status Detection     ---- ---- ----
 
+# Determine installation status of an instruction file (not installed, symlinked, copied, etc.)
+# Usage: get_file_status --file-basename "filename.md" --source-file "/path/to/source.md"
 function get_file_status {
-  local file_basename="$1"
-  local source_file="$2"
+  zparseopts -D -F -- \
+    -file-basename:=opt_file_basename \
+    -source-file:=opt_source_file
+  
+  local file_basename="${opt_file_basename[2]}"
+  local source_file="${opt_source_file[2]}"
   local target_file="$target_instructions_dir/$file_basename"
   
   if [[ ! -e "$target_file" ]]; then
@@ -401,8 +419,60 @@ function get_file_status {
   fi
 }
 
+# ---- ---- ----     Development Directory Symlink     ---- ---- ----
+
+# Create a symlink to the AI development directory in the target repository
+# Verifies existing symlinks point to the correct location
+# Usage: create_dev_symlink
+function create_dev_symlink {
+  local dev_link_name="${user_ai_dir:t}"
+  local dev_link_path="$target_dir/$dev_link_name"
+  
+  log_info "Setting up development directory symlink..."
+  log_debug "Dev symlink path: $dev_link_path"
+  log_debug "Dev symlink target: $user_ai_dir"
+  
+  # Check if symlink already exists
+  if [[ -L "$dev_link_path" ]]; then
+    local link_target="${dev_link_path:A}"
+    if [[ "$link_target" == "$user_ai_dir" ]]; then
+      log_success "Development symlink already correct: $dev_link_name → $user_ai_dir"
+      return 0
+    else
+      log_error "Development symlink points to wrong location"
+      log_error "Expected: $user_ai_dir"
+      log_error "Actual: $link_target"
+      exit 1
+    fi
+  fi
+  
+  # Check if regular file/directory exists
+  if [[ -e "$dev_link_path" ]]; then
+    log_error "Cannot create development symlink: path already exists"
+    log_error "Path: $dev_link_path"
+    exit 1
+  fi
+  
+  # Create the symlink
+  log_info "Creating development symlink: $dev_link_name → $user_ai_dir"
+  command_string="ln -s '$user_ai_dir' '$dev_link_path'"
+  if ! execute_or_dry_run "$command_string" "create development symlink"; then
+    log_error "Failed to create development symlink"
+    exit 1
+  fi
+  
+  if [[ -z "${flag_dry_run:-}" ]]; then
+    log_success "Created development symlink: $dev_link_name"
+  else
+    log_success "DRY-RUN: Would create development symlink: $dev_link_name"
+  fi
+}
+
 # ---- ---- ----     Interactive Menu     ---- ---- ----
 
+# Display menu of available instruction files and process user selections
+# User can select individual files or 'all' to install all files
+# Usage: display_menu
 function display_menu {
   log_info "Available instruction files:"
   echo ""
@@ -426,7 +496,7 @@ function display_menu {
     file_full_paths+=("$file_path")
     
     local file_status
-    file_status="$(get_file_status "$file_basename" "$file_path")"
+    file_status="$(get_file_status --file-basename "$file_basename" --source-file "$file_path")"
     
     local status_indicator
     case "$file_status" in
@@ -469,7 +539,7 @@ function display_menu {
     if [[ "$index" =~ ^[0-9]+$ ]] && [[ "$index" -ge 1 ]] && [[ "$index" -le ${#file_basenames[@]} ]]; then
       local file_basename="${file_basenames[$index]}"
       local file_full_path="${file_full_paths[$index]}"
-      install_instruction_file "$file_basename" "$file_full_path"
+      install_instruction_file --file-basename "$file_basename" --source-file "$file_full_path"
     else
       log_warning "Invalid selection: $index"
     fi
@@ -481,9 +551,16 @@ function display_menu {
 # Array to track installed files for summary
 installed_files=()
 
+# Install a single instruction file by creating symlink or copying
+# Tracks installation in installed_files array for summary display
+# Usage: install_instruction_file --file-basename "filename.md" --source-file "/path/to/source.md"
 function install_instruction_file {
-  local file_basename="$1"
-  local source_file="$2"
+  zparseopts -D -F -- \
+    -file-basename:=opt_file_basename \
+    -source-file:=opt_source_file
+  
+  local file_basename="${opt_file_basename[2]}"
+  local source_file="${opt_source_file[2]}"
   local target_file="$target_instructions_dir/$file_basename"
   
   log_info "Installing $file_basename..."
@@ -550,6 +627,12 @@ log_info "${dry_run_prefix}Configuring AI instructions for $ai_platform platform
 log_info "Source directory: $user_ai_instructions_dir"
 log_info "Target directory: $target_instructions_dir"
 log_info "Configuration type: $configure_type"
+
+# Create development directory symlink if requested
+if [[ -n "${flag_dev_sym_link:-}" ]]; then
+  echo ""
+  create_dev_symlink
+fi
 
 # Display interactive menu
 display_menu

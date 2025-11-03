@@ -14,6 +14,38 @@
 # Print Usage
 Function must be declared before calling, cannot be overwritten as AI suggested
 
+# Always use zparseopts with functions in a script
+Avoid positional or unnamed arguments at every opportunity, unless it's a last resort. 
+Additionally add/update each function with a comment containing succinct description and a usage synopsis
+* [ ] Include text abour references from userscript/markdown_linker/markdown_linker.md
+  * [ ] update examples below with references, etc..
+
+EX: Bad
+```zsh
+function get_file_status {
+  local file_basename="$1"
+  local source_file="$2"
+  local target_file="$target_instructions_dir/$file_basename"
+  ...
+}
+```
+
+EX: Good
+```zsh
+# Determine installation status of an instruction file (not installed, symlinked, copied, etc.)
+# Usage: get_file_status --file-basename "filename.md" --source-file "/path/to/source.md"
+function get_file_status {
+  zparseopts -D -F -- \
+    -file-basename:=opt_file_basename \
+    -source-file:=opt_source_file
+  
+  local file_basename="${opt_file_basename[2]}"
+  local source_file="${opt_source_file[2]}"
+  local target_file="$target_instructions_dir/$file_basename"
+```
+
+
+
 
 ## inputs
 * --handle-error <fatal | warning>

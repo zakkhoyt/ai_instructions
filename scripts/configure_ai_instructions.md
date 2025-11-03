@@ -82,3 +82,5 @@ Args:
 ln -s $user_ai_dir $target_dir1
 ```
   
+
+* if `$target_dir1` contains a vscode-workspace file, modify it as if we had the VSCOde IDE open and "add folder to workspace"

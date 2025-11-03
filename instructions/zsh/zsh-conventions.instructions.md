@@ -478,6 +478,44 @@ my_function() {  # Avoid this syntax
 }
 ```
 
+### Function Comments and Documentation
+
+**REQUIRED**: Every function must include a comment block above its definition documenting its purpose and usage.
+
+**Minimum comment structure:**
+
+```zsh
+# Brief one-line description of what function does
+# Usage: function_name --arg1 value1 --arg2 value2
+function function_name {
+  zparseopts -D -F -- \
+    -arg1:=opt_arg1 \
+    -arg2:=opt_arg2
+  # ...
+}
+```
+
+**Complete example with multi-line description:**
+
+```zsh
+# Install a single instruction file by creating symlink or copying
+# Tracks installation in array for summary display
+# Usage: install_instruction_file --file-basename "name.md" --source-file "/path/to/source.md"
+function install_instruction_file {
+  zparseopts -D -F -- \
+    -file-basename:=opt_file_basename \
+    -source-file:=opt_source_file
+  # ...
+}
+```
+
+**Why function comments matter:**
+-   **Self-documenting code**: Intent is immediately clear without reading implementation
+-   **IDE support**: Most editors use these comments for inline help/autocomplete
+-   **Maintenance**: New developers understand function purpose quickly
+-   **AI-friendly**: AI agents can better understand and use functions with clear documentation
+-   **Consistency**: Uniform documentation style across codebase
+
 ### Function Arguments: Named vs Positional
 
 **STRONGLY PREFER**: Use `zparseopts` with named arguments instead of positional arguments in functions.
