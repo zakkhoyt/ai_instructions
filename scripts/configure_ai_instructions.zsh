@@ -113,7 +113,8 @@ zparseopts -D -F -- \
   -help=flag_help \
   {d,-debug}+=flag_debug \
   -dry-run=flag_dry_run \
-  -dev-link=flag_dev_sym_link \
+  -dev-link=flag_dev_link \
+  -dev-vscode=flag_dev_vscode \
   -source-dir:=opt_source_dir \
   -target-dir:=opt_target_dir \
   -ai-platform:=opt_ai_platform \
@@ -150,8 +151,10 @@ META OPTIONS
     --help                  Display this help message and exit
     --debug                 Enable debug logging
     --dry-run               Show what would be done without making changes
-    --dev-link              Create symlink to AI development directory in target repo
-                              (useful for accessing docs/todo and other repo files)
+    --dev-link              Create symlink to AI dev directory and update .gitignore
+                           (useful for quick access to repo files during development)
+    --dev-vscode            Add AI dev directory to VS Code workspace
+                           (enables IDE integration for development repo)
 
 ENVIRONMENT
     Z2K_AI_DIR             Override default source directory location
@@ -439,16 +442,16 @@ function create_dev_symlink {
       log_success "Development symlink already correct: $dev_link_name → $user_ai_dir"
       return 0
     else
-      log_error "Development symlink points to wrong location"
+      log_error "[1] Development symlink points to wrong location"
       log_error "Expected: $user_ai_dir"
       log_error "Actual: $link_target"
       exit 1
     fi
   fi
   
-  # Check if regular file/directory exists
+  # Check if regular file/directory exists at target path
   if [[ -e "$dev_link_path" ]]; then
-    log_error "Cannot create development symlink: path already exists"
+    log_error "[1] Cannot create development symlink: path already exists as regular file/directory"
     log_error "Path: $dev_link_path"
     exit 1
   fi
@@ -457,8 +460,9 @@ function create_dev_symlink {
   log_info "Creating development symlink: $dev_link_name → $user_ai_dir"
   command_string="ln -s '$user_ai_dir' '$dev_link_path'"
   if ! execute_or_dry_run "$command_string" "create development symlink"; then
-    log_error "Failed to create development symlink"
-    exit 1
+    local exit_code=$?
+    log_error "[$exit_code] Failed to create development symlink at '$dev_link_path'"
+    exit "$exit_code"
   fi
   
   if [[ -z "${flag_dry_run:-}" ]]; then
@@ -477,69 +481,107 @@ function update_vscode_workspace {
   
   local dev_link_name="${opt_dev_link_name[2]}"
   
-  # Find .code-workspace file in target directory
+  log_info "Updating VS Code workspace configuration..."
+  
+  # Check if jq is available (warning-level if missing, not fatal)
+  if ! type jq >/dev/null 2>&1; then
+    log_warning "jq not found - skipping VS Code workspace update (jq required for JSON manipulation)"
+    return 0
+  fi
+  
+  # Find .code-workspace file (should only be one at repo root)
   local workspace_file
-  workspace_file=$(find "$target_dir" -maxdepth 1 -name "*.code-workspace" -type f | head -1)
+  workspace_file=$(find "$target_dir" -maxdepth 1 -name "*.code-workspace" -type f 2>/dev/null | head -1)
   
   if [[ -z "$workspace_file" ]]; then
-    log_debug "No VS Code workspace file found in $target_dir"
+    log_debug "No .code-workspace file found in repository root"
     return 0
   fi
   
-  log_info "Updating VS Code workspace: $(basename "$workspace_file")"
+  log_debug "Found workspace file: $workspace_file"
   
-  # Use jq to check if folder already exists and add if needed
-  if ! type jq >/dev/null 2>&1; then
-    log_warning "jq not found - cannot update workspace file automatically"
-    log_warning "You may need to manually add '$dev_link_name' folder to workspace"
-    return 0
-  fi
+  # Create backup before modification
+  local backup_file="${workspace_file}.backup"
   
-  # Create backup
-  command_string="cp '$workspace_file' '${workspace_file}.backup'"
+  log_debug "Creating backup: $backup_file"
+  command_string="cp '$workspace_file' '$backup_file'"
   if ! execute_or_dry_run "$command_string" "backup workspace file"; then
-    log_warning "Failed to create backup of workspace file"
+    local exit_code=$?
+    log_error "[$exit_code] Failed to create backup of workspace file"
+    exit "$exit_code"
   fi
   
   # Check if the dev folder path already exists in the workspace
+  log_debug "Checking if dev folder already in workspace: $dev_link_name"
   local folder_exists
   folder_exists=$(jq --arg folder "$dev_link_name" '.folders[]? | select(.path == $folder) | .path' "$workspace_file" 2>/dev/null)
   
   if [[ -n "$folder_exists" ]]; then
     log_success "Development folder already in workspace: $dev_link_name"
+    rm -f "$backup_file"
     return 0
   fi
   
   # Add the dev folder to the workspace
+  log_info "Adding development directory to workspace: $dev_link_name"
   local temp_workspace="${workspace_file}.tmp"
-  jq --arg folder "$dev_link_name" '.folders += [{"path": $folder}]' "$workspace_file" > "$temp_workspace" 2>/dev/null || {
-    log_warning "Failed to parse or update workspace file - restoring backup"
-    command_string="mv '${workspace_file}.backup' '$workspace_file'"
-    execute_or_dry_run "$command_string" "restore workspace backup"
-    return 1
-  }
+  
+  command_string="jq --arg folder '$dev_link_name' '.folders += [{\"path\": \$folder, \"name\": \"AI Documentation\"}]' '$workspace_file' > '$temp_workspace'"
+  if ! execute_or_dry_run "$command_string" "parse and update workspace JSON"; then
+    local exit_code=$?
+    log_error "[$exit_code] Failed to parse or update workspace JSON"
+    log_debug "Restoring from backup..."
+    command_string="mv '$backup_file' '$workspace_file'"
+    if ! execute_or_dry_run "$command_string" "restore workspace backup"; then
+      log_error "[restore-failed] Could not restore backup: manual recovery needed at $backup_file"
+      exit "$exit_code"
+    fi
+    log_success "Restored backup after failed update"
+    exit "$exit_code"
+  fi
   
   # Replace original with updated version
   command_string="mv '$temp_workspace' '$workspace_file'"
-  if ! execute_or_dry_run "$command_string" "update workspace file"; then
-    log_warning "Failed to update workspace file - restoring backup"
-    command_string="mv '${workspace_file}.backup' '$workspace_file'"
-    execute_or_dry_run "$command_string" "restore workspace backup"
-    return 1
+  if ! execute_or_dry_run "$command_string" "finalize workspace update"; then
+    local exit_code=$?
+    log_error "[$exit_code] Failed to finalize workspace update"
+    log_debug "Restoring from backup..."
+    command_string="mv '$backup_file' '$workspace_file'"
+    if ! execute_or_dry_run "$command_string" "restore workspace backup"; then
+      log_error "[restore-failed] Could not restore backup: manual recovery needed at $backup_file"
+      exit "$exit_code"
+    fi
+    log_success "Restored backup after failed finalization"
+    exit "$exit_code"
   fi
   
-  if [[ -z "${flag_dry_run:-}" ]]; then
-    log_success "Added development folder to workspace: $dev_link_name"
-    # Clean up backup
-    rm -f "${workspace_file}.backup"
+  # Verify update succeeded (only if not in dry-run mode)
+  if [[ -z "${flag_dry_run:-}" && -f "$workspace_file" ]]; then
+    folder_exists=$(jq --arg folder "$dev_link_name" '.folders[]? | select(.path == $folder) | .path' "$workspace_file" 2>/dev/null)
+    if [[ -n "$folder_exists" ]]; then
+      log_success "Updated VS Code workspace configuration"
+      log_debug "Removing backup file: $backup_file"
+      rm -f "$backup_file"
+    else
+      log_error "[1] Workspace update verification failed - path not found in folders"
+      log_debug "Restoring from backup..."
+      command_string="mv '$backup_file' '$workspace_file'"
+      if ! execute_or_dry_run "$command_string" "restore workspace backup"; then
+        log_error "[restore-failed] Could not restore backup: manual recovery needed at $backup_file"
+      fi
+      exit 1
+    fi
   else
-    log_success "DRY-RUN: Would add development folder to workspace: $dev_link_name"
+    log_success "DRY-RUN: Would update VS Code workspace configuration"
   fi
 }
 
 # Update .gitignore to ignore the development directory symlink
 # Adds the dev folder to .gitignore if not already present
 # Usage: update_gitignore --dev-link-name ".ai"
+# Update .gitignore to ignore the development directory symlink
+# Prevents accidental commits of symlink to user AI directory
+# Usage: update_gitignore --dev-link-name <name>
 function update_gitignore {
   zparseopts -D -F -- \
     -dev-link-name:=opt_dev_link_name
@@ -547,44 +589,64 @@ function update_gitignore {
   local dev_link_name="${opt_dev_link_name[2]}"
   local gitignore_file="$target_dir/.gitignore"
   
+  log_info "Updating .gitignore to ignore development symlink..."
+  
   # Check if .gitignore exists
   if [[ ! -f "$gitignore_file" ]]; then
-    log_debug "No .gitignore file found in $target_dir"
+    log_debug "No .gitignore file found - skipping update"
     return 0
   fi
   
-  log_info "Updating .gitignore to ignore development symlink..."
+  log_debug "Found .gitignore file: $gitignore_file"
   
   # Check if dev_link_name is already in .gitignore
+  log_debug "Checking for existing entry in .gitignore: $dev_link_name"
   if grep -q "^${dev_link_name}$" "$gitignore_file"; then
     log_success "Development symlink already ignored in .gitignore: $dev_link_name"
     return 0
   fi
   
-  # Check for commented version
-  if grep -q "^#.*${dev_link_name}" "$gitignore_file"; then
-    log_debug "Found commented entry for $dev_link_name in .gitignore"
-  fi
+  # Create backup before modification
+  local backup_file="${gitignore_file}.backup"
   
-  # Create backup
-  command_string="cp '$gitignore_file' '${gitignore_file}.backup'"
+  log_debug "Creating backup: $backup_file"
+  command_string="cp '$gitignore_file' '$backup_file'"
   if ! execute_or_dry_run "$command_string" "backup .gitignore file"; then
-    log_warning "Failed to create backup of .gitignore"
+    local exit_code=$?
+    log_error "[$exit_code] Failed to create backup of .gitignore"
+    exit "$exit_code"
   fi
   
   # Add dev_link_name to .gitignore
+  log_info "Adding entry to .gitignore: $dev_link_name"
   command_string="echo '$dev_link_name' >> '$gitignore_file'"
-  if ! execute_or_dry_run "$command_string" "add to .gitignore"; then
-    log_warning "Failed to update .gitignore - restoring backup"
-    command_string="mv '${gitignore_file}.backup' '$gitignore_file'"
-    execute_or_dry_run "$command_string" "restore .gitignore backup"
-    return 1
+  if ! execute_or_dry_run "$command_string" "add development symlink to .gitignore"; then
+    local exit_code=$?
+    log_error "[$exit_code] Failed to update .gitignore - restoring backup"
+    command_string="mv '$backup_file' '$gitignore_file'"
+    if ! execute_or_dry_run "$command_string" "restore .gitignore backup"; then
+      log_error "[restore-failed] Could not restore backup: manual recovery needed at $backup_file"
+      exit "$exit_code"
+    fi
+    log_success "Restored backup after failed update"
+    exit "$exit_code"
   fi
   
+  # Verify the entry was actually added (only if not in dry-run mode)
   if [[ -z "${flag_dry_run:-}" ]]; then
-    log_success "Added development symlink to .gitignore: $dev_link_name"
-    # Clean up backup
-    rm -f "${gitignore_file}.backup"
+    if grep -q "^${dev_link_name}$" "$gitignore_file"; then
+      log_success "Added development symlink to .gitignore: $dev_link_name"
+      log_debug "Removing backup file: $backup_file"
+      rm -f "$backup_file"
+    else
+      log_error "[1] .gitignore verification failed - entry not found after append"
+      log_debug "Restoring from backup..."
+      command_string="mv '$backup_file' '$gitignore_file'"
+      if ! execute_or_dry_run "$command_string" "restore .gitignore backup"; then
+        log_error "[restore-failed] Could not restore backup: manual recovery needed at $backup_file"
+      fi
+      exit 1
+    fi
   else
     log_success "DRY-RUN: Would add development symlink to .gitignore: $dev_link_name"
   fi
@@ -750,17 +812,19 @@ log_info "Source directory: $user_ai_instructions_dir"
 log_info "Target directory: $target_instructions_dir"
 log_info "Configuration type: $configure_type"
 
-# Create development directory symlink if requested
-if [[ -n "${flag_dev_sym_link:-}" ]]; then
+# Create development directory symlink and update .gitignore if requested
+if [[ -n "${flag_dev_link:-}" ]]; then
   echo ""
+  local dev_link_name="${user_ai_dir:t}"
   create_dev_symlink
-  
-  # Update VS Code workspace if one exists
+  update_gitignore --dev-link-name "$dev_link_name"
+fi
+
+# Add development directory to VS Code workspace if requested
+if [[ -n "${flag_dev_vscode:-}" ]]; then
+  echo ""
   local dev_link_name="${user_ai_dir:t}"
   update_vscode_workspace --dev-link-name "$dev_link_name"
-  
-  # Update .gitignore to ignore the symlink
-  update_gitignore --dev-link-name "$dev_link_name"
 fi
 
 # Display interactive menu

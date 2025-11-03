@@ -516,7 +516,294 @@ function install_instruction_file {
 -   **AI-friendly**: AI agents can better understand and use functions with clear documentation
 -   **Consistency**: Uniform documentation style across codebase
 
-### Function Arguments: Named vs Positional
+### Function-Level Error Handling
+
+**CRITICAL**: Functions must apply the same error handling patterns as script-level code. All functions follow the three-phase error handling pattern:
+
+1. **Intent**: Log what will be done using `slog_step_se --context will`
+2. **Operation**: Execute the operation with proper error handling
+3. **Outcome**: Log success or failure (fatal or warning)
+
+#### Fatal Error Handling in Functions
+
+Use `return` instead of `exit` for fatal errors within functions:
+
+✅ **Good (fatal error in function):**
+```zsh
+# Verify required directory exists
+# Usage: get_backup_path --source-dir "/path/to/backup"
+function get_backup_path {
+  zparseopts -D -F -- \
+    -source-dir:=opt_source_dir
+  
+  local source_dir="${opt_source_dir[2]}"
+  
+  # [step] Verify backup source directory exists
+  slog_step_se --context will "verify backup source directory: " --url "$source_dir" --default
+  
+  if [[ ! -d "$source_dir" ]]; then
+    slog_step_se --context fatal "backup source directory does not exist: " --url "$source_dir" --default
+    return 1
+  fi
+  
+  slog_step_se --context success "verified backup source directory exists: " --url "$source_dir" --default
+  echo "$source_dir"
+}
+```
+
+**Critical differences from script-level fatal handling:**
+-   Use `return <code>` instead of `exit <code>`
+-   Use `return` to signal failure to the calling code
+-   Calling code decides whether to `exit` the entire script or recover
+
+#### Calling Functions with Fatal Error Handling
+
+When calling functions that can fail, use `|| { }` pattern with exit code capture:
+
+✅ **Good (calling function with error handling):**
+```zsh
+# [step] Get backup directory
+slog_step_se --context will "determine backup directory"
+
+backup_path=$(get_backup_path --source-dir "$source_dir") || {
+  exit_code=$?
+  slog_step_se --context fatal --exit-code "$exit_code" "determine backup directory"
+  exit $exit_code
+}
+
+slog_var_se_d "backup_path" "$backup_path"
+slog_step_se --context success "determined backup directory: " --url "$backup_path" --default
+```
+
+#### Warning Error Handling in Functions
+
+Use `if/then/else/fi` for operations that should not stop the function:
+
+✅ **Good (warning error in function):**
+```zsh
+# Update optional user preference
+# Usage: maybe_update_preference --preference-name "dock_size" --preference-value "64"
+function maybe_update_preference {
+  zparseopts -D -F -- \
+    -preference-name:=opt_pref_name \
+    -preference-value:=opt_pref_value
+  
+  local pref_name="${opt_pref_name[2]}"
+  local pref_value="${opt_pref_value[2]}"
+  
+  # [step] Update user preference
+  slog_step_se --context will "update preference: " --code "$pref_name" --default " = " --code "$pref_value" --default
+  
+  if defaults write com.example.app "$pref_name" "$pref_value" 2>/dev/null; then
+    slog_step_se --context success "updated preference: " --code "$pref_name" --default
+    return 0
+  else
+    local exit_code=$?
+    slog_step_se --context warning --exit-code "$exit_code" "failed to update preference (optional): " --code "$pref_name" --default
+    return 0  # Still return 0 - this is optional and shouldn't fail the caller
+  fi
+}
+```
+
+#### External Tool Dependency Handling in Functions
+
+When functions depend on external tools that might not be available, handle gracefully:
+
+✅ **Good (fatal dependency check in function):**
+```zsh
+# Parse JSON output - requires jq
+# Usage: parse_json_field --json-string '{}' --field "name"
+function parse_json_field {
+  zparseopts -D -F -- \
+    -json-string:=opt_json_string \
+    -field:=opt_field
+  
+  local json_string="${opt_json_string[2]}"
+  local field="${opt_field[2]}"
+  
+  # [step] Verify jq is available
+  slog_step_se --context will "verify jq tool is available"
+  
+  if ! type jq >/dev/null 2>&1; then
+    slog_step_se --context fatal "required tool not found: jq"
+    return 1
+  fi
+  
+  slog_step_se --context success "verified jq tool is available"
+  
+  # [step] Parse JSON field
+  slog_step_se --context will "parse JSON field: " --code "$field" --default
+  
+  local result
+  result=$(echo "$json_string" | jq -r ".${field}") || {
+    local exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "parse JSON field: " --code "$field" --default
+    return "$exit_code"
+  }
+  
+  echo "$result"
+}
+```
+
+✅ **Good (optional dependency, graceful fallback):**
+```zsh
+# Try to pretty-print JSON with jq if available, otherwise use cat
+# Usage: try_pretty_json --json-string '{}'
+function try_pretty_json {
+  zparseopts -D -F -- \
+    -json-string:=opt_json_string
+  
+  local json_string="${opt_json_string[2]}"
+  
+  # Check if jq is available (optional - this is best-effort)
+  if ! type jq >/dev/null 2>&1; then
+    slog_debug_se "jq not available - using plain JSON output"
+    echo "$json_string"
+    return 0
+  fi
+  
+  # [step] Pretty-print JSON with jq
+  slog_step_se --context will "pretty-print JSON"
+  
+  if echo "$json_string" | jq . >/dev/null 2>&1; then
+    echo "$json_string" | jq .
+    slog_step_se --context success "pretty-printed JSON"
+  else
+    slog_step_se --context warning "invalid JSON - using plain output"
+    echo "$json_string"
+  fi
+  
+  return 0
+}
+```
+
+#### Backup and Restore Error Handling in Functions
+
+When functions modify files, always use backup/restore pattern for error safety:
+
+✅ **Good (file modification with backup/restore):**
+```zsh
+# Add an entry to a configuration file safely
+# Usage: append_config_entry --config-file "/etc/app.conf" --entry "key=value"
+function append_config_entry {
+  zparseopts -D -F -- \
+    -config-file:=opt_config_file \
+    -entry:=opt_entry
+  
+  local config_file="${opt_config_file[2]}"
+  local entry="${opt_entry[2]}"
+  local backup_file="${config_file}.backup"
+  
+  # [step] Verify configuration file exists
+  slog_step_se --context will "verify configuration file exists: " --url "$config_file" --default
+  
+  if [[ ! -f "$config_file" ]]; then
+    slog_step_se --context fatal "configuration file not found: " --url "$config_file" --default
+    return 1
+  fi
+  
+  slog_step_se --context success "verified configuration file exists"
+  
+  # [step] Create backup
+  slog_step_se --context will "create backup of configuration file"
+  
+  if ! cp "$config_file" "$backup_file"; then
+    local exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "failed to create backup"
+    return "$exit_code"
+  fi
+  
+  slog_step_se --context success "created backup of configuration file"
+  
+  # [step] Append entry
+  slog_step_se --context will "append entry to configuration: " --code "$entry" --default
+  
+  if echo "$entry" >> "$config_file"; then
+    slog_step_se --context success "appended entry to configuration"
+  else
+    local exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "failed to append entry - restoring backup"
+    if mv "$backup_file" "$config_file"; then
+      slog_step_se --context success "restored backup after failed append"
+    else
+      slog_step_se --context fatal "could not restore backup - manual recovery needed at: " --url "$backup_file" --default
+    fi
+    return "$exit_code"
+  fi
+  
+  # [step] Clean up backup
+  slog_debug_se "removing backup file: " --url "$backup_file" --default
+  rm -f "$backup_file"
+  
+  return 0
+}
+```
+
+#### Summary: Error Handling Decision Guide for Functions
+
+| Scenario | Pattern | Return Code |
+|----------|---------|-------------|
+| **Critical operation that must succeed** | `||` with fatal log and `return 1` | Non-zero on failure |
+| **Operation can fail but function continues** | `if/then/else/fi` with warning log | Return 0 (always) |
+| **External tool dependency required** | Check availability, fatal if missing | Non-zero on missing |
+| **External tool dependency optional** | Graceful fallback if missing | Zero (always) |
+| **File modification** | Always use backup/restore pattern | Non-zero on file operation failure |
+| **Multi-step operation** | Combine patterns: fatal for critical steps, warning for optional | Depends on step |
+
+#### Key Error Handling Rules for Functions
+
+1. **Always return explicit exit codes**: Don't rely on implicit `return 0` at end
+   ```zsh
+   # Good
+   if operation_succeeds; then
+     return 0
+   else
+     return 1
+   fi
+   
+   # Also good - explicit at end
+   return 0
+   ```
+
+2. **Capture exit codes from critical commands**:
+   ```zsh
+   command || {
+     exit_code=$?
+     slog_step_se --context fatal --exit-code "$exit_code" "message"
+     return "$exit_code"
+   }
+   ```
+
+3. **Use function return values in calling code**:
+   ```zsh
+   result=$(my_function) || {
+     exit_code=$?
+     # Handle the error at script level
+   }
+   ```
+
+4. **Document expected return values in function comments**:
+   ```zsh
+   # Process data file
+   # Returns: 0 on success, 1 if file invalid, 2 if file not found
+   # Usage: process_file --file "/path/to/file"
+   function process_file {
+     # ...
+   }
+   ```
+
+5. **Never suppress stderr in function calls** (unless specifically filtering):
+   ```zsh
+   # Bad
+   result=$(my_function 2>/dev/null) || handle_error
+   
+   # Good - let errors flow through
+   result=$(my_function) || handle_error
+   ```
+
+---
+
+## Function Arguments: Named vs Positional
 
 **STRONGLY PREFER**: Use `zparseopts` with named arguments instead of positional arguments in functions.
 
