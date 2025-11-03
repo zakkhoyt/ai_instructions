@@ -655,6 +655,7 @@ function update_gitignore {
 # ---- ---- ----     Interactive Menu     ---- ---- ----
 
 # Display menu of available instruction files and process user selections
+# Pre-fills selection with already-installed files for convenient re-linking/updating
 # User can select individual files or 'all' to install all files
 # Usage: display_menu
 function display_menu {
@@ -673,6 +674,7 @@ function display_menu {
   local file_index=1
   local file_basenames=()
   local file_full_paths=()
+  local installed_indices=()
   
   for file_path in "${instruction_files[@]}"; do
     local file_basename="${file_path:t}"
@@ -694,6 +696,12 @@ function display_menu {
     esac
     
     printf "%2d. %s %s\n" "$file_index" "$status_indicator" "$file_basename"
+    
+    # Collect indices of already-installed files
+    if [[ "$file_status" != "not_installed" ]]; then
+      installed_indices+=("$file_index")
+    fi
+    
     ((file_index++))
   done
   
@@ -705,9 +713,36 @@ function display_menu {
   echo "  [?] Wrong symlink target"
   echo ""
   
-  # Get user selection
+  # Build pre-filled selection string from already-installed files
+  local default_selection
+  if [[ ${#installed_indices[@]} -gt 0 ]]; then
+    # Join installed indices with spaces
+    default_selection="${(j: :)installed_indices[@]}"
+  else
+    default_selection=""
+  fi
+  
+  # Prompt user with pre-filled selection
   echo "Enter selections by space-separated numbers (EX: '1 2'), or 'all': "
+  
+  # Pre-type the default selection (don't press enter)
+  if [[ -n "$default_selection" ]]; then
+    # Show user the pre-filled text
+    echo -n "$default_selection"
+  fi
+  
+  # Read user input (will append to pre-filled text)
   read -r user_selection
+  
+  # If user entered nothing but we had pre-filled text, use the pre-filled
+  if [[ -z "$user_selection" && -n "$default_selection" ]]; then
+    user_selection="$default_selection"
+    log_debug "Using pre-selected files: $user_selection"
+  elif [[ -z "$user_selection" && -z "$default_selection" ]]; then
+    # User entered nothing and nothing was pre-filled
+    log_warning "No files selected - no changes will be made"
+    return 0
+  fi
   
   local selected_indices=()
   if [[ "$user_selection" == "all" ]]; then
