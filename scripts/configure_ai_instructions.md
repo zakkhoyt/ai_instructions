@@ -83,4 +83,35 @@ ln -s $user_ai_dir $target_dir1
 ```
   
 
-* if `$target_dir1` contains a vscode-workspace file, modify it as if we had the VSCOde IDE open and "add folder to workspace"
+* [X] ~~*if `$target_dir1` contains a vscode-workspace file, modify it as if we had the VSCOde IDE open and "add folder to workspace"*~~ [2025-11-02]
+* [X] ~~*if `$target_dir1` contains a .gitignore file, modify it to ignore the symlink created ^*~~ [2025-11-02]
+* [ ] The above turns out to be redundant so let's break ^ into two args
+1. --dev-link: create the symlink and update .gitignore
+2. --dev-vscode: add folder to workspace
+
+
+---
+<!-- 
+
+when prsenting the menu to the user, where it is detected that some files have already been linked/copied
+
+(like this)
+```zsh
+ 1. [S] markdown-conventions.instructions.md
+file_status=symlinked
+status_indicator='[S]'
+ 2. [ ] swift-conventions.instructions.md
+file_status=not_installed
+status_indicator='[ ]'
+ 3. [S] zsh-conventions.instructions.md
+```
+
+pre-enter those already installed files into stdin (type it on behalf of the user, but dont' press enter)
+
+EX:
+In this case
+```zsh
+1 3
+```
+
+This way the user has only to press enter to update the files/links -->
