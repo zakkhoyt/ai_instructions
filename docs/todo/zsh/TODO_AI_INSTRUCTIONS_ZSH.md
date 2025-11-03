@@ -3,8 +3,16 @@
 `"Re-read .github/instructions/setup-scripts.instructions.md, then apply ALL requirements"`
 `"Re-read .github/instructions/zsh-conventions.instructions.md, then apply ALL requirements"`
 
+# Fix/Adjust
+* print_usage should always write to `stderr`, not `stdout`
+* print_usage should always return 1. The caller should then then use that rval. EX: `print_usage && exit $?`
+  * Calling this script with `--help` should never return exit status of 0, and should never write data to `stdout` as that data would be considered valid. 
+* print_usage: Always write the help using `slog_se`. Not echo, not echo_pretty. Assume that slog_se is always available. 
+* print_usage should return non-0. Callers should exit with it's rval
+* print_usage (and all logging) should consolidate multiple lines using variables/array vs calling slog_*, echo_pretty, echo multiple times. 
 
-
+# Print Usage
+Function must be declared before calling, cannot be overwritten as AI suggested
 
 
 ## inputs

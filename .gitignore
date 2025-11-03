@@ -4,6 +4,7 @@
 # File created using '.gitignore Generator' for Visual Studio Code: https://bit.ly/vscode-gig
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,macos,git,homebrew,platformio,python,swift,swiftpackagemanager,swiftpm,venv,xcode
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,macos,git,homebrew,platformio,python,swift,swiftpackagemanager,swiftpm,venv,xcode
+#
 
 ### Git ###
 # Created by git for backups. To disable backups in Git:
@@ -330,12 +331,12 @@ xcuserdata
 ### venv ###
 # Virtualenv
 # http://iamzed.com/2009/05/07/a-primer-on-virtualenv/
-[Bb]in
-[Ii]nclude
-[Ll]ib
-[Ll]ib64
-[Ll]ocal
-[Ss]cripts
+# [Bb]in
+# [Ii]nclude
+# [Ll]ib
+# [Ll]ib64
+# [Ll]ocal
+# [Ss]cripts
 pyvenv.cfg
 pip-selfcheck.json
 
@@ -375,6 +376,26 @@ pip-selfcheck.json
 
 # Custom rules (everything added below won't be overriden by 'Generate .gitignore File' if you use 'Update' option)
 
+# ## About ###
+# Git Ignore Common File
+# This file contains common .gitignore rules for 
+# * git
+# * vscode
+# * macOS/homebrew
+# * python/venv
+# * xcode/swift/swiftpm
+# * platformio
+# 
+# ## Symbolic Links ###
+#
+# ```zsh
+# # Add all symbolic links to your .gitignore :
+# find . -type l >> .gitignore
+# # Remove all symbolic links from git cache/history
+# find . -type l -exec git rm --cached {} \;
+# ```
+#
+
 # Any .gitignored dir
 **/.gitignored/*
 **/_gitignored/*
@@ -384,3 +405,7 @@ pip-selfcheck.json
 
 # log files
 **/*.log
+
+# A symbolic link to docs in hatch-baby/environment-toolbox
+docs/presentation
+

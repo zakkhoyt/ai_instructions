@@ -1,5 +1,9 @@
 
 
+
+# Add comments
+
+
 # When running terminal commands
 
 * rather using tail / head, redire4ct stdout / stderr ot a file
