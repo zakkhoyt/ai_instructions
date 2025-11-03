@@ -468,6 +468,128 @@ function create_dev_symlink {
   fi
 }
 
+# Update VS Code workspace file to include the development directory
+# Adds the dev folder as a workspace folder if not already present
+# Usage: update_vscode_workspace --dev-link-name ".ai"
+function update_vscode_workspace {
+  zparseopts -D -F -- \
+    -dev-link-name:=opt_dev_link_name
+  
+  local dev_link_name="${opt_dev_link_name[2]}"
+  
+  # Find .code-workspace file in target directory
+  local workspace_file
+  workspace_file=$(find "$target_dir" -maxdepth 1 -name "*.code-workspace" -type f | head -1)
+  
+  if [[ -z "$workspace_file" ]]; then
+    log_debug "No VS Code workspace file found in $target_dir"
+    return 0
+  fi
+  
+  log_info "Updating VS Code workspace: $(basename "$workspace_file")"
+  
+  # Use jq to check if folder already exists and add if needed
+  if ! type jq >/dev/null 2>&1; then
+    log_warning "jq not found - cannot update workspace file automatically"
+    log_warning "You may need to manually add '$dev_link_name' folder to workspace"
+    return 0
+  fi
+  
+  # Create backup
+  command_string="cp '$workspace_file' '${workspace_file}.backup'"
+  if ! execute_or_dry_run "$command_string" "backup workspace file"; then
+    log_warning "Failed to create backup of workspace file"
+  fi
+  
+  # Check if the dev folder path already exists in the workspace
+  local folder_exists
+  folder_exists=$(jq --arg folder "$dev_link_name" '.folders[]? | select(.path == $folder) | .path' "$workspace_file" 2>/dev/null)
+  
+  if [[ -n "$folder_exists" ]]; then
+    log_success "Development folder already in workspace: $dev_link_name"
+    return 0
+  fi
+  
+  # Add the dev folder to the workspace
+  local temp_workspace="${workspace_file}.tmp"
+  jq --arg folder "$dev_link_name" '.folders += [{"path": $folder}]' "$workspace_file" > "$temp_workspace" 2>/dev/null || {
+    log_warning "Failed to parse or update workspace file - restoring backup"
+    command_string="mv '${workspace_file}.backup' '$workspace_file'"
+    execute_or_dry_run "$command_string" "restore workspace backup"
+    return 1
+  }
+  
+  # Replace original with updated version
+  command_string="mv '$temp_workspace' '$workspace_file'"
+  if ! execute_or_dry_run "$command_string" "update workspace file"; then
+    log_warning "Failed to update workspace file - restoring backup"
+    command_string="mv '${workspace_file}.backup' '$workspace_file'"
+    execute_or_dry_run "$command_string" "restore workspace backup"
+    return 1
+  fi
+  
+  if [[ -z "${flag_dry_run:-}" ]]; then
+    log_success "Added development folder to workspace: $dev_link_name"
+    # Clean up backup
+    rm -f "${workspace_file}.backup"
+  else
+    log_success "DRY-RUN: Would add development folder to workspace: $dev_link_name"
+  fi
+}
+
+# Update .gitignore to ignore the development directory symlink
+# Adds the dev folder to .gitignore if not already present
+# Usage: update_gitignore --dev-link-name ".ai"
+function update_gitignore {
+  zparseopts -D -F -- \
+    -dev-link-name:=opt_dev_link_name
+  
+  local dev_link_name="${opt_dev_link_name[2]}"
+  local gitignore_file="$target_dir/.gitignore"
+  
+  # Check if .gitignore exists
+  if [[ ! -f "$gitignore_file" ]]; then
+    log_debug "No .gitignore file found in $target_dir"
+    return 0
+  fi
+  
+  log_info "Updating .gitignore to ignore development symlink..."
+  
+  # Check if dev_link_name is already in .gitignore
+  if grep -q "^${dev_link_name}$" "$gitignore_file"; then
+    log_success "Development symlink already ignored in .gitignore: $dev_link_name"
+    return 0
+  fi
+  
+  # Check for commented version
+  if grep -q "^#.*${dev_link_name}" "$gitignore_file"; then
+    log_debug "Found commented entry for $dev_link_name in .gitignore"
+  fi
+  
+  # Create backup
+  command_string="cp '$gitignore_file' '${gitignore_file}.backup'"
+  if ! execute_or_dry_run "$command_string" "backup .gitignore file"; then
+    log_warning "Failed to create backup of .gitignore"
+  fi
+  
+  # Add dev_link_name to .gitignore
+  command_string="echo '$dev_link_name' >> '$gitignore_file'"
+  if ! execute_or_dry_run "$command_string" "add to .gitignore"; then
+    log_warning "Failed to update .gitignore - restoring backup"
+    command_string="mv '${gitignore_file}.backup' '$gitignore_file'"
+    execute_or_dry_run "$command_string" "restore .gitignore backup"
+    return 1
+  fi
+  
+  if [[ -z "${flag_dry_run:-}" ]]; then
+    log_success "Added development symlink to .gitignore: $dev_link_name"
+    # Clean up backup
+    rm -f "${gitignore_file}.backup"
+  else
+    log_success "DRY-RUN: Would add development symlink to .gitignore: $dev_link_name"
+  fi
+}
+
 # ---- ---- ----     Interactive Menu     ---- ---- ----
 
 # Display menu of available instruction files and process user selections
@@ -632,6 +754,13 @@ log_info "Configuration type: $configure_type"
 if [[ -n "${flag_dev_sym_link:-}" ]]; then
   echo ""
   create_dev_symlink
+  
+  # Update VS Code workspace if one exists
+  local dev_link_name="${user_ai_dir:t}"
+  update_vscode_workspace --dev-link-name "$dev_link_name"
+  
+  # Update .gitignore to ignore the symlink
+  update_gitignore --dev-link-name "$dev_link_name"
 fi
 
 # Display interactive menu
