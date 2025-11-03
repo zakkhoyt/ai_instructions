@@ -115,3 +115,11 @@ In this case
 ```
 
 This way the user has only to press enter to update the files/links -->
+
+
+
+---
+
+* [ ] New arg to add custom specs to:
+  * [ ] `--dev-link`: Add additional `[--dev-link-name <dir_name>]` which has a default value of the last path component of `$user_ai_dir`. When creating the symlink, use this value for the directory name of the sym link. This allows the user to control what the sym link directory name is in their repo
+  * [ ] `--dev-vscode`: : Add additional `[--dev-vscode-name <dir_name>]` which has a default value of the last path component of `$user_ai_dir`. When creating the folder name in VSCode, use this value for the folder name. This allows the user to control what the sym link directory name is in their repo
