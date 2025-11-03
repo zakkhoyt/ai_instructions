@@ -1,0 +1,163 @@
+#!/usr/bin/env -S zsh -euo pipefail
+# shellcheck shell=bash # trick shellcheck into working with zsh
+# shellcheck disable=SC2296 # Falsely identifies zsh expansions
+# shellcheck disable=SC1091 # Complains about sourcing without literal path
+#
+# ---- ---- ----  About this Script  ---- ---- ----
+#
+# Purpose: Assists with taking notes related to ticketed dev work (Jira tickets, PRs, branches)
+# Author: zakkhoyt
+# Usage: ./jira_notes.zsh [--mode <mode>] [--jira <ticket>] [options]
+#
+# This script:
+# - Accepts or infers a Jira ticket number (e.g., HSD-12345)
+# - Creates directory structure and files for taking notes
+# - Manages feature branches, PRs, and documentation
+# - Opens relevant files/URLs in appropriate applications
+#
+# Directory Structure:
+#   $HOME/Documents/HatchDocs/jira/
+#   └── HSD-9966/
+#       ├── HSD-9966.md
+#       ├── git_branch.md
+#       ├── PR-#5324.md
+#       ├── logs/
+#       └── json/
+#
+# See: $HOME/code/repositories/hatch/hatch_sleep/scripts/shell/bin/jira_notes_docs
+
+# ---- ---- ----     Source Utilities     ---- ---- ----
+
+# Determine script directory for relative path fallback
+script_dir="${0:A:h}"
+
+# Define standard source file directories (used for utilities and trap handlers)
+source_dirs=(
+  "${HATCH_SOURCE_DIR:-}"
+  "$HOME/.hatch/source"
+  "$HOME/.zsh_home/utilities"
+  "$script_dir/../../assets/hatch_home/source"
+)
+
+# Source .zsh_scripting_utilities
+unset -v scripting_utilities_found
+for source_dir in "${source_dirs[@]}"; do
+  if [[ -n "$source_dir" && -f "$source_dir/.zsh_scripting_utilities" ]]; then
+    source "$source_dir/.zsh_scripting_utilities" "$0" "$@" > /dev/null
+    scripting_utilities_found=true
+    break
+  fi
+done
+
+# Error if all paths failed
+if [[ -z "${scripting_utilities_found:-}" ]]; then
+  echo "ERROR: Cannot find .zsh_scripting_utilities in any expected location:" >&2
+  for source_dir in "${source_dirs[@]}"; do
+    [[ -n "$source_dir" ]] && echo "  - $source_dir/.zsh_scripting_utilities" >&2
+  done
+  exit 1
+fi
+
+# ---- ---- ----   Argument Parsing   ---- ---- ----
+
+# Stage 1: Parse standard arguments (help, debug, dry-run)
+# Note: -D removes parsed opts, no -E so unrecognized opts pass through to later stages
+zparseopts -D -- \
+  -help=flag_help \
+  {d,-debug}+=flag_debug \
+  -dry-run=flag_dry_run
+
+# Display help if requested (early exit)
+if [[ -n "${flag_help:-}" ]]; then
+  print_usage
+  exit 0
+fi
+
+# Set up debug mode if requested
+flag_debug_level=${#flag_debug[@]}
+slog_var_se_d "flag_debug_level" "$flag_debug_level"
+if [[ $flag_debug_level -gt 0 ]]; then
+  export IS_DEBUG=true
+  if [[ $flag_debug_level -gt 1 ]]; then
+    export IS_UTILS_DEBUG=true
+  fi
+fi
+
+is_dry_run=${flag_dry_run:+true}
+slog_var_se_d "is_dry_run" "$is_dry_run"
+
+# Stage 2: Parse trap control flags (for debugging trap handlers)
+zparseopts -D -- \
+  {-trap-err,-debug-err}=flag_debug_err \
+  {-trap-exit,-debug-exit}=flag_debug_exit
+
+# Set up error handling traps
+if [[ -n "${flag_debug_err:-}" ]]; then
+  trap 'slog_error_se "Script failed at line $LINENO with exit code $?"' ERR
+else
+  trap 'slog_error_se "Script failed at line $LINENO with exit code $?"' ERR
+fi
+
+if [[ -n "${flag_debug_exit:-}" ]]; then
+  trap 'slog_se_d "Script exiting with status $?"' EXIT
+fi
+
+
+# List all ignored files in dir (along with rule)
+# git check-ignore -v ./**/*
+
+# shellcheck disable=SC2206
+# shellcheck disable=SC2296
+
+git_root_dir="$(git rev-parse --show-toplevel 2>/dev/null)" || {
+  rval=$?
+  slog_step_se --context error --rval $rval "git_root_dir == nil"
+  return $rval
+}
+ignored_items=(${(f)"$(git check-ignore -v "$git_root_dir"/**/*)"})
+
+# TODO: zakkhoyt - parse rearrange, present with better formatting
+# format: `<source>:<line>:<pattern>/t<file>`
+# .gitignore:410:docs/presentation    /Users/zakkhoyt/.ai/docs/presentation
+# slog_array_se "array" "${ignored_items[@]}"
+
+# ignored_items=("$@")
+# echo "ignored_items.count: ${#ignored_items[@]}" 1>&2
+# slog "This repository has " --bold "${#ignored_items[@]}" --default " ignored items:"
+
+slog_marker_se "This repository has " --bold "${#ignored_items[@]}" --default " ignored items:"
+
+for ((i=0; i<="${#ignored_items[@]}"; i++)); do
+  ignored_item="${ignored_items[$i]:-}"
+  if [[ -z "$ignored_item" ]]; then continue; fi
+  # echo "  \${ignored_items[$i]}: $ignored_item" 1>&2
+
+  # Parse ignored_item into components
+  # Format: <source>:<line>:<pattern><TAB><file>
+  # Example: .gitignore:410:docs/presentation<TAB>/Users/zakkhoyt/.ai/docs/presentation
+  
+  # Split on TAB to separate pattern info from file path
+  IFS=$'\t' read -r pattern_info file_path <<< "$ignored_item"
+  
+  # Split pattern_info on colons
+  # Example: .gitignore:410:docs/presentation
+  source_file="${pattern_info%%:*}"                    # .gitignore
+  temp="${pattern_info#*:}"                            # 410:docs/presentation
+  line_number="${temp%%:*}"                            # 410
+  pattern="${temp#*:}"                                 # docs/presentation
+  
+  if [[ -n $flag_debug ]]; then 
+    slog_var_se_d "source_file" "$source_file"
+    slog_var_se_d "line_number" "$line_number"
+    slog_var_se_d "pattern" "$pattern"
+    slog_var_se_d "file_path" "$file_path"
+  else
+    slog "  " --url "$file_path" --default "    " --code "$pattern" --default "    " "$source_file:$line_number" 
+  fi
+done
+
+
+
+
+# # List all ignored files and dirs
+# git status --ignored --short

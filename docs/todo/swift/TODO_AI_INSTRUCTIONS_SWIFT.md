@@ -9,6 +9,7 @@
 
 # swift build vs xcodebuild
 * [ ] TODO: always use xcodebuild. 
+* [ ] No force unwrapping ever
 
 # Compiling / Testing
 * [ ] Provide instructions for how to compile

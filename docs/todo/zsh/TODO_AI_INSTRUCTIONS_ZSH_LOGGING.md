@@ -30,6 +30,28 @@ Currently we have several individual functions to log variable details
 
 
 
+###  `slog_var1_se` 
+* `slog_var1_se` - Help my update this function to support more variable types
+
+Currently we have several individual functions to log variable details
+```zsh
+# works on primitive types (string, int, bool), but not collections
+# bad: requires passing the name and the value
+slog_var_se "my_var" "$my_var"
+
+# works on standard arrays
+# bad: requires passing the 2 args (name and the value(s))
+# bad: only works on arrays (not associated arrays)
+slog_array_se "my_array" "${my_array[@]}"
+```
+
+* when logging values, wrap them in single quotes (unless empty)
+* when logging values, if value is nil, represent it with `<nil>` (without single quotes)
+
+
+
+
+
 
 ---
 
