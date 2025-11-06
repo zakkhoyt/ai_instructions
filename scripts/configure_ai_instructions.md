@@ -120,6 +120,10 @@ This way the user has only to press enter to update the files/links -->
 
 ---
 
+# `.github/copilot-instructions.md`
+The configure script should also (optionally) either generate, copy, or link to `.github/copilot-instructions.md`
+
+
 * [ ] New arg to add custom specs to:
   * [ ] `--dev-link`: Add additional `[--dev-link-name <dir_name>]` which has a default value of the last path component of `$user_ai_dir`. When creating the symlink, use this value for the directory name of the sym link. This allows the user to control what the sym link directory name is in their repo
   * [ ] `--dev-vscode`: : Add additional `[--dev-vscode-name <dir_name>]` which has a default value of the last path component of `$user_ai_dir`. When creating the folder name in VSCode, use this value for the folder name. This allows the user to control what the sym link directory name is in their repo
@@ -128,7 +132,7 @@ This way the user has only to press enter to update the files/links -->
 
 
 
-# configure script
+<!-- 
 
 The script `scripts/configure_ai_instructions.zsh` is mostly working as expected. I've noticed some problems with the `--dev-vscode` arg. It's not quite working as expected. 
 
@@ -142,11 +146,17 @@ The script `scripts/configure_ai_instructions.zsh` is mostly working as expected
 
 ## Example 01
 The workspace file `userscripts.code-workspace` was updated using `cd $HOME/code/repositories/z2k/github/userscripts && ~/.ai/scripts/configure_ai_instructions.zsh --dev-vscode --debug`
+
+See a capture of the terminal I/O here: `scripts/.gitignored/bug01.log`
+
 This is the diff of that at file after running the script
 
 * Problem 1: The path to `$user_ai_dir` is completely wrong.
   * PWD is `$HOME/code/repositories/z2k/github/userscripts`
-  * the relavite path to `$user_ai_dir` is `"path": "../../../../../.ai"`, not `.ai` (even though )
+  * the relavite path to `$user_ai_dir` is `"path": "../../../../../.ai"`, not `.ai`. Like it's computing what should be `name` and putting it in `path`
+* Problem 2: If the path property were correct, it should be absolute path (if possible)
+  * Ideally: `$HOME/.ai`, falling back to `~/.ai`, falling back to `/Users/zakkhoyt/.ai`
+* Problem 3: The name property is wrong. It should always be the leaf dir name of `path` (or `$user_ai_dir`). Never `"AI Documentation"`
 
 ```diff
    "folders": [
@@ -160,59 +170,20 @@ This is the diff of that at file after running the script
    ],
    "settings": {}
 ```
-
-
-
-## Example diff from recent run. 
+Ideal diff
 ```diff
-+  "folders": [
-+    {
-+      "path": "."
+   "folders": [
+     {
+       "path": "."
 +    },
 +    {
-+      "path": "../../../../../.ai"
-+    }
-+  ],
-+  "settings": {}
-+}
++      "path": "/Users/zakkhoyt/.ai",
++      "name": ".ai"
+     }
+   ],
+   "settings": {}
 ```
-What's wrong is it's missing  the name property
-```diff
-+  "folders": [
-+    {
-+      "path": "."
-+    },
-+    {
-+      "path": "../../../../../.ai"
-+    }
-+  ],
-+  "settings": {}
-+}
-```
-
-When the workspace already has added the ai folder to workspace and the scirpt is run a second time
-
-```diff
-+  "folders": [
-+    {
-+      "path": "."
-+    },
-+    {
-+      "path": "../../../../../.ai"
-+    },
-+    {
-+      "path": ".ai",
-+      "name": "AI Documentation"
-+    }
-+  ],
-+  "settings": {}
-+}
-```
-
-
-
-## The configure script should also (optionally) either generate, copy, or link to `.github/copilot-instructions.md`
-
+ -->
 
 
 
