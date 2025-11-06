@@ -3,37 +3,162 @@
 
 # Auto Approving AI Agent CLI
 
+## Key Documentation Notes
+
+From VS Code's settings documentation:
+- Commands are evaluated for **every sub-command** within the full command line
+- For `foo && bar` to auto-approve, BOTH `foo` AND `bar` must match `true` entries
+- Use `{ "approve": true, "matchCommandLine": true }` to match against the **full command line** instead of sub-commands
+- Command substitution `$(foo)` and process substitution `<(foo)` are **blocked by default** via broad rules
+- Patterns are matched against the **start** of a command
+- Regular expressions can be wrapped in `/` characters with optional flags like `i` for case-insensitivity
+
+## Recommended Configuration
+
 ```json
 // VSCode User Settings
 // $HOME/Library/Application Support/Code/User/settings.json
 {
-    "chat.tools.terminal.autoApprove": {
-        "/.*/": {
-            "approve": true,
-      "matchCommandLine": true
-    },
-    "*": {
+  "chat.tools.terminal.autoApprove": {
+    // Use matchCommandLine: true to match entire command lines
+    // This bypasses the sub-command matching requirement
+    
+    // Match command lines with pipes and logical operators
+    "/\\|/": {
         "approve": true,
-      "matchCommandLine": true
+        "matchCommandLine": true
     },
-    // ...
+    "/&&/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "/\\|\\|/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "/;/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    
+    // Override default blocks for command/process substitution
+    "/\\$\\(/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "/<\\(/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    
+    // Match command lines with parentheses, braces, backticks
+    "/\\(/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "/\\)/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "/\\{/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "/\\}/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "/`/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    
+    // Redirections
+    "/>/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "/2>&1/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    
+    // Approve commonly blocked commands
+    "xargs": true,
+    "jq": true,
+    "awk": true,
+    "sed": true,
+    "find": true,
+    "grep": true,
+    "head": true,
+    "tail": true,
+    "tee": true,
+    
+    // Catch-all for any command line (last resort)
+    "/.*$/": {
+        "approve": true,
+        "matchCommandLine": true
+    }
   }
 }
 ```
+
 ```json
 // VSCode Workspace Settings
 // $vscode_workspace_dir/.vscode/settings.json
 {
   "chat.tools.terminal.autoApprove": {
-    "/.*/": {
-      "approve": true,
-      "matchCommandLine": true
+    // Same patterns as user settings above
+    "/\\|/": {
+        "approve": true,
+        "matchCommandLine": true
     },
-    "*": {
-      "approve": true,
-      "matchCommandLine": true
+    "/&&/": {
+        "approve": true,
+        "matchCommandLine": true
     },
-    // ...
+    "/\\|\\|/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "/\\$\\(/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "/<\\(/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "/\\(/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "/\\{/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "/`/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "/>/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "/2>&1/": {
+        "approve": true,
+        "matchCommandLine": true
+    },
+    "xargs": true,
+    "jq": true,
+    "awk": true,
+    "sed": true,
+    "find": true,
+    "grep": true,
+    "/.*$/": {
+        "approve": true,
+        "matchCommandLine": true
+    }
   }
 }
 ```

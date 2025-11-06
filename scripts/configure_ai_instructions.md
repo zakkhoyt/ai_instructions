@@ -123,3 +123,96 @@ This way the user has only to press enter to update the files/links -->
 * [ ] New arg to add custom specs to:
   * [ ] `--dev-link`: Add additional `[--dev-link-name <dir_name>]` which has a default value of the last path component of `$user_ai_dir`. When creating the symlink, use this value for the directory name of the sym link. This allows the user to control what the sym link directory name is in their repo
   * [ ] `--dev-vscode`: : Add additional `[--dev-vscode-name <dir_name>]` which has a default value of the last path component of `$user_ai_dir`. When creating the folder name in VSCode, use this value for the folder name. This allows the user to control what the sym link directory name is in their repo
+
+
+
+
+
+# configure script
+
+The script `scripts/configure_ai_instructions.zsh` is mostly working as expected. I've noticed some problems with the `--dev-vscode` arg. It's not quite working as expected. 
+
+* should modify the first *.code-workspace file found. 
+  * If none are found, print that none were found then move on without modifying the workspace
+  * If multiple are found, prompt the user which to use
+  * if only 1 found, modify that one. 
+* When adding the dir to the workspace file, the `"path"` to `$user_ai_dir` should be absolute, if possible.  (in the example below it's relative: `"../../../../../.ai"`)
+* The `"name"` property should be set along side `"path"`, and it should be set it should be set to the the last path compontent of `$user_ai_dir` is. In this example it should be `.ai`
+* This script should be smart enough to detect if `user_ai_dir` has already been added to the workspace, then print as much and be done with this step. 
+
+## Example 01
+The workspace file `userscripts.code-workspace` was updated using `cd $HOME/code/repositories/z2k/github/userscripts && ~/.ai/scripts/configure_ai_instructions.zsh --dev-vscode --debug`
+This is the diff of that at file after running the script
+
+* Problem 1: The path to `$user_ai_dir` is completely wrong.
+  * PWD is `$HOME/code/repositories/z2k/github/userscripts`
+  * the relavite path to `$user_ai_dir` is `"path": "../../../../../.ai"`, not `.ai` (even though )
+
+```diff
+   "folders": [
+     {
+       "path": "."
++    },
++    {
++      "path": ".ai",
++      "name": "AI Documentation"
+     }
+   ],
+   "settings": {}
+```
+
+
+
+## Example diff from recent run. 
+```diff
++  "folders": [
++    {
++      "path": "."
++    },
++    {
++      "path": "../../../../../.ai"
++    }
++  ],
++  "settings": {}
++}
+```
+What's wrong is it's missing  the name property
+```diff
++  "folders": [
++    {
++      "path": "."
++    },
++    {
++      "path": "../../../../../.ai"
++    }
++  ],
++  "settings": {}
++}
+```
+
+When the workspace already has added the ai folder to workspace and the scirpt is run a second time
+
+```diff
++  "folders": [
++    {
++      "path": "."
++    },
++    {
++      "path": "../../../../../.ai"
++    },
++    {
++      "path": ".ai",
++      "name": "AI Documentation"
++    }
++  ],
++  "settings": {}
++}
+```
+
+
+
+## The configure script should also (optionally) either generate, copy, or link to `.github/copilot-instructions.md`
+
+
+
+

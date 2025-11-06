@@ -1,5 +1,13 @@
 
 
+
+# ssh-key
+Read this markdown file which helps to configure a computer to connect to another computer over ssh without using passwords. 
+
+Create a zsh script to automate this procedurs as described in the document. Add as m any CLI args as needed, providing reasonable default values
+
+
+
 # ViolentMonkey
 ## Markdown Link
 

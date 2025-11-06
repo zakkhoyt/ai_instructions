@@ -1,6 +1,4 @@
 
-
-
 # ripgrep is installed and available and can be much more performant than grep. 
 
 # .aiignore / .aiignored
@@ -19,8 +17,9 @@ grep -iE "(cancel|timeout|timed out)" scripts/.gitignored/github_runner/_diag/Wo
 
 # How to configure vscode's ai agent to auto-approve EVERY terminal command. 
 
+I'm trying to set up Visual Studio Code's AI chat agent so that it doesn't need to ask me for approval, ever, when running commands in the terminal. 
 
-Despite setting up both `user` and `workspace` settings to autoapprove
+Despite setting up both `user` and `workspace` settings to autoapprove like this
 ```zsh
 "chat.tools.terminal.autoApprove": {
     "/.*/": {
@@ -33,6 +32,23 @@ Despite setting up both `user` and `workspace` settings to autoapprove
     },
 }
 ```
+
+it continues to prompt me if the command has:
+
+* any pipes (` | `)
+* any parentises, braces, or curly braces
+* This include for loops, do, while, et...
+
+![alt text](images/vscode_ai_agent_prompt_02.png) 
+![alt text](images/vscode_ai_agent_prompt_01.png) 
+![alt text](images/vscode_ai_agent_prompt_00.png)
+
+Here are is the VScode user and workspace settings
+
+![alt text](images/vscode_ai_workspace_settings.png) 
+![alt text](images/vscode_ai_user_settings.png) 
+
+
 
 
 
