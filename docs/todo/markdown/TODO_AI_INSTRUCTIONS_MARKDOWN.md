@@ -21,3 +21,11 @@ To make the configuration specific to the project, store your instuctions at `/U
 
 
 
+# Link formatting
+
+# Table of contents
+# References
+
+# Format Tables
+
+* add padding and alignment like VScode extension "Format Table"

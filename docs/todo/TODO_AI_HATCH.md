@@ -1,4 +1,30 @@
 
+# Monorepo Scripts
+
+## Swift6 Error Categories
+* Write a zsh script that will:
+* clean and compile our `Nightlight_Development` scheme
+  * [ ] <command>
+* collect all stdout/stderr logs while filtering the realtime output to only show compiler warnings
+* At the end of the build, sort and categorize the errors by root message
+  * Split each error into:
+    * [ ] root error message <TODO: Example>
+    * [ ] error variant <TODO: parts of the message that vary>
+    * [ ] filename:line number <TODO: Example>
+    * [ ] 
+  * exclude things like filename, line number, and error specifiics to come up with a list of error categories
+  * do retain the full error message though
+
+
+
+## PR Adds <N> new warnings
+
+## PR contains HatchModules resolve warnings
+## PR breaks docc
+
+
+
+
 # `docs`
 
 * dont' rely on `get_errors` tool after making significant changes. Intead compile the smallest scheme which includes the changes (package target first, then app if needed)

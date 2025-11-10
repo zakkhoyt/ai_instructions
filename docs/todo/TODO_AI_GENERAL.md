@@ -1,4 +1,16 @@
 
+# when sourcing config files, how can we check if it's arleady been sourced then avoid sourcing again?
+* will this have impacts from cli: `source ~/.zshrc`. Can we override the check? arguent? Can we zparseopts? --force-source
+
+# update _slog to hanle many things
+* detect if output / tty, stipping ANSI related args if not (allowing us to pipe to log files for examples)
+* update to take args like `--callstack`
+  * `--callstack`
+  * `--context <context>`
+  * `--rval <rval>` | `--exit-code <code>` | `--return-code <code>`
+  * Build a list of other args from TODOs in .zsh_logging_utils
+
+
 # ripgrep is installed and available and can be much more performant than grep. 
 
 # .aiignore / .aiignored

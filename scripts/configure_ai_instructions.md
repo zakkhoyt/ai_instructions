@@ -121,7 +121,21 @@ This way the user has only to press enter to update the files/links -->
 ---
 
 # `.github/copilot-instructions.md`
-The configure script should also (optionally) either generate, copy, or link to `.github/copilot-instructions.md`
+When using this script to set up another repository it does configure that repo with .github/instructions, but does not add/link/copy a `.github/copilot-instructions.md`. 
+
+
+Here's one idea i had for solving this. 
+Add a new arg flag, where when set the script will (after handling the instruction files):
+* check if copilot cli is installed (prompt to install if not (wrap that in a function))
+* use copilot cli to:
+  * read the repository
+  * read the instrutions that this script has already set up
+  * set up `.github/copilot-instructions.md` 
+
+
+LMK what you think. Are there better ways to do this? Ask me questions /
+
+
 
 
 * [ ] New arg to add custom specs to:

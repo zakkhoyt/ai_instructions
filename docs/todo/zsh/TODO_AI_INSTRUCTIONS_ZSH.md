@@ -1,4 +1,51 @@
 
+
+
+# docs and help
+
+## function comments
+
+![alt text](images/Code_20251109161638.png)
+
+```markdown
+
+# append_unique - Appends items to a zsh array and removes duplicates
+# # SYNOPSIS
+# `append_unique --array <name> <items...>`
+# # ARGS
+# * `--array <name>` - Name of the array variable to append to (must be an array type)
+# # EXAMPLES
+# ```zsh
+# append_unique --array path /usr/local/bin /opt/homebrew/bin
+# append_unique --array fpath ~/.zsh/functions ~/.oh-my-zsh/custom
+# ```
+# # RETURN
+# * `0` - Success
+# * `1` - Error: --array option missing, array name not found, or variable is not an array
+# # STDERR
+# * Error messages if arguments are invalid
+# * Warning if array contents appear to have been passed as arguments
+# * Hint for tied arrays if uppercase name provided (PATH, FPATH, etc.)
+# # REFERENCES
+# ## Array subscript `(I)` flag 
+# * `man zshparam` (search "Subscript Flags")
+# * [zsh.sourceforge.io: Array-Subscript-Flags](https://zsh.sourceforge.io/Doc/Release/Parameters.html#Array-Subscript-Flags)
+# ## Tied arrays (path/PATH) 
+# * `man zshparam` (search "Special Parameters")
+# * [zsh.sourceforge.io: Array-Parameters](https://zsh.sourceforge.io/Doc/Release/Parameters.html#Array-Parameters)
+```
+
+## print_usage
+
+
+
+
+
+
+
+
+# jq and echo "\n"
+
 # 
 `"Re-read .github/instructions/setup-scripts.instructions.md, then apply ALL requirements"`
 `"Re-read .github/instructions/zsh-conventions.instructions.md, then apply ALL requirements"`
