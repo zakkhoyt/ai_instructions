@@ -480,41 +480,165 @@ my_function() {  # Avoid this syntax
 
 ### Function Comments and Documentation
 
-**REQUIRED**: Every function must include a comment block above its definition documenting its purpose and usage.
+**REQUIRED**: Every function must include a markdown-style documentation block above its definition. This format is designed to be both human-readable and machine-extractable (by removing the `# ` comment prefix).
 
-**Minimum comment structure:**
+#### Documentation Format
+
+Functions should use markdown-style comments with standardized section headers. The format supports:
+- **Section headers**: Use markdown H1 headers (`# SYNOPSIS`, `# ARGS`, etc.)
+- **Subsection headers**: Use markdown H2 headers (`# ## Subsection Title`)
+- **Code blocks**: Use markdown triple-backticks for code examples
+- **Inline code**: Use markdown backticks for inline code/variables
+- **Lists**: Use markdown asterisk syntax for bullet points
+- **Links**: Use markdown link syntax `[text](url)`
+
+**Complete documentation template:**
 
 ```zsh
-# Brief one-line description of what function does
-# Usage: function_name --arg1 value1 --arg2 value2
+# Brief one-line description of what the function does
+# # SYNOPSIS
+# ```zsh
+# function_name --arg1 <value1> --arg2 <value2> [--optional-arg <value>]
+# ```
+# # ARGS
+# * `--arg1 <value>` - Description of first argument
+# * `--arg2 <value>` - Description of second argument
+# * `--optional-arg <value>` - Description of optional argument (optional)
+# # EXIT STATUS
+# * `0` - Success
+# * `1` - Error: description of error condition
+# # STDOUT
+# Description of what gets written to stdout, or "None" if nothing
+# # STDERR
+# * Description of stderr output
+# * Another stderr condition
+# # EXAMPLES
+# ```zsh
+# function_name --arg1 value1 --arg2 value2
+# function_name --arg1 value1 --arg2 value2 --optional-arg value3
+# ```
+# # REFERENCES
+# ## Topic or Tool Name
+# * `man command_name`
+# * [website.example.com: Topic Name](https://website.example.com/path)
+# # OTHER
+# Additional notes, implementation details, or important context
 function function_name {
   zparseopts -D -F -- \
     -arg1:=opt_arg1 \
-    -arg2:=opt_arg2
-  # ...
+    -arg2:=opt_arg2 \
+    -optional-arg:=opt_optional_arg
+  # function implementation
 }
 ```
 
-**Complete example with multi-line description:**
+#### Required Sections
+
+At minimum, every function must include:
+
+1. **Brief description** (first line)
+2. **SYNOPSIS** - Function call syntax with argument names
+3. **ARGS** - List of all arguments with descriptions
+4. **EXIT STATUS** - Possible return codes and their meanings
+
+#### Optional Sections
+
+Include these sections when relevant:
+
+- **STDOUT** - What gets written to stdout (use "None" if nothing)
+- **STDERR** - What gets written to stderr
+- **EXAMPLES** - Usage examples (highly recommended)
+- **REFERENCES** - Links to documentation, man pages, or related topics
+- **OTHER** - Additional notes, implementation details, or important context
+
+#### Minimal Example
+
+For simple functions, the minimal documentation is acceptable:
 
 ```zsh
-# Install a single instruction file by creating symlink or copying
-# Tracks installation in array for summary display
-# Usage: install_instruction_file --file-basename "name.md" --source-file "/path/to/source.md"
-function install_instruction_file {
-  zparseopts -D -F -- \
-    -file-basename:=opt_file_basename \
-    -source-file:=opt_source_file
-  # ...
+# Brief one-line description of what function does
+# # SYNOPSIS
+# ```zsh
+# function_name --arg1 <value1>
+# ```
+# # ARGS
+# * `--arg1 <value>` - Description of argument
+# # EXIT STATUS
+# * `0` - Success
+# * `1` - Error: description of error
+# # STDOUT
+# None
+# # STDERR
+# Error messages if operation fails
+function function_name {
+  zparseopts -D -F -- -arg1:=opt_arg1
+  # function implementation
 }
 ```
 
-**Why function comments matter:**
--   **Self-documenting code**: Intent is immediately clear without reading implementation
--   **IDE support**: Most editors use these comments for inline help/autocomplete
--   **Maintenance**: New developers understand function purpose quickly
--   **AI-friendly**: AI agents can better understand and use functions with clear documentation
--   **Consistency**: Uniform documentation style across codebase
+#### Real-World Example
+
+From the `append_unique` function:
+
+```zsh
+# Appends items to a zsh array and removes duplicates.
+# # SYNOPSIS
+# ```zsh
+# append_unique --array <name> <items...>
+# ```
+# # ARGS
+# * `--array <name>` - Name of the array variable to append to (must be an array type)
+# * `<items...>` - One or more items to append to the array
+# # EXIT STATUS
+# * `0` - Success
+# * `1` - Error: --array option missing, array name not found, or variable is not an array
+# # STDOUT
+# None
+# # STDERR
+# * Error messages if arguments are invalid
+# * Warning if array contents appear to have been passed as arguments
+# * Hint for tied arrays if uppercase name provided (PATH, FPATH, etc.)
+# # EXAMPLES
+# ```zsh
+# append_unique --array path /usr/local/bin /opt/homebrew/bin
+# append_unique --array fpath ~/.zsh/functions ~/.oh-my-zsh/custom
+# ```
+# # REFERENCES
+# ## Array subscript `(I)` flag
+# * `man zshparam` (search "Subscript Flags")
+# * [zsh.sourceforge.io: Array-Subscript-Flags](https://zsh.sourceforge.io/Doc/Release/Parameters.html#Array-Subscript-Flags)
+# ## Tied arrays (path/PATH)
+# * `man zshparam` (search "Special Parameters")
+# * [zsh.sourceforge.io: Array-Parameters](https://zsh.sourceforge.io/Doc/Release/Parameters.html#Array-Parameters)
+# # OTHER
+# Zsh provides array versions of uppercase colon-delimited environment variables.
+# These special "tied" arrays automatically synchronize with their string counterparts:
+# * `path` ↔ `PATH` - Executable search paths
+# * `fpath` ↔ `FPATH` - Function search paths (for autoload)
+# * `manpath` ↔ `MANPATH` - Manual page search paths
+# * `cdpath` ↔ `CDPATH` - Directory search paths for cd command
+# * `mailpath` ↔ `MAILPATH` - Mail file locations
+function append_unique {
+  # function implementation
+}
+```
+
+#### Why Markdown-Style Documentation
+
+-   **Machine-extractable**: Remove `# ` prefix to get valid markdown documentation
+-   **Human-readable**: Familiar markdown syntax is easy to read in source
+-   **IDE support**: Many editors parse comment blocks for inline help
+-   **Syntax highlighting**: Better Comments extension highlights structure elements
+-   **Consistency**: Uniform documentation style across entire codebase
+-   **AI-friendly**: Clear structure helps AI agents understand function behavior
+-   **Documentation tools**: Compatible with tools like `shdoc` that extract markdown from comments
+
+#### Documentation vs print_usage
+
+**IMPORTANT**: Function documentation is separate from script `print_usage` functions:
+- **Function docs**: Document individual functions with markdown-style comments
+- **`print_usage`**: Document script command-line interface with formatted help text
+- These serve different purposes and should not be confused
 
 ### Function-Level Error Handling
 
