@@ -1,7 +1,10 @@
 
 
 
-# Add comments
+# write
+
+
+# Add comments requirement to zsh
 
 
 # When running terminal commands

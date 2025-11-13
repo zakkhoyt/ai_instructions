@@ -474,12 +474,12 @@ function create_dev_symlink {
 
 # Update VS Code workspace file to include the development directory
 # Adds the dev folder as a workspace folder if not already present
-# Usage: update_vscode_workspace --dev-link-name ".ai"
+# Usage: update_vscode_workspace --user-ai-dir "/Users/user/.ai"
 function update_vscode_workspace {
   zparseopts -D -F -- \
-    -dev-link-name:=opt_dev_link_name
+    -user-ai-dir:=opt_user_ai_dir
   
-  local dev_link_name="${opt_dev_link_name[2]}"
+  local user_ai_dir_path="${opt_user_ai_dir[2]}"
   
   log_info "Updating VS Code workspace configuration..."
   
@@ -489,16 +489,108 @@ function update_vscode_workspace {
     return 0
   fi
   
-  # Find .code-workspace file (should only be one at repo root)
-  local workspace_file
-  workspace_file=$(find "$target_dir" -maxdepth 1 -name "*.code-workspace" -type f 2>/dev/null | head -1)
+  # Find all .code-workspace files at repo root
+  local workspace_files
+  workspace_files=(${(f)"$(find "$target_dir" -maxdepth 1 -name "*.code-workspace" -type f 2>/dev/null)"})
   
-  if [[ -z "$workspace_file" ]]; then
-    log_debug "No .code-workspace file found in repository root"
+  if [[ ${#workspace_files[@]} -eq 0 ]]; then
+    log_info "No .code-workspace file found in repository root - skipping workspace update"
     return 0
   fi
   
-  log_debug "Found workspace file: $workspace_file"
+  local workspace_file
+  
+  if [[ ${#workspace_files[@]} -eq 1 ]]; then
+    workspace_file="${workspace_files[1]}"
+    log_debug "Found workspace file: $workspace_file"
+  else
+    # Multiple workspace files - prompt user to select
+    log_info "Found ${#workspace_files[@]} workspace files:"
+    echo ""
+    
+    # Sort by modification time (newest first) and build selection menu
+    local -a sorted_files
+    local -a file_mtimes
+    
+    for file in "${workspace_files[@]}"; do
+      local mtime
+      mtime=$(stat -f "%m" "$file" 2>/dev/null || stat -c "%Y" "$file" 2>/dev/null)
+      file_mtimes+=("$mtime:$file")
+    done
+    
+    # Sort by mtime descending (newest first)
+    sorted_files=(${(On)file_mtimes[@]})
+    
+    local file_index=1
+    local -a display_files
+    
+    for entry in "${sorted_files[@]}"; do
+      local file="${entry#*:}"
+      local file_basename="${file:t}"
+      display_files+=("$file")
+      printf "%2d. %s\n" "$file_index" "$file_basename"
+      ((file_index++))
+    done
+    
+    echo ""
+    echo "Enter selection (default: 1 - most recently modified): "
+    echo -n "1"
+    
+    read -r user_selection
+    
+    # Use pre-filled "1" if user just pressed Enter
+    if [[ -z "$user_selection" ]]; then
+      user_selection="1"
+      log_debug "Using pre-selected workspace file: 1"
+    fi
+    
+    # Validate selection
+    if [[ ! "$user_selection" =~ ^[0-9]+$ ]] || [[ "$user_selection" -lt 1 ]] || [[ "$user_selection" -gt ${#display_files[@]} ]]; then
+      log_warning "Invalid selection: $user_selection - skipping workspace update"
+      return 0
+    fi
+    
+    workspace_file="${display_files[$user_selection]}"
+    log_debug "Selected workspace file: $workspace_file"
+  fi
+  
+  # Get absolute path for user_ai_dir and the display name
+  local user_ai_dir_absolute="${user_ai_dir_path:A}"
+  local dev_link_name="${user_ai_dir_path:t}"
+  
+  log_debug "User AI directory (absolute): $user_ai_dir_absolute"
+  log_debug "Display name: $dev_link_name"
+  
+  # Check if user_ai_dir already exists in workspace (by comparing absolute paths)
+  log_debug "Checking if user AI directory already in workspace..."
+  
+  # Extract all folder paths from workspace and convert to absolute paths for comparison
+  local existing_paths
+  existing_paths=$(jq -r '.folders[]?.path // empty' "$workspace_file" 2>/dev/null)
+  
+  if [[ -n "$existing_paths" ]]; then
+    while IFS= read -r folder_path; do
+      # Convert workspace folder path to absolute (relative to workspace file directory)
+      local workspace_dir="${workspace_file:h}"
+      local folder_absolute
+      
+      if [[ "$folder_path" == /* ]]; then
+        # Already absolute path
+        folder_absolute="${folder_path:A}"
+      else
+        # Relative path - resolve relative to workspace file location
+        folder_absolute="${workspace_dir}/${folder_path}"
+        folder_absolute="${folder_absolute:A}"
+      fi
+      
+      log_debug "Comparing: $folder_absolute == $user_ai_dir_absolute"
+      
+      if [[ "$folder_absolute" == "$user_ai_dir_absolute" ]]; then
+        log_success "Development folder already in workspace: $folder_path"
+        return 0
+      fi
+    done <<< "$existing_paths"
+  fi
   
   # Create backup before modification
   local backup_file="${workspace_file}.backup"
@@ -511,22 +603,11 @@ function update_vscode_workspace {
     exit "$exit_code"
   fi
   
-  # Check if the dev folder path already exists in the workspace
-  log_debug "Checking if dev folder already in workspace: $dev_link_name"
-  local folder_exists
-  folder_exists=$(jq --arg folder "$dev_link_name" '.folders[]? | select(.path == $folder) | .path' "$workspace_file" 2>/dev/null)
-  
-  if [[ -n "$folder_exists" ]]; then
-    log_success "Development folder already in workspace: $dev_link_name"
-    rm -f "$backup_file"
-    return 0
-  fi
-  
-  # Add the dev folder to the workspace
-  log_info "Adding development directory to workspace: $dev_link_name"
+  # Add the dev folder to the workspace with absolute path and proper name
+  log_info "Adding development directory to workspace: $user_ai_dir_absolute"
   local temp_workspace="${workspace_file}.tmp"
   
-  command_string="jq --arg folder '$dev_link_name' '.folders += [{\"path\": \$folder, \"name\": \"AI Documentation\"}]' '$workspace_file' > '$temp_workspace'"
+  command_string="jq --arg folder_path '$user_ai_dir_absolute' --arg folder_name '$dev_link_name' '.folders += [{\"path\": \$folder_path, \"name\": \$folder_name}]' '$workspace_file' > '$temp_workspace'"
   if ! execute_or_dry_run "$command_string" "parse and update workspace JSON"; then
     local exit_code=$?
     log_error "[$exit_code] Failed to parse or update workspace JSON"
@@ -557,7 +638,8 @@ function update_vscode_workspace {
   
   # Verify update succeeded (only if not in dry-run mode)
   if [[ -z "${flag_dry_run:-}" && -f "$workspace_file" ]]; then
-    folder_exists=$(jq --arg folder "$dev_link_name" '.folders[]? | select(.path == $folder) | .path' "$workspace_file" 2>/dev/null)
+    local folder_exists
+    folder_exists=$(jq --arg folder "$user_ai_dir_absolute" '.folders[]? | select(.path == $folder) | .path' "$workspace_file" 2>/dev/null)
     if [[ -n "$folder_exists" ]]; then
       log_success "Updated VS Code workspace configuration"
       log_debug "Removing backup file: $backup_file"
@@ -858,8 +940,7 @@ fi
 # Add development directory to VS Code workspace if requested
 if [[ -n "${flag_dev_vscode:-}" ]]; then
   echo ""
-  local dev_link_name="${user_ai_dir:t}"
-  update_vscode_workspace --dev-link-name "$dev_link_name"
+  update_vscode_workspace --user-ai-dir "$user_ai_dir"
 fi
 
 # Display interactive menu

@@ -120,6 +120,84 @@ This way the user has only to press enter to update the files/links -->
 
 ---
 
+# `.github/copilot-instructions.md`
+When using this script to set up another repository it does configure that repo with .github/instructions, but does not add/link/copy a `.github/copilot-instructions.md`. 
+
+
+Here's one idea i had for solving this. 
+Add a new arg flag, where when set the script will (after handling the instruction files):
+* check if copilot cli is installed (prompt to install if not (wrap that in a function))
+* use copilot cli to:
+  * read the repository
+  * read the instrutions that this script has already set up
+  * set up `.github/copilot-instructions.md` 
+
+
+LMK what you think. Are there better ways to do this? Ask me questions /
+
+
+
+
 * [ ] New arg to add custom specs to:
   * [ ] `--dev-link`: Add additional `[--dev-link-name <dir_name>]` which has a default value of the last path component of `$user_ai_dir`. When creating the symlink, use this value for the directory name of the sym link. This allows the user to control what the sym link directory name is in their repo
   * [ ] `--dev-vscode`: : Add additional `[--dev-vscode-name <dir_name>]` which has a default value of the last path component of `$user_ai_dir`. When creating the folder name in VSCode, use this value for the folder name. This allows the user to control what the sym link directory name is in their repo
+
+
+
+
+
+<!-- 
+
+The script `scripts/configure_ai_instructions.zsh` is mostly working as expected. I've noticed some problems with the `--dev-vscode` arg. It's not quite working as expected. 
+
+* should modify the first *.code-workspace file found. 
+  * If none are found, print that none were found then move on without modifying the workspace
+  * If multiple are found, prompt the user which to use
+  * if only 1 found, modify that one. 
+* When adding the dir to the workspace file, the `"path"` to `$user_ai_dir` should be absolute, if possible.  (in the example below it's relative: `"../../../../../.ai"`)
+* The `"name"` property should be set along side `"path"`, and it should be set it should be set to the the last path compontent of `$user_ai_dir` is. In this example it should be `.ai`
+* This script should be smart enough to detect if `user_ai_dir` has already been added to the workspace, then print as much and be done with this step. 
+
+## Example 01
+The workspace file `userscripts.code-workspace` was updated using `cd $HOME/code/repositories/z2k/github/userscripts && ~/.ai/scripts/configure_ai_instructions.zsh --dev-vscode --debug`
+
+See a capture of the terminal I/O here: `scripts/.gitignored/bug01.log`
+
+This is the diff of that at file after running the script
+
+* Problem 1: The path to `$user_ai_dir` is completely wrong.
+  * PWD is `$HOME/code/repositories/z2k/github/userscripts`
+  * the relavite path to `$user_ai_dir` is `"path": "../../../../../.ai"`, not `.ai`. Like it's computing what should be `name` and putting it in `path`
+* Problem 2: If the path property were correct, it should be absolute path (if possible)
+  * Ideally: `$HOME/.ai`, falling back to `~/.ai`, falling back to `/Users/zakkhoyt/.ai`
+* Problem 3: The name property is wrong. It should always be the leaf dir name of `path` (or `$user_ai_dir`). Never `"AI Documentation"`
+
+```diff
+   "folders": [
+     {
+       "path": "."
++    },
++    {
++      "path": ".ai",
++      "name": "AI Documentation"
+     }
+   ],
+   "settings": {}
+```
+Ideal diff
+```diff
+   "folders": [
+     {
+       "path": "."
++    },
++    {
++      "path": "/Users/zakkhoyt/.ai",
++      "name": ".ai"
+     }
+   ],
+   "settings": {}
+```
+ -->
+
+
+

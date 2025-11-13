@@ -17,6 +17,7 @@ When writing or modifying **ANY** Python code in this repository, ensure:
 
 - ✅ **Type hints used** - All function parameters and return values annotated
 - ✅ **Docstrings present** - All modules, classes, and functions documented
+- ✅ **Reference links included** - Docstrings include References section for data types, APIs, techniques, and conventions
 - ✅ **Logging configured** - Use Python `logging` module, not `print()` statements
 - ✅ **Debug flag controlled** - Use log levels (DEBUG, INFO, WARNING, ERROR) appropriately
 - ✅ **PEP 8 compliant** - Follow Python style guide for formatting
@@ -414,6 +415,10 @@ def function(arg1: str, arg2: int) -> bool:
     
     Raises:
         ValueError: Description of when raised
+    
+    References:
+        - arg1 documentation: https://example.com/docs/arg1
+        - Return format specification: https://example.com/docs/return-format
     """
 ```
 
@@ -441,8 +446,203 @@ def function(arg1: str, arg2: int) -> bool:
     ------
     ValueError
         Description of when raised
+    
+    References
+    ----------
+    - arg1 documentation: https://example.com/docs/arg1
+    - Return format specification: https://example.com/docs/return-format
     """
 ```
+
+### Reference Links in Docstrings
+
+**ALWAYS include a `References` section in docstrings** when applicable. Reference links provide context and allow readers to understand data types, APIs, techniques, and conventions used in the function.
+
+#### What to Reference
+
+Include links to:
+
+1. **Input/Output Data Types**: 
+   - Custom data structures, formats, or schemas
+   - Third-party library data types (e.g., pandas DataFrame, numpy arrays)
+   - File format specifications (JSON, CSV, Parquet, etc.)
+
+2. **Third-Party APIs**:
+   - REST API documentation
+   - SDK/library documentation
+   - Authentication mechanisms
+
+3. **Techniques and Algorithms**:
+   - Academic papers or articles
+   - Algorithm descriptions
+   - Mathematical formulas or statistical methods
+
+4. **Conventions and Standards**:
+   - Industry standards (ISO, RFC, etc.)
+   - Internal project conventions
+   - Data format specifications
+
+#### Examples
+
+**Example 1: Data Processing with Pandas**
+```python
+import pandas as pd
+from typing import Dict
+
+def aggregate_workflow_metrics(df: pd.DataFrame) -> Dict[str, float]:
+    """
+    Aggregate workflow execution metrics by workflow file.
+    
+    Calculates mean duration, success rate, and execution count for each
+    unique workflow file in the dataset.
+    
+    Args:
+        df: DataFrame with columns: workflow_file, duration_minutes, outcome
+    
+    Returns:
+        Dictionary mapping workflow_file to aggregated metrics
+    
+    Raises:
+        KeyError: If required columns are missing from DataFrame
+    
+    References:
+        - pandas.DataFrame.groupby: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.groupby.html
+        - pandas.DataFrame.agg: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.agg.html
+        - Input JSON schema: See runner_health.zsh lines 540-598
+    
+    Example:
+        >>> df = pd.read_json("health.json")
+        >>> metrics = aggregate_workflow_metrics(df)
+        >>> print(metrics["ios_build.yml"])
+    """
+```
+
+**Example 2: API Integration**
+```python
+import requests
+from typing import List, Dict
+
+def fetch_github_workflow_runs(
+    repo: str,
+    workflow_id: str,
+    token: str
+) -> List[Dict]:
+    """
+    Fetch workflow run history from GitHub Actions API.
+    
+    Retrieves the last 100 workflow runs for the specified workflow,
+    including status, duration, and conclusion.
+    
+    Args:
+        repo: Repository in format "owner/repo"
+        workflow_id: Workflow file name (e.g., "ci.yml")
+        token: GitHub personal access token with repo scope
+    
+    Returns:
+        List of workflow run dictionaries with keys: id, status, conclusion,
+        created_at, updated_at, run_duration_ms
+    
+    Raises:
+        requests.HTTPError: If API request fails
+        ValueError: If repo format is invalid
+    
+    References:
+        - GitHub Actions API - List workflow runs:
+          https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs
+        - Authentication: https://docs.github.com/en/rest/overview/authenticating-to-the-rest-api
+        - Rate limiting: https://docs.github.com/en/rest/overview/rate-limits-for-the-rest-api
+    
+    Example:
+        >>> runs = fetch_github_workflow_runs("owner/repo", "ci.yml", token)
+        >>> print(f"Found {len(runs)} workflow runs")
+    """
+```
+
+**Example 3: Plotly Graphing**
+```python
+import plotly.graph_objects as go
+from pathlib import Path
+
+def create_workflow_timeline(
+    timestamps: list[int],
+    outcomes: list[str],
+    output_path: Path
+) -> None:
+    """
+    Create interactive timeline graph of workflow executions.
+    
+    Generates a Plotly scatter plot showing workflow execution outcomes
+    over time, with color coding for success/failure states.
+    
+    Args:
+        timestamps: Unix epoch timestamps of workflow executions
+        outcomes: Outcome strings ("Succeeded", "Failed", "Cancelled")
+        output_path: Path where HTML graph will be saved
+    
+    Raises:
+        ValueError: If timestamps and outcomes have different lengths
+        OSError: If output_path directory doesn't exist
+    
+    References:
+        - plotly.graph_objects.Scatter: https://plotly.com/python/line-and-scatter/
+        - Plotly color scales: https://plotly.com/python/builtin-colorscales/
+        - Time series in Plotly: https://plotly.com/python/time-series/
+        - GitHub Actions workflow outcomes: 
+          https://docs.github.com/en/actions/managing-workflow-runs/reviewing-workflow-runs
+    
+    Example:
+        >>> timestamps = [1730000000, 1730003600, 1730007200]
+        >>> outcomes = ["Succeeded", "Failed", "Succeeded"]
+        >>> create_workflow_timeline(timestamps, outcomes, Path("timeline.html"))
+    """
+```
+
+**Example 4: Statistical Analysis**
+```python
+from scipy import stats
+import numpy as np
+
+def detect_duration_anomalies(
+    durations: np.ndarray,
+    threshold: float = 2.0
+) -> tuple[np.ndarray, float, float]:
+    """
+    Detect anomalous workflow durations using Z-score method.
+    
+    Identifies workflow executions with durations that are statistical
+    outliers based on Z-score threshold. Uses modified Z-score with
+    median absolute deviation for robustness to outliers.
+    
+    Args:
+        durations: Array of workflow execution durations in minutes
+        threshold: Z-score threshold for anomaly detection (default: 2.0)
+    
+    Returns:
+        Tuple of (anomaly_mask, mean_duration, std_duration):
+            - anomaly_mask: Boolean array where True indicates anomaly
+            - mean_duration: Mean duration across all executions
+            - std_duration: Standard deviation of durations
+    
+    References:
+        - Z-score method: https://en.wikipedia.org/wiki/Standard_score
+        - Modified Z-score (MAD): https://www.itl.nist.gov/div898/handbook/eda/section3/eda35h.htm
+        - scipy.stats.zscore: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.zscore.html
+        - Outlier detection techniques: https://scikit-learn.org/stable/modules/outlier_detection.html
+    
+    Example:
+        >>> durations = np.array([5.2, 5.5, 5.3, 15.0, 5.4])
+        >>> anomalies, mean, std = detect_duration_anomalies(durations)
+        >>> print(f"Found {anomalies.sum()} anomalies")
+    """
+```
+
+#### Guidelines
+
+1. **Be specific**: Link to exact API methods, not just homepage
+2. **Use stable URLs**: Prefer versioned docs or permalink URLs when available
+3. **Include internal references**: Link to related code/docs in the repo
+4. **Keep it relevant**: Only include references that add value
+5. **Update regularly**: Keep links current as APIs/libraries evolve
 
 ### Inline Comments
 
@@ -917,6 +1117,10 @@ def main_function(
     
     Raises:
         ValueError: If arg2 is negative
+    
+    References:
+        - tuple return type: https://docs.python.org/3/library/stdtypes.html#tuple
+        - Related internal function: See _helper_function() in this module
     
     Example:
         >>> main_function("test", 42)
