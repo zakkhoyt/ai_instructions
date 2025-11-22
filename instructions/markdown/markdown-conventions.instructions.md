@@ -339,6 +339,41 @@ Use `1.` for all items (auto-numbering):
 1. Third step
 ```
 
+## Table Formatting
+
+### Column Padding
+
+All markdown tables must be formatted with padded columns to form a literal 2D rectangle in the source code. This improves readability when viewing the raw markdown file.
+
+**Format requirements**:
+1. Calculate the maximum width for each column
+2. Pad all cells to match their column's maximum width
+3. Align separators (pipes) vertically
+4. Use single space padding inside each cell
+
+✅ **Good:**
+```markdown
+| Syntax          | Type            | Example      | Purpose                          |
+| --------------- | --------------- | ------------ | -------------------------------- |
+| `${(flags)var}` | Parameter flags | `${(qq)arr}` | Control expansion behavior       |
+| `${var[sub]}`   | Subscript       | `${arr[1]}`  | Array indexing (square brackets) |
+| `${var:mod}`    | Modifier        | `${path:t}`  | Path/string modification (colon) |
+| `*(qual)`       | Glob qualifier  | `*(/)`       | Filter files in globbing         |
+```
+
+❌ **Bad:**
+```markdown
+| Syntax | Type | Example | Purpose |
+| --- | --- | --- | --- |
+| `${(flags)var}` | Parameter flags | `${(qq)arr}` | Control expansion behavior |
+| `${var[sub]}` | Subscript | `${arr[1]}` | Array indexing (square brackets) |
+```
+
+**Implementation notes**:
+- Use VS Code extension "Format Tables" or similar tools to automatically format tables
+- Manually pad tables when creating or editing if auto-formatting is unavailable
+- Tables should remain readable in both raw markdown and rendered HTML
+
 ## Summary Checklist
 
 When writing or reviewing markdown documentation, verify:
@@ -353,5 +388,6 @@ When writing or reviewing markdown documentation, verify:
 - [ ] Code blocks specify language
 - [ ] Internal links use relative paths
 - [ ] External links have descriptive text
+- [ ] Tables formatted with padded columns (2D rectangle in source)
 
 ````

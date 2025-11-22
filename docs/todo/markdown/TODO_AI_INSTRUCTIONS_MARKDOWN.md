@@ -128,9 +128,32 @@ extension [String] {
 * `https://cli.github.com/).` => [GitHub: GH CLI](https://cli.github.com/). 
 * `https://cli.github.com/manual/gh_api` => [GitHub: GH CLI Manual](https://cli.github.com/manual/gh_api)
 
-# Table of contents
+
+
+
+
+
+<!-- 
+# Table Formatting
+
+```md
+| Syntax          | Type            | Example      | Purpose                          |
+| --------------- | --------------- | ------------ | -------------------------------- |
+| `${(flags)var}` | Parameter flags | `${(qq)arr}` | Control expansion behavior       |
+| `${var[sub]}`   | Subscript       | `${arr[1]}`  | Array indexing (square brackets) |
+| `${var:mod}`    | Modifier        | `${path:t}`  | Path/string modification (colon) |
+| `*(qual)`       | Glob qualifier  | `*(/)`       | Filter files in globbing         |
+| `${var(???)}`   | ❌ INVALID       | -            | Not valid syntax                 |
+``` 
+-->
+
+
 # References
 
-# Format Tables
+Any time a markdown link is added to a document it must 
 
-* add padding and alignment like VScode extension "Format Table"
+# Table of contents
+## Footnotes
+* [GitHub Flavored Markdown: Footnotes](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#footnotes)
+
+
