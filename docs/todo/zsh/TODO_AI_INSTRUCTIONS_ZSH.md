@@ -1,6 +1,19 @@
 
 
 
+
+# zsh expansion
+
+* header expansion statements: (already done)
+* trailing expansion argument: 
+* compound expansion statements `(N/)`
+* expansion prefixes: `^`
+EX: 
+```zsh
+source_dirs=(${^source_dir_candidates}(N/))
+```
+
+
 # docs and help
 
 ## function comments
