@@ -1,42 +1,4 @@
 
-# swift build vs xcodebuild
-* [ ] TODO: always use xcodebuild. 
-* [ ] No force unwrapping ever
-
-
-```zsh
-# Need to specify "My Mac", however you do that with xcodebuild
-xcodebuild build \
-  -workspace Nightlight.xcworkspace \
-  -scheme HatchLoggerMacros \
-  -destination 'platform=macOS' \
-  -configuration Debug
-
-# xcodebuild test \
-#   -scheme HatchLoggerMacrosImplementation \
-#   -destination 'platform=macOS' 
-
-xcodebuild test \
-  -workspace Nightlight.xcworkspace \
-  -scheme HatchLoggerMacros \
-  -destination 'platform=macOS' 2>&1 \
- | tail -50
-
-
-cd /Users/zakkhoyt/code/repositories/hatch/hatch_sleep/1/iOS/hatch-sleep-app && \
-xcodebuild test 
-  -workspace Nightlight.xcworkspace 
-  -scheme HatchLoggerMacrosImplementation 
-  -destination 'platform=macOS' 2>&1 | \
-tail -100
-
-
-
-xcodebuild -workspace Nightlight.xcworkspace -list 2>&1 | grep -i "macro\|logger" | head -20
-```
-
-
-
 # For All
 
 # compile, test, and run tooling
@@ -50,9 +12,35 @@ xcodebuild -workspace Nightlight.xcworkspace -list 2>&1 | grep -i "macro\|logger
   * EX: A swift package with a library target that runs on `macOS` and `iOS`: Since it supports `macOS` then  `swift <tool>` should work
 
 
+For most cases, xcodebuild should be preferred because it works with any swift source type (package, workspace, project) and with any platform target (except `linux)
+
+`swift <tool>` might be the option to use if the Agent machine is `linux` or if the swift code is purely for `macOS` platform. The latter will still work with xcodebuild though. 
+
+
+## xcrun
+`xcrun` works for locating where the correct version of  `swift*` binaries and `xc*` binaries on located on the `macOS` filesystem. 
+Both tool families are shipped with xcode and reside in the same dir: `/Applications/${xcode_version}.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/`
+```zsh
+
+# get absolute path of `tool`
+$ tool='swift'; echo "$(xcrun --find "$tool" 2>/dev/null)"
+
+$ echo "# swift-package:\n$(xcrun --find swift-package 2>/dev/null)";
+# swift-package:
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-package
+```
+
+
+
+
 ## xcodebuild
 
-Always use `xcrun` to locate the relevant binaries: `"$(xcrun --find xcodebuild 2>/dev/null)"`
+> [!NOTE]
+> Agents should always use `xcrun` to locate the relevant binaries vs the binary name itself
+> There are often multiple Xcode versions installed on an iOS dev machine, so it's important that Agents use the right one
+> The relative `xcrun` is set with `xcode-select -s <path>` or equiv
+> EX: `"$(xcrun --find xcodebuild 2>/dev/null)"`
+
 ```zsh
 $ echo "# xcodebuild:\n$(xcrun --find xcodebuild 2>/dev/null)"      
 # xcodebuild:
@@ -63,6 +51,12 @@ $ echo "# xcodebuild:\n$(xcrun --find xcodebuild 2>/dev/null)"
 Always include a `cd` or `pushd` command to enter the workspace dir, project dir, or package dir first. 
 Always pick child most directory possible. EX: Package.swift is preferred over Nightlight.xcworkspace
 ```zsh
+# clean then build
+cd "$PACKAGE_DIR" && \
+"$(xcrun --find xcodebuild 2>/dev/null)" clean build \
+  -scheme "Nightlight_Development" \
+  -destination "platform=iOS Simulator,name=iPhone 16"
+      
 cd "$PACKAGE_DIR" && \
 "$(xcrun --find xcodebuild 2>/dev/null)" test \
   -scheme HatchIoTShadowClient \
@@ -105,7 +99,10 @@ zsh code
 Prefer this order:
 1) macOS native. This only works when the target is being compiled to run on macOS (not catalyst, not designed for iphone)
  * `-destination 'platform=macOS'`
-2) macOS (designed for iphone, catalyst). Most of our iOS projects are configured as `Designed for iPhone` where the iOS binary can be run on `macOS`. This doesn't always work with tests though.
+2) macOS (designed for iphone, catalyst). 
+   * Most of our iOS projects are configured as `Designed for iPhone` where the iOS binary can be run on `My Mac (Designed for iPhone)`. 
+   * [ ] I'm not sure what the `-destination '...'` equivalent is for this option. Please do informat me!
+   * This doesn't always work with tests though.
 3) iOS simulator. Next would be the iOS simulators. These cant' run all types of tests though
    * When specifying an iOS simulator, keep it as general as possible
      * use generic iOS simulator where possible: 
@@ -118,37 +115,57 @@ Prefer this order:
 
 
 ## swift <tool>
+Very similar to the [#xcodebuild](#xcodebuild) section. 
 
-Very similar to the xcodebuild section. 
-
-`xcrun` works for finiding `swift` binaries on `macOS` as well:
+**--help pages**
 ```zsh
-$ echo "# swift-package:\n$(xcrun --find swift-package 2>/dev/null)"
-# swift-package:
-/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-package
+$ "$(xcrun --find swift-package 2>/dev/null)" --help
+$ "$(xcrun --find swift-build 2>/dev/null)" --help
+$ "$(xcrun --find swift-run 2>/dev/null)" --help
+$ "$(xcrun --find swift-test 2>/dev/null)" --help
 ```
+
 
 
 Always include a `cd` or `pushd` command to enter the workspace dir, project dir, or package dir first. 
 
 ```zsh
+
+
+
 cd "$PACKAGE_DIR" && \
-xcodebuild test \
-  -scheme HatchIoTShadowClient \
-  -destination 'generic/platform=iOS' \
-  -configuration Debug \
+"$(xcrun --find swift-build 2>/dev/null)" \
+  --package-path ${PACKAGE_DIR} \
+  --product ${TOOL_NAME}
+
+
+cd "$PACKAGE_DIR" && \
+"$(xcrun --find swift-build 2>/dev/null)" \
+  --package-path ${PACKAGE_DIR} \
+  --product ${TOOL_NAME} \
+  --configuration release \
+  --arch arm64 --arch x86_64
+
+cd "$PACKAGE_DIR" && \
+"$(xcrun --find swift-test 2>/dev/null)" \
+  --package-path ${PACKAGE_DIR} \
+  --product ${TOOL_NAME}
+
 ```
 
 
 
-
-
-
-
-# Agent Must Check its Work
+# AI Agent Must Check their own Swift Changes
 AI agents should **always** validate its code chaanges. Linting the swift code changes is never a good enough solution. 
 1) Unit Tests / Snapshot tests is the most preferrable (capture known good data before the refactory, validate it after the refactory)
 ```zsh
+cd "$PACKAGE_DIR" && \
+"$(xcrun --find xcodebuild 2>/dev/null)" test \
+  -scheme <scheme> \
+  -destination 'generic/platform=iOS' \
+  -configuration Debug
+
+cd "$PACKAGE_DIR" && \
 swift test <testTarget> [args]
 ```
 
@@ -157,15 +174,20 @@ swift test <testTarget> [args]
 swift run <exectuable_target> [args]
 ```
 
-1) If the code is a library or some intermediate code where adding tests is super invovled or not possible, then the code should be validated to compile wihtout errors\x1B[1m
+3) If the code is a library or some intermediate code where adding tests is super invovled or not possible, then the code should be validated to compile wihtout errors\x1B[1m
 ```zsh
 swift build <library> [args]
-``
+```
 
 
-* [ ] When AI agent uses a shell terminal, the word `build` MUST ALWAYS be quoted lest zsh will try to autocorrect it to `.build` which will then prompt the human for input and it becomes a mess. 
+* [ ] When AI agent uses a shell terminal, the word `build` MUST ALWAYS be quoted 
+  * [ ] otherwise `oh-my-zsh` will try to autocorrect it to `.build` which will then prompt the human for input and it becomes a mess. 
     * [ ] TODO: how to disable autocorrect on a per-shell instance basis?
-* [ ] always check your work either with unit tests or `swift run echo_pretty <args>` then inspect the bytes of the output using `xxd` or similar tools 
+      * I jotted down "zsh arg `nocorrection` (SP?)". Have a look in `man zshall` and the `oh-my-zsh` documettation to find a potentisl soluion.
+        * Can AI Agent disable this behavior upon assuming control of the terminal?
+        * Can I create a terminal profile for AI to use? How do I ensure that when AI uses a terminal that I alrady had open that it will switch? 
+* [ ] Agens must aways validate that their changes have not broken any compiling, behavior, etc... 
+  * [ ] either with unit tests or `swift run echo_pretty <args>` then inspect the bytes of the output using `xxd` or similar tools 
 
 
 
@@ -207,28 +229,6 @@ If the swift code being modfified is a refactoring, then the agent should ensure
 
 
 
-# Capture stdout/stderr to a file 
-Let the nature stdout/stderr flow to TTY. If you are monitoring you need ot use `tee` or some other splitter to monitor a duplicate stream. 
-
-You could capture stdout/stderr to a file but then we woudl have to wait for the command to exit... unless you tail that file. 
-
-The long and short is:
-* I want to see the natural output in real time
-* I want the natural output to be retained as a file so yuo dont' have to re-run long running commands ot look for some other string
-* This preserves a history that both of use can refer to
-
-```zsh
-# Bad
-xcodebuild test -workspace Nightlight.xcworkspace -scheme HatchLoggerMacros -destination 'platform=macOS' 2>&1 | grep -A 20 "Test Suite 'LogAllMacroTests'"
-# whoops a test failed. now  AI is going ot want to this which is a huge waste of time
-xcodebuild test -workspace Nightlight.xcworkspace -scheme HatchLoggerMacros -destination 'platform=macOS' 2>&1 | grep -A 20 "Failed"
-```
-
-
-
-
-
-
 
 
 # Lint/Format rules
@@ -241,7 +241,7 @@ xcodebuild test -workspace Nightlight.xcworkspace -scheme HatchLoggerMacros -des
 
 
 # Compiling / Testing
-* [ ] Provide instructions for how to compile
+* [X] ~~*Provide instructions for how to compile*~~ [2025-11-22]
   * quote "build" to avoid zsh autocorrecting
   * [ ] zsharg `nocorrection` (SP?)
   * [ ] HatchModules (all)

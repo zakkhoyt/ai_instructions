@@ -51,11 +51,19 @@ This is a second line.
 
 > [!CAUTION]
 > Advises about risks or negative outcomes of certain actions.
+```
 
 
 
+```mark
 > [!${10:NOTE|TIP|IMPORTANT|WARNING|CAUTION}]
 > ${20:message}
+
+> [!\${10:NOTE}]
+> \${20:message}
+
+> [!\${10:NOTE|TIP|IMPORTANT|WARNING|CAUTION}]
+> \${20:message}
 
 
 ```
