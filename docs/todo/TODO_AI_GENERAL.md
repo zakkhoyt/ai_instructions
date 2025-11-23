@@ -1,4 +1,19 @@
 
+I have some new/rought information that I want to refine then add to this repo's `instructions` folder.
+The general topic involves `zsh` terminal commands, but it's got a lot more to do with Agent behavior.
+It's how i'd like the AI Agent to USE terminal. The end goal is that the agent and myself get more done together.
+
+I don't' think this content belongs in `instructions/zsh/zsh-conventions.instructions.md` as that's more about how I want my scripts to be written. 
+I do think this belongs in a new instruction category / file, maybe `instructions/agent/agent-terminal-conventions.instructions.md`?
+
+Work with me to:
+* [ ] Selecting an appropriate instruction file destination for this data. 
+* [ ] Refine the data (below) so that  AI Agents will best understand it. 
+
+# New Data
+
+````instructions.md
+
 ## Other command line considerations that the AI Agent should take
 
 ### Always store outputs to log files
@@ -31,6 +46,53 @@ but `tee` (tee like app) creates a duplicate stream that the agent can then filt
 # something along the lines of this (def pseudocode)
 some_long_running_command | tee_app 1>&3 2>&4 | tail -n 20 | grep "ERROR"
 ```
+````
+
+
+
+Also, I noticed that `instructions/zsh/zsh-conventions.instructions.md` actually already contains some data that really should be moved to this new file as it's got much more in common with it. 
+I've pasted a copy it here 
+````instructions.md
+### Pager-Aware Command Execution
+
+**CRITICAL for AI Agents**: Many commands output to a pager (like `less`) instead of stdout, which can cause scripts or AI agents to hang indefinitely waiting for user interaction.
+
+**Common commands that use pagers:**
+-   `gh` subcommands (e.g., `gh repo view`, `gh issue view`, `gh pr view`)
+-   `git diff`, `git log` (without `--no-pager`)
+-   `man` pages
+-   `systemctl status`
+-   Any command configured with `PAGER` environment variable
+
+**Solution**: Pipe output to `cat` to bypass the pager and write directly to stdout:
+
+✅ **Good (bypasses pager):**
+```zsh
+gh repo view --json owner --jq '.owner.login' | cat
+git --no-pager diff
+git --no-pager log --oneline
+```
+
+❌ **Bad (opens pager, blocks script):**
+```zsh
+gh repo view --json owner --jq '.owner.login'  # Opens in less
+git diff  # Opens in pager
+```
+
+**Alternative approaches:**
+-   Use `--no-pager` flag when available: `git --no-pager log`
+-   Set environment variable: `GH_PAGER=cat gh repo view`
+-   Disable pager globally (not recommended): `export PAGER=cat`
+
+**When to use `| cat`:**
+-   Running commands in automated scripts
+-   When output needs to be captured in a variable
+-   When piping to another command (like `jq`, `grep`, `awk`)
+-   In any non-interactive context
+````
+
+
+
 
 
 
