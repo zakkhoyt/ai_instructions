@@ -1,9 +1,4 @@
 {
-  "folders": [
-    {
-      "path": "."
-    }
-  ],
   "settings": {
     "chatgpt.lang": "en",
     "chat.agent.thinkingStyle": "collapsedPreview",

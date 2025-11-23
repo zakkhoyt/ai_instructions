@@ -160,43 +160,6 @@ ai_platforms/
     └── .coderabbit.template.yml
 ```
 
-### Secondary idea
-```txt
-.ai/
-├── platforms/
-│   ├── copilot/
-│   │   ├── .github/
-│   │   │   └── copilot-instructions.template.md
-│   │   └── instructions/ # (symlink to ../../../instructions/)
-│   ├── claude/
-│   │   ├── .claude/
-│   │   │   └── settings.template.json
-│   │   └── CLAUDE.template.md
-│   ├── cursor/
-│   │   └── .cursor/
-│   │       └── rules/
-│   │           └── mobile.template.mdc
-│   └── coderabbit/
-│       └── .coderabbit.template.yml
-└── instructions/
-    ├── agent/
-    │   ├── agent-swift-terminal-conventions.instructions.md
-    │   └── agent-terminal-conventions.instructions.md
-    ├── git/
-    │   └── git-branching.instructions.md
-    ├── markdown/
-    │   └── markdown-conventions.instructions.md
-    ├── python/
-    │   ├── python-conventions.instructions.md
-    │   └── python-git-branching.instructions.md
-    ├── swift/
-    │   └── swift-conventions.instructions.md
-    ├── userscript/
-    │   └── userscript-conventions.instructions.md
-    └── zsh/
-        └── zsh-conventions.instructions.md
-```
-
 
 
 

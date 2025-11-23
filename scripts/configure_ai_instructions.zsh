@@ -123,6 +123,7 @@ zparseopts -D -F -- \
   -dry-run=flag_dry_run \
   -dev-link=flag_dev_link \
   -dev-vscode=flag_dev_vscode \
+  -vscode-settings=flag_vscode_settings \
   -regenerate-main=flag_regenerate_main \
   -source-dir:=opt_source_dir \
   -target-dir:=opt_target_dir \
@@ -166,6 +167,13 @@ META OPTIONS
                            (useful for quick access to repo files during development)
     --dev-vscode            Add AI dev directory to VS Code workspace
                            (enables IDE integration for development repo)
+    --vscode-settings       Merge AI workspace settings template into VS Code workspace
+                           - Configures GitHub Copilot chat auto-approvals for terminal commands
+                           - Auto-approves shell syntax: pipes, redirects, variable expansion, etc.
+                           - Auto-approves common commands: grep, sed, awk, jq, find, tee, xargs
+                           - Sets AI agent thinking style and session location preferences
+                           - Creates timestamped backup before modifying workspace file
+                           Template: vscode/workspace-settings.template.json
 
 ENVIRONMENT
     Z2K_AI_DIR             Override default source directory location
@@ -186,6 +194,15 @@ EXAMPLES
 
     # Configure specific target directory
     ./configure_ai_instructions.zsh --target-dir /path/to/project
+
+    # Merge VS Code workspace settings (chat auto-approvals, AI preferences)
+    ./configure_ai_instructions.zsh --vscode-settings
+
+    # Development workflow: link dev directory and add to VS Code workspace
+    ./configure_ai_instructions.zsh --dev-link --dev-vscode
+
+    # Preview changes without modifying files
+    ./configure_ai_instructions.zsh --dry-run
 EOF
 }
 
@@ -351,7 +368,7 @@ function get_file_checksum {
   if [[ -f "$file_path" ]]; then
     shasum -a 256 "$file_path" | cut -d' ' -f1
   else
-    echo ""
+
   fi
 }
 
@@ -379,7 +396,7 @@ function get_stored_checksum {
   if [[ -f "$checksums_file" ]]; then
     grep "^$file_name:" "$checksums_file" | cut -d':' -f2
   else
-    echo ""
+
   fi
 }
 
@@ -517,7 +534,7 @@ function update_vscode_workspace {
   else
     # Multiple workspace files - prompt user to select
     log_info "Found ${#workspace_files[@]} workspace files:"
-    echo ""
+
     
     # Sort by modification time (newest first) and build selection menu
     local -a sorted_files
@@ -543,7 +560,7 @@ function update_vscode_workspace {
       ((file_index++))
     done
     
-    echo ""
+
     echo "Enter selection (default: 1 - most recently modified): "
     echo -n "1"
     
@@ -669,6 +686,82 @@ function update_vscode_workspace {
   fi
 }
 
+# Merge VS Code workspace settings from template into workspace file
+# Preserves existing settings and merges in new ones from template
+# Usage: merge_vscode_workspace_settings
+function merge_vscode_workspace_settings {
+  log_info "Merging VS Code workspace settings..."
+  
+  # Check if jq is available
+  if ! type jq >/dev/null 2>&1; then
+    log_warning "jq not found - skipping workspace settings merge (jq required for JSON manipulation)"
+    return 0
+  fi
+  
+  # Find workspace file
+  local workspace_files
+  workspace_files=(${(f)"$(find "$target_dir" -maxdepth 1 -name "*.code-workspace" -type f 2>/dev/null)"})
+  
+  if [[ ${#workspace_files[@]} -eq 0 ]]; then
+    log_info "No .code-workspace file found - skipping settings merge"
+    return 0
+  fi
+  
+  local workspace_file
+  if [[ ${#workspace_files[@]} -eq 1 ]]; then
+    workspace_file="${workspace_files[1]}"
+  else
+    # Multiple files - use the same one update_vscode_workspace would use (most recently modified)
+    local -a file_mtimes
+    for file in "${workspace_files[@]}"; do
+      local mtime
+      mtime=$(stat -f "%m" "$file" 2>/dev/null || stat -c "%Y" "$file" 2>/dev/null)
+      file_mtimes+=("$mtime:$file")
+    done
+    local sorted_files=(${(On)file_mtimes[@]})
+    workspace_file="${sorted_files[1]#*:}"
+  fi
+  
+  log_debug "Using workspace file: $workspace_file"
+  
+  # Check template file
+  local template_file="$user_ai_dir/vscode/workspace-settings.template.json"
+  if [[ ! -f "$template_file" ]]; then
+    log_error "Template file not found: $template_file"
+    return 1
+  fi
+  
+  # Create backup
+  local backup_file="${workspace_file}.backup.$(date +%Y%m%d_%H%M%S)"
+  log_debug "Creating backup: $backup_file"
+  command_string="cp '$workspace_file' '$backup_file'"
+  if ! execute_or_dry_run "$command_string" "backup workspace file"; then
+    log_error "Failed to create backup"
+    return 1
+  fi
+  
+  # Merge settings using jq - deeply merge template settings into workspace settings
+  local temp_file="$(mktemp)"
+  if ! jq -s '.[0] * {settings: ((.[0].settings // {}) * (.[1].settings // {}))}' \
+    "$workspace_file" "$template_file" > "$temp_file" 2>/dev/null; then
+    log_error "Failed to merge settings with jq"
+    rm -f "$temp_file"
+    return 1
+  fi
+  
+  # Move merged file into place
+  command_string="mv '$temp_file' '$workspace_file'"
+  if ! execute_or_dry_run "$command_string" "update workspace with merged settings"; then
+    log_error "Failed to update workspace file"
+    rm -f "$temp_file"
+    return 1
+  fi
+  
+  log_success "Merged workspace settings from template"
+  log_debug "Removing backup file: $backup_file"
+  rm -f "$backup_file"
+}
+
 # Update .gitignore to ignore the development directory symlink
 # Adds the dev folder to .gitignore if not already present
 # Usage: update_gitignore --dev-link-name ".ai"
@@ -765,13 +858,13 @@ function synthesize_copilot_instructions {
   # Check if output file exists and --regenerate-main wasn't passed
   if [[ -f "$output_file" ]] && [[ -z "${flag_regenerate_main:-}" ]]; then
     # Prompt user for update
-    echo ""
+
     log_info "File exists: $output_file"
     echo "Options:"
     echo "  1. Update instruction file list only (preserve user edits)"
     echo "  2. Skip (do nothing)"
     echo "  3. Regenerate entire file from template (lose user edits)"
-    echo ""
+
     read -r "response?Enter choice [1]: "
     response="${response:-1}"
     
@@ -941,7 +1034,6 @@ function update_instruction_list {
 # Usage: display_menu
 function display_menu {
   log_info "Available instruction files:"
-  echo ""
   
   # Get list of instruction files recursively
   local instruction_files
@@ -986,13 +1078,11 @@ function display_menu {
     ((file_index++))
   done
   
-  echo ""
   echo "Status Legend:"
   echo "  [ ] Not installed    [S] Symlinked (current)"
   echo "  [C] Copied (current) [O] Copied (outdated)"
   echo "  [M] Copied (modified)[U] Copied (unknown)"
   echo "  [?] Wrong symlink target"
-  echo ""
   
   # Build pre-filled selection string from already-installed files
   local default_selection
@@ -1144,7 +1234,6 @@ log_info "Configuration type: $configure_type"
 
 # Create development directory symlink and update .gitignore if requested
 if [[ -n "${flag_dev_link:-}" ]]; then
-  echo ""
   local dev_link_name="${user_ai_dir:t}"
   create_dev_symlink
   update_gitignore --dev-link-name "$dev_link_name"
@@ -1152,20 +1241,23 @@ fi
 
 # Add development directory to VS Code workspace if requested
 if [[ -n "${flag_dev_vscode:-}" ]]; then
-  echo ""
   update_vscode_workspace --user-ai-dir "$user_ai_dir"
+fi
+
+# Merge VS Code workspace settings if requested
+if [[ -n "${flag_vscode_settings:-}" ]]; then
+  merge_vscode_workspace_settings
 fi
 
 # Synthesize main instruction file for copilot platform (only if it doesn't exist)
 if [[ "$ai_platform" == "copilot" ]] && [[ ! -f "$ai_platform_instruction_file" ]]; then
-  echo ""
   synthesize_copilot_instructions
 fi
 
 # Display interactive menu
 display_menu
 
-set -x
+set +x
 # Regenerate checksums file based on currently installed copied files
 if [[ -z "${flag_dry_run:-}" ]]; then
   log_debug "Regenerating checksums file: $checksums_file"
@@ -1201,7 +1293,6 @@ fi
 
 # Update copilot-instructions.md with newly installed files
 if [[ "$ai_platform" == "copilot" ]] && [[ ${#installed_files[@]} -gt 0 ]]; then
-  echo ""
   log_info "Updating copilot-instructions.md with installed files..."
   update_instruction_list
   log_success "Updated instruction file list"
@@ -1213,8 +1304,7 @@ else
   log_success "AI instruction configuration complete!"
 fi
 
-# Show summary of installed files
-echo ""
+# Show summary of installed file
 if [[ ${#installed_files[@]} -gt 0 ]]; then
   local action_verb
   if [[ "$configure_type" == "symlink" ]]; then
@@ -1241,8 +1331,7 @@ else
   log_info "No files were installed"
 fi
 
-# Show next steps
-echo ""
+# Show next step
 log_info "Next steps:"
 case "$ai_platform" in
   copilot)
