@@ -164,19 +164,16 @@ cd "$PACKAGE_DIR" && \
   -scheme <scheme> \
   -destination 'generic/platform=iOS' \
   -configuration Debug
-
-cd "$PACKAGE_DIR" && \
-swift test <testTarget> [args]
 ```
 
 2) If the code is an app or an executableTarget then Agent can run the binary
 ```zsh
-swift run <exectuable_target> [args]
+"$(xcrun --find swift-run 2>/dev/null)" <exectuable_target> [args]
 ```
 
 3) If the code is a library or some intermediate code where adding tests is super invovled or not possible, then the code should be validated to compile wihtout errors\x1B[1m
 ```zsh
-swift build <library> [args]
+"$(xcrun --find swift-build 2>/dev/null)" <library> [args]
 ```
 
 
@@ -200,33 +197,35 @@ If the swift code being modfified is a refactoring, then the agent should ensure
 * Aagent should modify the target to depend on pointfreeco's snapshot testing library by adding it to the `dependencies` section of `Package.swift` as well as to `testTarget.dependencies`
 * Agent should also add snapshot tests to exercise the code that will be refactored
 - [ ] **Add SnapshotTesting Dependency**: Update `Package.swift` to add a dependency on `https://github.com/pointfreeco/swift-snapshot-testing.git` using something similar to:
-  ```swift
-  dependencies: [
-    .package(
-        url: "https://github.com/pointfreeco/swift-snapshot-testing.git",
-        from: Version(1, 18, 7)
-    ),
-    //...
-  ],
-  ```
+```swift
+dependencies: [
+  .package(
+      url: "https://github.com/pointfreeco/swift-snapshot-testing.git",
+      from: Version(1, 18, 7)
+  ),
+  //...
+],
+```
 - [ ] **Create Test Target**: Add a `testTarget` for echo_pretty in `Package.swift`, for example:
-  ```swift
-  targets: [
-    .testTarget(
-      name: "EchoPrettyTests",
-      dependencies: [
-        "EchoPretty",
-        .product(name: "SnapshotTesting", package: "swift-snapshot-testing")
-      ],
-      swiftSettings: swiftSettings
-    ),
-  ]
-  ```
+```swift
+targets: [
+  .testTarget(
+    name: "EchoPrettyTests",
+    dependencies: [
+      "EchoPretty",
+      .product(name: "SnapshotTesting", package: "swift-snapshot-testing")
+    ],
+    swiftSettings: swiftSettings
+  ),
+]
+```
 
 
 
 
 
+
+--- 
 
 
 

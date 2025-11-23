@@ -155,7 +155,7 @@ This arg is working well as is (when running `scripts/configure_ai_instructions.
 * [ ] when present, and when the script does locate a `*.code-workspace` file, then populate some data into the `settings` dict of that file. 
   * [ ] See `./docs/todo/setup/json/vscode_ai_workspace_settings.json` where I've stored a copy of the data I;d like copied into the target file. 
     * [ ] Let's clean up this source file and relocate it to a more appropriate place.  
-* [ ] when 
+* [ ] This data should be added to the settings file, nto duplicated, and should also respect any key/values taht are pre-exising
 
 
 
