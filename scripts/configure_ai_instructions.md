@@ -1,5 +1,5 @@
 
-
+<!-- 
 Create a script (./configure_ai_instructions.zsh) to help install these ai instructions to a specific folder for a specific AI service. 
 
 Terms:
@@ -68,10 +68,10 @@ Args:
 
 * For each selected instruction, "install" the file according to `configure_type`
     * if `configure_type` == "symlink", then create a symlink from `$user_ai_instructions_dir/<file>` to `$target_instructions_dir/<file>`
-    * if `configure_type` == "copy", then copy the file from `$user_ai_instructions_dir/<file>` to `$target_instructions_dir/<file>`
+    * if `configure_type` == "copy", then copy the file from `$user_ai_instructions_dir/<file>` to `$target_instructions_dir/<file>` -->
 
 ---
-
+<!-- 
 # TODO / Additions
 
 ## Support development of this repo along side the target repo
@@ -88,9 +88,9 @@ ln -s $user_ai_dir $target_dir1
 * [ ] The above turns out to be redundant so let's break ^ into two args
 1. --dev-link: create the symlink and update .gitignore
 2. --dev-vscode: add folder to workspace
+-->
 
-
----
+--- 
 <!-- 
 
 when prsenting the menu to the user, where it is detected that some files have already been linked/copied
@@ -120,7 +120,7 @@ This way the user has only to press enter to update the files/links -->
 
 ---
 
-# Synthesize and install a main `.github/copilot-instructions.md` (or equiv AI root instruction file)
+<!-- # Synthesize and install a main `.github/copilot-instructions.md` (or equiv AI root instruction file)
 
 When a user runs `scripts/configure_ai_instructions.zsh` to configure a repository with AI Instructions, the script does:
 * `mkdir -p .github/instructions`, 
@@ -141,24 +141,6 @@ Add a new arg flag, where when set the script will (after handling the instructi
   * set up `.github/copilot-instructions.md`  -->
 
 
-LMK what you think. Are there better ways to do this? Ask me questions, then let's agree on a plan. 
-
-## Better support for other AI platforms. Both root instruction file and `instructions/**/*`
-```zsh
-ai_platforms/
-├── copilot/
-│   └── copilot-instructions.template.md
-├── claude/
-│   ├── .claude/
-│   │   └── settings.template.json
-│   └── CLAUDE.template.md
-├── cursor/
-│   └── .cursor/
-│       └── rules/
-│           └── mobile.template.mdc
-└── coderabbit/
-    └── .coderabbit.template.yml
-```
 
 
 
@@ -166,12 +148,7 @@ ai_platforms/
 
 
 
-
-
-# Improve `--dev-vscode`
-This arg is working well as is (when running `scripts/configure_ai_instructions.zsh`), but it adds the `~/.ai` folder to the VSCodeWorkspace at the end (appends to the end of the json array). 
-* [ ] Instead insert the `~/.ai` folder in lex order. This is usually going to be first element givne it's index. 
-* [ ] This seems pretty simple to do. LMK if not. 
+<!-- 
 
 # New flag to configure workspace settings for ai chat preferences 
 * [ ] add an additional flag argument to `scripts/configure_ai_instructions.zsh`, say `--vscode-workspace-settings` 
@@ -179,9 +156,14 @@ This arg is working well as is (when running `scripts/configure_ai_instructions.
 * [ ] when present, and when the script does locate a `*.code-workspace` file, then populate some data into the `settings` dict of that file. 
   * [ ] See `./docs/todo/setup/json/vscode_ai_workspace_settings.json` where I've stored a copy of the data I;d like copied into the target file. 
     * [ ] Let's clean up this source file and relocate it to a more appropriate place.  
-* [ ] This data should be added to the settings file, nto duplicated, and should also respect any key/values taht are pre-exising
+* [ ] This data should be added to the settings file, nto duplicated, and should also respect any key/values taht are pre-exising -->
 
 
+<!-- # Improve `--dev-vscode`
+This arg is working well as is (when running `scripts/configure_ai_instructions.zsh`), but it adds the `~/.ai` folder to the VSCodeWorkspace at the end (appends to the end of the json array). 
+* [ ] Instead insert the `~/.ai` folder in lex order. This is usually going to be first element givne it's index. 
+* [ ] This seems pretty simple to do. LMK if not. 
+ -->
 
 <!-- * [ ] New arg to add custom specs to:
   * [ ] `--dev-link`: Add additional `[--dev-link-name <dir_name>]` which has a default value of the last path component of `$user_ai_dir`. When creating the symlink, use this value for the directory name of the sym link. This allows the user to control what the sym link directory name is in their repo
@@ -246,3 +228,25 @@ Ideal diff
 
 
 
+
+
+
+
+LMK what you think. Are there better ways to do this? Ask me questions, then let's agree on a plan.  -->
+
+## Better support for other AI platforms. Both root instruction file and `instructions/**/*`
+```zsh
+ai_platforms/
+├── copilot/
+│   └── copilot-instructions.template.md
+├── claude/
+│   ├── .claude/
+│   │   └── settings.template.json
+│   └── CLAUDE.template.md
+├── cursor/
+│   └── .cursor/
+│       └── rules/
+│           └── mobile.template.mdc
+└── coderabbit/
+    └── .coderabbit.template.yml
+```
