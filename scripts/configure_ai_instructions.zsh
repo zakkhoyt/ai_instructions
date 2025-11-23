@@ -631,11 +631,12 @@ function update_vscode_workspace {
     exit "$exit_code"
   fi
   
-  # Add the dev folder to the workspace with absolute path and proper name
+  # Add the dev folder to the workspace with absolute path and proper name, sorted lexicographically
   log_info "Adding development directory to workspace: $user_ai_dir_absolute"
   local temp_workspace="${workspace_file}.tmp"
   
-  command_string="jq --arg folder_path '$user_ai_dir_absolute' --arg folder_name '$dev_link_name' '.folders += [{\"path\": \$folder_path, \"name\": \$folder_name}]' '$workspace_file' > '$temp_workspace'"
+  # Insert new folder and sort all folders lexicographically by path
+  command_string="jq --arg folder_path '$user_ai_dir_absolute' --arg folder_name '$dev_link_name' '.folders += [{\"path\": \$folder_path, \"name\": \$folder_name}] | .folders |= sort_by(.path)' '$workspace_file' > '$temp_workspace'"
   if ! execute_or_dry_run "$command_string" "parse and update workspace JSON"; then
     local exit_code=$?
     log_error "[$exit_code] Failed to parse or update workspace JSON"
