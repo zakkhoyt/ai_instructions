@@ -863,9 +863,9 @@ function analyze_project_and_populate {
   [[ -z "$build_tool_list" ]] && build_tool_list="(not detected)"
   
   # Replace placeholders in file
-  sed -i '' "s|**Detected Languages:** <!-- AUTO-GENERATED -->|**Detected Languages:** $lang_list|" "$output_file"
-  sed -i '' "s|**Detected Frameworks:** <!-- AUTO-GENERATED -->|**Detected Frameworks:** $framework_list|" "$output_file"
-  sed -i '' "s|**Build Tools:** <!-- AUTO-GENERATED -->|**Build Tools:** $build_tool_list|" "$output_file"
+  sed -i '' "s|\*\*Detected Languages:\*\* <!-- AUTO-GENERATED -->|\*\*Detected Languages:\*\* $lang_list|" "$output_file"
+  sed -i '' "s|\*\*Detected Frameworks:\*\* <!-- AUTO-GENERATED -->|\*\*Detected Frameworks:\*\* $framework_list|" "$output_file"
+  sed -i '' "s|\*\*Build Tools:\*\* <!-- AUTO-GENERATED -->|\*\*Build Tools:\*\* $build_tool_list|" "$output_file"
   
   log_debug "Project analysis complete"
 }
@@ -875,10 +875,10 @@ function analyze_project_and_populate {
 function update_instruction_list {
   local output_file="$ai_platform_instruction_file"
   
-  # Get list of installed instruction files
+  # Get list of installed instruction files (include symlinks)
   local instruction_files=()
   if [[ -d "$target_instructions_dir" ]]; then
-    instruction_files=(${(f)"$(find "$target_instructions_dir" -name "*.instructions.md" -type f | sort)"})
+    instruction_files=(${(f)"$(find "$target_instructions_dir" -name "*.instructions.md" \( -type f -o -type l \) 2>/dev/null | sort)"})
   fi
   
   if [[ ${#instruction_files[@]} -eq 0 ]]; then
@@ -1134,14 +1134,22 @@ if [[ -n "${flag_dev_vscode:-}" ]]; then
   update_vscode_workspace --user-ai-dir "$user_ai_dir"
 fi
 
-# Synthesize main instruction file for copilot platform
-if [[ "$ai_platform" == "copilot" ]]; then
+# Synthesize main instruction file for copilot platform (only if it doesn't exist)
+if [[ "$ai_platform" == "copilot" ]] && [[ ! -f "$ai_platform_instruction_file" ]]; then
   echo ""
   synthesize_copilot_instructions
 fi
 
 # Display interactive menu
 display_menu
+
+# Update copilot-instructions.md with newly installed files
+if [[ "$ai_platform" == "copilot" ]] && [[ ${#installed_files[@]} -gt 0 ]]; then
+  echo ""
+  log_info "Updating copilot-instructions.md with installed files..."
+  update_instruction_list
+  log_success "Updated instruction file list"
+fi
 
 if [[ -n "${flag_dry_run:-}" ]]; then
   log_success "DRY-RUN: AI instruction configuration simulation complete!"

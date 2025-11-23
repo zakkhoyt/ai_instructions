@@ -1,1 +1,1 @@
-/Users/zakkhoyt/.ai/instructions/python/python-conventions.instructions.md
+/Users/zakkhoyt/.ai/ai_platforms/copilot/.github/instructions/python/python-conventions.instructions.md

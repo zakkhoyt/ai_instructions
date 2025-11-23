@@ -1,1 +1,1 @@
-/Users/zakkhoyt/.ai/instructions/python/python-git-branching.instructions.md
+/Users/zakkhoyt/.ai/ai_platforms/copilot/.github/instructions/python/python-git-branching.instructions.md

@@ -1,1 +1,1 @@
-/Users/zakkhoyt/.ai/instructions/agent/agent-terminal-conventions.instructions.md
+/Users/zakkhoyt/.ai/ai_platforms/copilot/.github/instructions/agent/agent-terminal-conventions.instructions.md
