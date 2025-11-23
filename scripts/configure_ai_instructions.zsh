@@ -2,6 +2,14 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2296
 # shellcheck disable=SC1091
+
+source "$HOME/.zsh_home/utilities/.zsh_scripting_utilities" "$0" "$@" > /dev/null
+
+#
+# Debug trap for hanging issues - set DEBUG_HANG=1 to enable
+if [[ -n "${DEBUG_HANG:-}" ]]; then
+  trap 'echo "[TRAP] Line $LINENO in ${FUNCNAME[0]:-main}" >&2' DEBUG
+fi
 #
 # ---- ---- ----  About this Script  ---- ---- ----
 #
@@ -995,22 +1003,21 @@ function display_menu {
     default_selection=""
   fi
   
-  # Prompt user with pre-filled selection
-  echo "Enter selections by space-separated numbers (EX: '1 2'), or 'all': "
-  
-  # Pre-type the default selection (don't press enter)
+  # Prompt user with selection
   if [[ -n "$default_selection" ]]; then
-    # Show user the pre-filled text
-    echo -n "$default_selection"
+    echo "Current selection: $default_selection"
+    echo -n "Press Enter to accept, or type new selection: "
+  else
+    echo -n "Enter selections by space-separated numbers (EX: '1 2'), or 'all': "
   fi
   
-  # Read user input (will append to pre-filled text)
+  # Read user input
   read -r user_selection
   
-  # If user entered nothing but we had pre-filled text, use the pre-filled
+  # If user entered nothing but we had default, use the default
   if [[ -z "$user_selection" && -n "$default_selection" ]]; then
     user_selection="$default_selection"
-    log_debug "Using pre-selected files: $user_selection"
+    log_debug "Using default selection: $user_selection"
   elif [[ -z "$user_selection" && -z "$default_selection" ]]; then
     # User entered nothing and nothing was pre-filled
     log_warning "No files selected - no changes will be made"
@@ -1026,16 +1033,34 @@ function display_menu {
     selected_indices=(${(s: :)user_selection})
   fi
   
-  # Process selections
-  for index in "${selected_indices[@]}"; do
+  # # Process selections
+  # for index in "${selected_indices[@]}"; do
+
+  # selected_indices=("$@")
+  local i
+  slog_se_d "selected_indices.count: ${#selected_indices[@]}"
+  for ((i=0; i<="${#selected_indices[@]}"; i++)); do
+    index="${selected_indices[$i]:-}"
+    if [[ -z "$index" ]]; then 
+      slog_se_d "  \${selected_indices[$i]}: <nil>"
+      continue; 
+    fi
+    slog_se_d "  \${selected_indices[$i]}: $index"
+
+
+
     if [[ "$index" =~ ^[0-9]+$ ]] && [[ "$index" -ge 1 ]] && [[ "$index" -le ${#file_basenames[@]} ]]; then
       local file_basename="${file_basenames[$index]}"
       local file_full_path="${file_full_paths[$index]}"
+      slog_se_d "    calling install_instruction_file"
       install_instruction_file --file-basename "$file_basename" --source-file "$file_full_path"
+      slog_se_d "    did call install_instruction_file"  
     else
       log_warning "Invalid selection: $index"
     fi
   done
+
+  slog_se_d "finished loop in $0"
 }
 
 # ---- ---- ----     File Installation     ---- ---- ----
@@ -1092,11 +1117,8 @@ function install_instruction_file {
         return 1
       fi
       
-      # Update checksum for copy mode (only if not dry-run)
+      # Checksum will be regenerated after menu completes
       if [[ -z "${flag_dry_run:-}" ]]; then
-        local checksum
-        checksum="$(get_file_checksum "$target_file")"
-        update_checksum "$file_basename" "$checksum"
         log_success "Copied $file_basename"
         installed_files+=("$file_basename")
       else
@@ -1142,6 +1164,40 @@ fi
 
 # Display interactive menu
 display_menu
+
+set -x
+# Regenerate checksums file based on currently installed copied files
+if [[ -z "${flag_dry_run:-}" ]]; then
+  log_debug "Regenerating checksums file: $checksums_file"
+  log_debug "Target instructions dir: $target_instructions_dir"
+  
+  # Clear old checksums file
+  echo "" > "$checksums_file"
+  
+  # Scan for copied files (regular files, not symlinks) and regenerate checksums
+  if [[ -d "$target_instructions_dir" ]]; then
+    log_debug "About to run find command..."
+    local copied_files=()
+    copied_files=(${(f)"$(find "$target_instructions_dir" -name "*.instructions.md" -type f 2>/dev/null | sort)"})
+    
+    log_debug "Find command completed"
+    log_debug "Found ${#copied_files[@]} copied files"
+    
+    for file_path in "${copied_files[@]}"; do
+      local file_basename="${file_path:t}"
+      local checksum
+      checksum="$(get_file_checksum "$file_path")"
+      if [[ -n "$checksum" ]]; then
+        echo "$file_basename:$checksum" >> "$checksums_file"
+        log_debug "Added checksum for: $file_basename"
+      fi
+    done
+    
+    if [[ ${#copied_files[@]} -gt 0 ]]; then
+      log_debug "Regenerated checksums for ${#copied_files[@]} copied file(s)"
+    fi
+  fi
+fi
 
 # Update copilot-instructions.md with newly installed files
 if [[ "$ai_platform" == "copilot" ]] && [[ ${#installed_files[@]} -gt 0 ]]; then
