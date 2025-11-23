@@ -1,3 +1,24 @@
+<!-- 
+✅ **COMPLETED** - New instruction file created at `instructions/agent/agent-terminal-conventions.instructions.md`
+
+## Summary
+
+A new instruction file has been created specifically for AI agent terminal command execution behavior:
+
+**Location**: `instructions/agent/agent-terminal-conventions.instructions.md`
+
+**Key Topics Covered**:
+1. **Persist Command Output** - Always save long-running command output to log files
+2. **Real-Time Human Visibility** - Use `tee` so humans can see what's happening
+3. **Avoid Re-Running Long Commands** - Work from saved logs instead of re-executing
+4. **Bypass Pagers** - Use `| cat` or `--no-pager` to prevent hanging
+5. **Log File Naming** - Use timestamped, organized log files
+
+**Migration**: The "Pager-Aware Command Execution" section has been moved from `instructions/zsh/zsh-conventions.instructions.md` to this new file, as it's more relevant to agent behavior than zsh scripting conventions.
+
+---
+
+# Original Notes Below
 
 I have some new/rought information that I want to refine then add to this repo's `instructions` folder.
 The general topic involves `zsh` terminal commands, but it's got a lot more to do with Agent behavior.
@@ -89,7 +110,7 @@ git diff  # Opens in pager
 -   When output needs to be captured in a variable
 -   When piping to another command (like `jq`, `grep`, `awk`)
 -   In any non-interactive context
-````
+```` -->
 
 
 

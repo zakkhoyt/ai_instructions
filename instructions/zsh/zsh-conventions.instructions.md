@@ -2047,43 +2047,6 @@ fi
 
 ## Recommendations
 
-### Pager-Aware Command Execution
-
-**CRITICAL for AI Agents**: Many commands output to a pager (like `less`) instead of stdout, which can cause scripts or AI agents to hang indefinitely waiting for user interaction.
-
-**Common commands that use pagers:**
--   `gh` subcommands (e.g., `gh repo view`, `gh issue view`, `gh pr view`)
--   `git diff`, `git log` (without `--no-pager`)
--   `man` pages
--   `systemctl status`
--   Any command configured with `PAGER` environment variable
-
-**Solution**: Pipe output to `cat` to bypass the pager and write directly to stdout:
-
-✅ **Good (bypasses pager):**
-```zsh
-gh repo view --json owner --jq '.owner.login' | cat
-git --no-pager diff
-git --no-pager log --oneline
-```
-
-❌ **Bad (opens pager, blocks script):**
-```zsh
-gh repo view --json owner --jq '.owner.login'  # Opens in less
-git diff  # Opens in pager
-```
-
-**Alternative approaches:**
--   Use `--no-pager` flag when available: `git --no-pager log`
--   Set environment variable: `GH_PAGER=cat gh repo view`
--   Disable pager globally (not recommended): `export PAGER=cat`
-
-**When to use `| cat`:**
--   Running commands in automated scripts
--   When output needs to be captured in a variable
--   When piping to another command (like `jq`, `grep`, `awk`)
--   In any non-interactive context
-
 ### Array Iteration Patterns
 
 **FIRST PRIORITY**: Avoid loops entirely when Zsh expansion can accomplish the task. Only use loops when expansion is insufficient.
