@@ -250,7 +250,16 @@ nocorrect "$(xcrun --find xcodebuild 2>/dev/null)" \
   -destination "platform=iOS Simulator,name=iPhone 16,OS=18.4" \
   clean test \
   2>&1 | tee ".gitignored/test/package_test_$(date +%Y%m%d_%H%M%S).log"
+
+# Show available destinations for a package scheme
+cd "$PACKAGE_DIR" && \
+nocorrect "$(xcrun --find xcodebuild 2>/dev/null)" \
+  -scheme HatchTerminal-Package \
+  -showdestinations \
+  2>&1 | tee ".gitignored/research/xcodebuild_showdestinations_$(date +%Y%m%d_%H%M%S).log"
 ```
+
+**Note**: The `-Package` scheme suffix is automatically created by Xcode for Swift Packages and works with all xcodebuild commands including `-showdestinations`.
 
 ---
 
@@ -307,6 +316,7 @@ When specifying `-destination` for `xcodebuild`, prefer options in this order:
 Use when target is compiled to run natively on macOS (not Catalyst, not "Designed for iPhone"):
 
 ```zsh
+# macOS platform
 -destination 'platform=macOS'
 ```
 
