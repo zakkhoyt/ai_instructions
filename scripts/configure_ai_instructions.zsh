@@ -115,6 +115,7 @@ zparseopts -D -F -- \
   -dry-run=flag_dry_run \
   -dev-link=flag_dev_link \
   -dev-vscode=flag_dev_vscode \
+  -regenerate-main=flag_regenerate_main \
   -source-dir:=opt_source_dir \
   -target-dir:=opt_target_dir \
   -ai-platform:=opt_ai_platform \
@@ -151,6 +152,8 @@ META OPTIONS
     --help                  Display this help message and exit
     --debug                 Enable debug logging
     --dry-run               Show what would be done without making changes
+    --regenerate-main       Force regeneration of main instruction file from template
+                           (WARNING: This will overwrite any custom edits)
     --dev-link              Create symlink to AI dev directory and update .gitignore
                            (useful for quick access to repo files during development)
     --dev-vscode            Add AI dev directory to VS Code workspace
@@ -195,8 +198,8 @@ configure_type="${opt_configure_type[2]:-symlink}"
 # Detect repository directory (where this script is located)
 script_dir="${0:A:h}"
 repo_dir="${script_dir:h}"  # Parent of scripts/ directory
-repo_instructions_dir="$repo_dir/instructions"
-user_ai_instructions_dir="$user_ai_dir/instructions"
+repo_instructions_dir="$repo_dir/ai_platforms/$ai_platform/.github/instructions"
+user_ai_instructions_dir="$user_ai_dir/ai_platforms/$ai_platform/.github/instructions"
 
 log_debug "script_dir: $script_dir"
 log_debug "repo_dir: $repo_dir"
@@ -734,6 +737,194 @@ function update_gitignore {
   fi
 }
 
+# ---- ---- ----     Template Synthesis     ---- ---- ----
+
+# Synthesize copilot-instructions.md from template with project analysis
+# and list of installed instruction files
+# Usage: synthesize_copilot_instructions
+function synthesize_copilot_instructions {
+  local template_file="$user_ai_dir/ai_platforms/copilot/.github/copilot-instructions.template.md"
+  local output_file="$ai_platform_instruction_file"
+  
+  log_info "Synthesizing copilot-instructions.md"
+  
+  # Check if template exists
+  if [[ ! -f "$template_file" ]]; then
+    log_error "Template file not found: $template_file"
+    return 1
+  fi
+  
+  # Check if output file exists and --regenerate-main wasn't passed
+  if [[ -f "$output_file" ]] && [[ -z "${flag_regenerate_main:-}" ]]; then
+    # Prompt user for update
+    echo ""
+    log_info "File exists: $output_file"
+    echo "Options:"
+    echo "  1. Update instruction file list only (preserve user edits)"
+    echo "  2. Skip (do nothing)"
+    echo "  3. Regenerate entire file from template (lose user edits)"
+    echo ""
+    read -r "response?Enter choice [1]: "
+    response="${response:-1}"
+    
+    case "$response" in
+      1)
+        log_info "Updating instruction file list section..."
+        update_instruction_list
+        return $?
+        ;;
+      2)
+        log_info "Skipping copilot-instructions.md update"
+        return 0
+        ;;
+      3)
+        log_info "Regenerating entire file from template..."
+        # Continue to full regeneration below
+        ;;
+      *)
+        log_error "Invalid choice: $response"
+        return 1
+        ;;
+    esac
+  fi
+  
+  # Full regeneration: copy template and populate
+  log_debug "Copying template to output"
+  if ! cp "$template_file" "$output_file"; then
+    log_error "Failed to copy template"
+    return 1
+  fi
+  
+  # Analyze project and populate template
+  analyze_project_and_populate
+  update_instruction_list
+  
+  log_success "Created: $output_file"
+  return 0
+}
+
+# Analyze target project and populate PROJECT_ANALYSIS section
+# Usage: analyze_project_and_populate
+function analyze_project_and_populate {
+  local output_file="$ai_platform_instruction_file"
+  
+  # Detect languages from file extensions
+  local -A lang_map=(
+    ["swift"]="Swift"
+    ["py"]="Python"
+    ["js"]="JavaScript"
+    ["ts"]="TypeScript"
+    ["go"]="Go"
+    ["rs"]="Rust"
+    ["java"]="Java"
+    ["kt"]="Kotlin"
+    ["rb"]="Ruby"
+    ["php"]="PHP"
+    ["c"]="C"
+    ["cpp"]="C++"
+    ["cs"]="C#"
+    ["sh"]="Shell"
+    ["zsh"]="Zsh"
+  )
+  
+  local detected_languages=()
+  for ext lang in "${(@kv)lang_map}"; do
+    if find "$target_dir" -maxdepth 3 -name "*.$ext" -type f 2>/dev/null | head -n 1 | grep -q .; then
+      detected_languages+=("$lang")
+    fi
+  done
+  
+  # Detect frameworks/tools
+  local detected_frameworks=()
+  [[ -f "$target_dir/Package.swift" ]] && detected_frameworks+=("Swift Package Manager")
+  [[ -f "$target_dir/package.json" ]] && detected_frameworks+=("Node.js/npm")
+  [[ -f "$target_dir/Podfile" ]] && detected_frameworks+=("CocoaPods")
+  [[ -f "$target_dir/Gemfile" ]] && detected_frameworks+=("Ruby/Bundler")
+  [[ -f "$target_dir/requirements.txt" ]] && detected_frameworks+=("Python/pip")
+  [[ -f "$target_dir/Cargo.toml" ]] && detected_frameworks+=("Rust/Cargo")
+  [[ -f "$target_dir/go.mod" ]] && detected_frameworks+=("Go Modules")
+  [[ -f "$target_dir/pom.xml" ]] && detected_frameworks+=("Maven")
+  [[ -f "$target_dir/build.gradle" ]] && detected_frameworks+=("Gradle")
+  
+  # Detect build tools
+  local detected_build_tools=()
+  [[ -f "$target_dir/Makefile" ]] && detected_build_tools+=("Make")
+  [[ -f "$target_dir/CMakeLists.txt" ]] && detected_build_tools+=("CMake")
+  [[ -d "$target_dir/.github/workflows" ]] && detected_build_tools+=("GitHub Actions")
+  
+  # Build replacement strings
+  local lang_list="${(j:, :)detected_languages[@]}"
+  [[ -z "$lang_list" ]] && lang_list="(not detected)"
+  
+  local framework_list="${(j:, :)detected_frameworks[@]}"
+  [[ -z "$framework_list" ]] && framework_list="(not detected)"
+  
+  local build_tool_list="${(j:, :)detected_build_tools[@]}"
+  [[ -z "$build_tool_list" ]] && build_tool_list="(not detected)"
+  
+  # Replace placeholders in file
+  sed -i '' "s|**Detected Languages:** <!-- AUTO-GENERATED -->|**Detected Languages:** $lang_list|" "$output_file"
+  sed -i '' "s|**Detected Frameworks:** <!-- AUTO-GENERATED -->|**Detected Frameworks:** $framework_list|" "$output_file"
+  sed -i '' "s|**Build Tools:** <!-- AUTO-GENERATED -->|**Build Tools:** $build_tool_list|" "$output_file"
+  
+  log_debug "Project analysis complete"
+}
+
+# Update the instruction file list in the REGENERATE section
+# Usage: update_instruction_list
+function update_instruction_list {
+  local output_file="$ai_platform_instruction_file"
+  
+  # Get list of installed instruction files
+  local instruction_files=()
+  if [[ -d "$target_instructions_dir" ]]; then
+    instruction_files=(${(f)"$(find "$target_instructions_dir" -name "*.instructions.md" -type f | sort)"})
+  fi
+  
+  if [[ ${#instruction_files[@]} -eq 0 ]]; then
+    log_warning "No instruction files installed yet"
+    return 0
+  fi
+  
+  # Build markdown list
+  local file_list_lines=()
+  for file_path in "${instruction_files[@]}"; do
+    local file_basename="${file_path:t}"
+    local relative_path=".github/instructions/$file_basename"
+    local display_name="${file_basename%.instructions.md}"
+    display_name="${display_name//-/ }"
+    display_name="${(C)display_name}"  # Capitalize words
+    file_list_lines+=("- [$display_name]($relative_path)")
+  done
+  
+  # Create temp file with new content
+  local temp_file="$(mktemp)"
+  local in_regenerate_section=false
+  
+  while IFS= read -r line; do
+    if [[ "$line" == "<!-- AI_INSTRUCTIONS_REGENERATE_START -->" ]]; then
+      echo "$line" >> "$temp_file"
+      echo "<!-- This section is automatically updated by configure_ai_instructions.zsh -->" >> "$temp_file"
+      echo "<!-- Do not manually edit between these markers -->" >> "$temp_file"
+      echo "" >> "$temp_file"
+      for file_line in "${file_list_lines[@]}"; do
+        echo "$file_line" >> "$temp_file"
+      done
+      echo "" >> "$temp_file"
+      in_regenerate_section=true
+    elif [[ "$line" == "<!-- AI_INSTRUCTIONS_REGENERATE_END -->" ]]; then
+      echo "$line" >> "$temp_file"
+      in_regenerate_section=false
+    elif [[ "$in_regenerate_section" == false ]]; then
+      echo "$line" >> "$temp_file"
+    fi
+  done < "$output_file"
+  
+  # Replace original file
+  mv "$temp_file" "$output_file"
+  log_debug "Updated instruction file list"
+}
+
 # ---- ---- ----     Interactive Menu     ---- ---- ----
 
 # Display menu of available instruction files and process user selections
@@ -941,6 +1132,12 @@ fi
 if [[ -n "${flag_dev_vscode:-}" ]]; then
   echo ""
   update_vscode_workspace --user-ai-dir "$user_ai_dir"
+fi
+
+# Synthesize main instruction file for copilot platform
+if [[ "$ai_platform" == "copilot" ]]; then
+  echo ""
+  synthesize_copilot_instructions
 fi
 
 # Display interactive menu

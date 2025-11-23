@@ -143,6 +143,67 @@ Add a new arg flag, where when set the script will (after handling the instructi
 
 LMK what you think. Are there better ways to do this? Ask me questions, then let's agree on a plan. 
 
+## Better support for other AI platforms. Both root instruction file and `instructions/**/*`
+```zsh
+ai_platforms/
+├── copilot/
+│   └── copilot-instructions.template.md
+├── claude/
+│   ├── .claude/
+│   │   └── settings.template.json
+│   └── CLAUDE.template.md
+├── cursor/
+│   └── .cursor/
+│       └── rules/
+│           └── mobile.template.mdc
+└── coderabbit/
+    └── .coderabbit.template.yml
+```
+
+### Secondary idea
+```txt
+.ai/
+├── platforms/
+│   ├── copilot/
+│   │   ├── .github/
+│   │   │   └── copilot-instructions.template.md
+│   │   └── instructions/ # (symlink to ../../../instructions/)
+│   ├── claude/
+│   │   ├── .claude/
+│   │   │   └── settings.template.json
+│   │   └── CLAUDE.template.md
+│   ├── cursor/
+│   │   └── .cursor/
+│   │       └── rules/
+│   │           └── mobile.template.mdc
+│   └── coderabbit/
+│       └── .coderabbit.template.yml
+└── instructions/
+    ├── agent/
+    │   ├── agent-swift-terminal-conventions.instructions.md
+    │   └── agent-terminal-conventions.instructions.md
+    ├── git/
+    │   └── git-branching.instructions.md
+    ├── markdown/
+    │   └── markdown-conventions.instructions.md
+    ├── python/
+    │   ├── python-conventions.instructions.md
+    │   └── python-git-branching.instructions.md
+    ├── swift/
+    │   └── swift-conventions.instructions.md
+    ├── userscript/
+    │   └── userscript-conventions.instructions.md
+    └── zsh/
+        └── zsh-conventions.instructions.md
+```
+
+
+
+
+
+
+
+
 
 # Improve `--dev-vscode`
 This arg is working well as is (when running `scripts/configure_ai_instructions.zsh`), but it adds the `~/.ai` folder to the VSCodeWorkspace at the end (appends to the end of the json array). 
