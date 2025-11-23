@@ -1,0 +1,1 @@
+/Users/zakkhoyt/code/repositories/hatch/hatch_mobile/HatchTerminal/Sources/EchoPretty/docs/echo_pretty_ai.md
