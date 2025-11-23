@@ -120,27 +120,48 @@ This way the user has only to press enter to update the files/links -->
 
 ---
 
-# `.github/copilot-instructions.md`
-When using this script to set up another repository it does configure that repo with .github/instructions, but does not add/link/copy a `.github/copilot-instructions.md`. 
+# Synthesize and install a main `.github/copilot-instructions.md` (or equiv AI root instruction file)
 
+When a user runs `scripts/configure_ai_instructions.zsh` to configure a repository with AI Instructions, the script does:
+* `mkdir -p .github/instructions`, 
+* Copy or linke the files from this repo's `instructions/**` to  `.github/instructions/**`
+* [ ] However this excludes the main instuction file which for CoPilot is `.github/copilot-instructions.md`
+* [ ] Should we create a committed copy in this repository? Where to store it?. 
+    * [ ] Perhaps: `mkdir -p ai_platform/copilot; touch ai_platform/copilot/.github/copilot-instructions.md`
+    * [ ] Perhaps: `mkdir -p ai_agent_files; mv instructions ai_agent_files; touch ai_agent_files/copilot-instructions.md`
+* [ ] or should `scripts/configure_ai_instructions.zsh` create a cusomt one based on analyzing whwat's in the dest repo?   
+* [ ] Dependiong on what we decide we might add base instructions for the otehr AI platforms
 
-Here's one idea i had for solving this. 
+<!-- Here's one idea i had for solving this. 
 Add a new arg flag, where when set the script will (after handling the instruction files):
 * check if copilot cli is installed (prompt to install if not (wrap that in a function))
 * use copilot cli to:
   * read the repository
   * read the instrutions that this script has already set up
-  * set up `.github/copilot-instructions.md` 
+  * set up `.github/copilot-instructions.md`  -->
 
 
-LMK what you think. Are there better ways to do this? Ask me questions /
+LMK what you think. Are there better ways to do this? Ask me questions, then let's agree on a plan. 
+
+
+# Improve `--dev-vscode`
+This arg is working well as is (when running `scripts/configure_ai_instructions.zsh`), but it adds the `~/.ai` folder to the VSCodeWorkspace at the end (appends to the end of the json array). 
+* [ ] Instead insert the `~/.ai` folder in lex order. This is usually going to be first element givne it's index. 
+* [ ] This seems pretty simple to do. LMK if not. 
+
+# New flag to configure workspace settings for ai chat preferences 
+* [ ] add an additional flag argument to `scripts/configure_ai_instructions.zsh`, say `--vscode-workspace-settings` 
+  * (that's kind of a long name. Maybe something to play with `--dev-vscode`?)
+* [ ] when present, and when the script does locate a `*.code-workspace` file, then populate some data into the `settings` dict of that file. 
+  * [ ] See `./docs/todo/setup/json/vscode_ai_workspace_settings.json` where I've stored a copy of the data I;d like copied into the target file. 
+    * [ ] Let's clean up this source file and relocate it to a more appropriate place.  
+* [ ] when 
 
 
 
-
-* [ ] New arg to add custom specs to:
+<!-- * [ ] New arg to add custom specs to:
   * [ ] `--dev-link`: Add additional `[--dev-link-name <dir_name>]` which has a default value of the last path component of `$user_ai_dir`. When creating the symlink, use this value for the directory name of the sym link. This allows the user to control what the sym link directory name is in their repo
-  * [ ] `--dev-vscode`: : Add additional `[--dev-vscode-name <dir_name>]` which has a default value of the last path component of `$user_ai_dir`. When creating the folder name in VSCode, use this value for the folder name. This allows the user to control what the sym link directory name is in their repo
+  * [ ] `--dev-vscode`: : Add additional `[--dev-vscode-name <dir_name>]` which has a default value of the last path component of `$user_ai_dir`. When creating the folder name in VSCode, use this value for the folder name. This allows the user to control what the sym link directory name is in their repo -->
 
 
 

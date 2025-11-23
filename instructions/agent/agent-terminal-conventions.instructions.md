@@ -120,23 +120,30 @@ xcodebuild clean build | grep "ERROR"
 long_running_test | tail -n 10
 ```
 
-### The Solution: Use `tee`
+### The Solution: Use `tee` with stderr redirection
 
-The `tee` command duplicates a stream: one copy to the terminal (for human visibility), another to a file or pipeline (for agent processing):
+The `tee` command duplicates stdin to both the terminal and a file. To capture **both stdout and stderr**, you must redirect stderr to stdout first using `2>&1`:
 
-✅ **Good (human sees everything in real-time):**
+✅ **Good (captures both stdout and stderr):**
 ```zsh
-# Save full output to file AND show in terminal
+# Redirect stderr to stdout BEFORE tee - this captures everything
 log_file=".gitignored/build/build_$(date +%Y%m%d_%H%M%S).log"
 xcodebuild clean build 2>&1 | tee "$log_file"
 
-# Filter after the fact
+# Both stdout and stderr are now in the log file
 grep "ERROR" "$log_file"
+```
+
+❌ **Bad (only captures stdout, stderr lost):**
+```zsh
+# This will show stderr in terminal but NOT save it to file
+xcodebuild clean build | tee "$log_file"
 ```
 
 ✅ **Good (advanced - show in terminal AND filter for agent):**
 ```zsh
 # Human sees full output, agent gets filtered subset
+# Note: 2>&1 must come BEFORE the first pipe
 log_file=".gitignored/build/build_$(date +%Y%m%d_%H%M%S).log"
 xcodebuild clean build 2>&1 | tee "$log_file" | grep --line-buffered "ERROR"
 ```
@@ -159,6 +166,8 @@ gradle build | grep "FAILED"
 
 ### Standard `tee` Patterns
 
+**CRITICAL: Always use `2>&1` before `tee` to capture both stdout and stderr.**
+
 **Capture everything, show everything:**
 ```zsh
 command 2>&1 | tee "$log_file"
@@ -167,6 +176,7 @@ command 2>&1 | tee "$log_file"
 **Capture everything, show filtered subset:**
 ```zsh
 # Requires --line-buffered for real-time grep output
+# The 2>&1 redirect must come BEFORE the first pipe
 command 2>&1 | tee "$log_file" | grep --line-buffered "pattern"
 ```
 
@@ -175,10 +185,13 @@ command 2>&1 | tee "$log_file" | grep --line-buffered "pattern"
 command 2>&1 | tee -a "$log_file"
 ```
 
-**Split stderr and stdout to separate files:**
+**Common mistake to avoid:**
 ```zsh
-# More advanced - captures both streams separately
-(command 2>&1 1>&3 | tee stderr.log) 3>&1 1>&2 | tee stdout.log
+# ❌ BAD - stderr goes to terminal but NOT to file
+command | tee "$log_file"  # Missing 2>&1
+
+# ✅ GOOD - both stdout and stderr captured
+command 2>&1 | tee "$log_file"
 ```
 
 ---
