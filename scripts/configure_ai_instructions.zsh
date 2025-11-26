@@ -5,6 +5,8 @@
 
 source "$HOME/.zsh_home/utilities/.zsh_scripting_utilities" "$0" "$@" > /dev/null
 
+# TODO: zakkhoyt - source boilerplate 
+
 #
 # Debug trap for hanging issues - set DEBUG_HANG=1 to enable
 if [[ -n "${DEBUG_HANG:-}" ]]; then
@@ -132,6 +134,7 @@ zparseopts -D -F -- \
 
 # ---- ---- ----     Help Function     ---- ---- ----
 
+script_basename="${0:A:t}"
 function print_usage {
   cat << 'EOF'
 SYNOPSIS
@@ -187,22 +190,26 @@ EXIT VALUES
 
 EXAMPLES
     # Configure copilot instructions for current directory
-    ./configure_ai_instructions.zsh
+    ./${script_basename}
 
     # Configure claude instructions with copy mode
-    ./configure_ai_instructions.zsh --ai-platform claude --configure-type copy
+    ./${script_basename} --ai-platform claude --configure-type copy
 
     # Configure specific target directory
-    ./configure_ai_instructions.zsh --target-dir /path/to/project
+    ./${script_basename} --target-dir /path/to/project
 
     # Merge VS Code workspace settings (chat auto-approvals, AI preferences)
-    ./configure_ai_instructions.zsh --vscode-settings
+    ./${script_basename} --vscode-settings
 
     # Development workflow: link dev directory and add to VS Code workspace
-    ./configure_ai_instructions.zsh --dev-link --dev-vscode
+    ./${script_basename} --dev-link --dev-vscode
 
     # Preview changes without modifying files
-    ./configure_ai_instructions.zsh --dry-run
+    ./${script_basename} --dry-run
+
+    # Configure a VSCode workspace for as prompt free of an AI Agent experience as possible
+    ~/.ai/scripts/configure_ai_instructions.zsh --dev-vscode --vscode-settings --debug
+    ./${script_basename} --dev-vscode --vscode-settings --debug
 EOF
 }
 
@@ -217,8 +224,8 @@ fi
 # Extract argument values
 user_ai_dir="${opt_source_dir[2]:-${Z2K_AI_DIR:-$HOME/.ai}}"
 target_dir="${opt_target_dir[2]:-$PWD}"
-ai_platform="${opt_ai_platform[2]:-copilot}"
 configure_type="${opt_configure_type[2]:-symlink}"
+ai_platform="${opt_ai_platform[2]:-copilot}"
 
 # Detect repository directory (where this script is located)
 script_dir="${0:A:h}"
@@ -234,12 +241,20 @@ log_debug "target_dir: $target_dir"
 # ---- ---- ----     Input Validation     ---- ---- ----
 
 # Validate AI platform
+typeset ai_platform_name=''
 case "$ai_platform" in
   copilot|github-copilot|github)
     ai_platform="copilot"
+    ai_platform_name="GitHub Copilot"
     ;;
-  claude|cursor|coderabbit)
-    # Valid platforms
+  claude)
+    ai_platform_name="Claude" 
+    ;;
+  cursor)
+    ai_platform_name="Cursor"
+    ;;
+  coderabbit)
+    ai_platform_name="CodeRabbit"
     ;;
   *)
     log_error "Invalid AI platform: $ai_platform"
@@ -581,6 +596,8 @@ function update_vscode_workspace {
     workspace_file="${display_files[$user_selection]}"
     log_debug "Selected workspace file: $workspace_file"
   fi
+  workspace_file="${workspace_file:A}"
+  log_debug "Workspace file (absolute): $workspace_file"
   
   # Get absolute path for user_ai_dir and the display name
   local user_ai_dir_absolute="${user_ai_dir_path:A}"
@@ -635,8 +652,15 @@ function update_vscode_workspace {
   log_info "Adding development directory to workspace: $user_ai_dir_absolute"
   local temp_workspace="${workspace_file}.tmp"
   
-  # Insert new folder and sort all folders lexicographically by path
-  command_string="jq --arg folder_path '$user_ai_dir_absolute' --arg folder_name '$dev_link_name' '.folders += [{\"path\": \$folder_path, \"name\": \$folder_name}] | .folders |= sort_by(.path)' '$workspace_file' > '$temp_workspace'"
+  local workspace_dir="${workspace_file:h}"
+  local workspace_dir_name="${workspace_dir:t}"
+  log_debug "Workspace directory name (for '.' entries): $workspace_dir_name"
+  
+  # Build jq filter for sorting folders lexicographically by name
+  # All variables ($folder_path, $folder_name, $workspace_dir) are passed via --arg
+  local jq_sort_filter='.folders += [{path: $folder_path, name: $folder_name}] | .folders |= map(if .path == "." and ((.name // "") | length) == 0 then .name = $workspace_dir_name else . end) | .folders |= map(.sort_name = (if .name then .name elif .path | startswith(".") then ($workspace_dir + "/" + .path) else .path end)) | .folders |= sort_by(.sort_name) | .folders |= map(del(.sort_name))'
+  
+  command_string="jq --arg folder_path '$user_ai_dir_absolute' --arg folder_name '$dev_link_name' --arg workspace_dir '$workspace_dir' --arg workspace_dir_name '$workspace_dir_name' '$jq_sort_filter' '$workspace_file' > '$temp_workspace'"
   if ! execute_or_dry_run "$command_string" "parse and update workspace JSON"; then
     local exit_code=$?
     log_error "[$exit_code] Failed to parse or update workspace JSON"
@@ -743,12 +767,25 @@ function merge_vscode_workspace_settings {
   
   # Merge settings using jq - deeply merge template settings into workspace settings
   local temp_file="$(mktemp)"
+  
+  # Strip comments from JSON files (handle // and /* */ style comments)
+  # jq doesn't support comments natively, so we preprocess the files
+  local workspace_no_comments="$(mktemp)"
+  local template_no_comments="$(mktemp)"
+  
+  # Remove // single-line comments and /* */ block comments
+  sed -e 's|//.*$||' "$workspace_file" | sed -e ':a' -e 'N' -e '$!ba' -e 's|/\*[^*]*\*\+\([^/*][^*]*\*\+\)*/||g' > "$workspace_no_comments"
+  sed -e 's|//.*$||' "$template_file" | sed -e ':a' -e 'N' -e '$!ba' -e 's|/\*[^*]*\*\+\([^/*][^*]*\*\+\)*/||g' > "$template_no_comments"
+  
   if ! jq -s '.[0] * {settings: ((.[0].settings // {}) * (.[1].settings // {}))}' \
-    "$workspace_file" "$template_file" > "$temp_file" 2>/dev/null; then
+    "$workspace_no_comments" "$template_no_comments" > "$temp_file" 2>/dev/null; then
     log_error "Failed to merge settings with jq"
-    rm -f "$temp_file"
+    rm -f "$temp_file" "$workspace_no_comments" "$template_no_comments"
     return 1
   fi
+  
+  # Clean up temp files
+  rm -f "$workspace_no_comments" "$template_no_comments"
   
   # Move merged file into place
   command_string="mv '$temp_file' '$workspace_file'"
@@ -1334,17 +1371,22 @@ fi
 
 # Show next step
 log_info "Next steps:"
+
 case "$ai_platform" in
   copilot)
-    echo "  • Instructions will be automatically detected by GitHub Copilot"
+    echo "  • Instructions will be automatically detected by $ai_platform_name"
     echo "  • Restart VS Code if needed to ensure instructions are loaded"
     ;;
   claude)
-    echo "  • Instructions may require additional configuration in Claude"
-    echo "  • Check Claude documentation for platform-specific setup"
+    echo "  • Instructions may require additional configuration in $ai_platform_name"
+    echo "  • Check $ai_platform_name documentation for platform-specific setup"
     ;;
   cursor)
-    echo "  • Instructions should be automatically detected by Cursor"
-    echo "  • Restart Cursor if needed to ensure instructions are loaded"
+    echo "  • Instructions should be automatically detected by $ai_platform_name"
+    echo "  • Restart $ai_platform_name if needed to ensure instructions are loaded"
+    ;;
+  coderabbit)
+    echo "  • Instructions should be automatically detected by $ai_platform_name"
+    echo "  • Restart $ai_platform_name if needed to ensure instructions are loaded"
     ;;
 esac

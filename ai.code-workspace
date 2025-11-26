@@ -7,7 +7,7 @@
   "settings": {
     "chatgpt.lang": "en",
     "chat.agent.thinkingStyle": "collapsedPreview",
-    "chat.agentSessionsViewLocation": "view",
+    "chat.agentSessionsViewLocation": "single-view",
     "chat.tools.terminal.ignoreDefaultAutoApproveRules": true,
     "chat.tools.terminal.autoApprove": {
       "*": {

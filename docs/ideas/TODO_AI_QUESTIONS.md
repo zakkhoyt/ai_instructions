@@ -5,17 +5,12 @@
 # Extension for Escaping Code Snippets
 * this idea intersects with `escape_vscode_snippet.zsh`
 
-
-# Markdown Extension
-## Extension for generating markdown links to other markdown:
-* formats: `markdown`, `html`
-* relative file (markdown & html) links
-* absolute path:  
+# Extension for relative file (markdown & html) links
 * autocompletion menu
 * auto-populate `title` and `url`
 
 
-## Extension for markdown validation
+# Extension for markdown validation
 Check all relative links to see if anything is broken
 * file links
 * <a></a>`
@@ -23,7 +18,7 @@ Check all relative links to see if anything is broken
 * `<img>` 
 
 
-## Extension for TOC / Refs / Sibling Files
+# Extension for TOC / Refs / Sibling Files
 * build a better CLI tool with `swift`
 * wrapper around new command line tool
 
