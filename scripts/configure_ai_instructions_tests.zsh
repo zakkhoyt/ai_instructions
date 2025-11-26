@@ -75,11 +75,21 @@ function assert_file_contains {
   fi
 }
 
+function assert_path_not_exists {
+  local path="$1"
+  if [[ ! -e "$path" ]]; then
+    test_pass "Path does not exist (expected): $path"
+  else
+    test_fail "Path unexpectedly exists: $path"
+  fi
+}
+
 function assert_checksums_count {
   local expected="$1"
   local actual=0
-  if [[ -f "$TEST_WORKSPACE/.ai-checksums" ]]; then
-    actual=$(wc -l < "$TEST_WORKSPACE/.ai-checksums" | tr -d ' ')
+  local checksums_file="$TEST_WORKSPACE/.gitignored/.ai-checksums"
+  if [[ -f "$checksums_file" ]]; then
+    actual=$(wc -l < "$checksums_file" | tr -d ' ')
   fi
   if [[ "$actual" == "$expected" ]]; then
     test_pass "Checksums count: expected=$expected, actual=$actual"
@@ -130,7 +140,7 @@ setup_test_workspace
 # Install 3 files
 echo "1 2 3" | "$SCRIPT_PATH" --configure-type symlink 2>&1 | grep -q "configuration complete"
 # Check copilot-instructions.md has 3 entries
-local entry_count=$(grep -c "^- \[" "$TEST_WORKSPACE/.github/copilot-instructions.md" || echo 0)
+entry_count=$(grep -c "^- \[" "$TEST_WORKSPACE/.github/copilot-instructions.md" || echo 0)
 if [[ "$entry_count" == "3" ]]; then
   test_pass "Instruction list has 3 entries"
 else
@@ -167,6 +177,17 @@ if [[ ! -f "$TEST_WORKSPACE/.github/copilot-instructions.md" ]]; then
 else
   test_fail "Dry run created files"
 fi
+cleanup_test_workspace
+
+test_start "Running from subdirectory uses git root"
+setup_test_workspace
+mkdir -p "$TEST_WORKSPACE/.github/instructions"
+(
+  cd "$TEST_WORKSPACE/.github/instructions"
+  printf "1\n" | "$SCRIPT_PATH" --configure-type symlink 2>&1 | grep -q "configuration complete"
+)
+assert_symlink_exists "$TEST_WORKSPACE/.github/instructions/agent-swift-terminal-conventions.instructions.md"
+assert_path_not_exists "$TEST_WORKSPACE/.github/instructions/.github"
 cleanup_test_workspace
 
 # ==================== SUMMARY ====================

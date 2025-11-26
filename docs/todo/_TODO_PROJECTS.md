@@ -20,10 +20,7 @@
 
 # .ai
 
-
-# .ai
-
-write the `.ai-checksums` doc under `.gitignored/` (create dir if necessary)
+* [X] ~~write the `.ai-checksums` doc under `.gitignored/` (create dir if necessary)~~ (2025-11-26)
 
 ## --dev-vscode sort order
 * [X] ~~*folders should be sorted in lex ordering*~~ [2025-11-23]

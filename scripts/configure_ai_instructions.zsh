@@ -100,6 +100,7 @@ ANSI_RED2_FG=${ANSI_RED2_FG:-'\033[91m'}
 ANSI_GREEN2_FG=${ANSI_GREEN2_FG:-'\033[92m'}
 ANSI_YELLOW2_FG=${ANSI_YELLOW2_FG:-'\033[93m'}
 ANSI_INFO_GRAY_FG=${ANSI_INFO_GRAY_FG:-'\033[90m'}
+ANSI_BOLD=${ANSI_BOLD:-'\033[1m'}
 ANSI_DEFAULT=${ANSI_DEFAULT:-'\033[0m'}
 
 # Execute a command or print what would be executed in dry-run mode
@@ -290,6 +291,9 @@ else
     log_warning "Target directory is not git repository root"
     log_warning "Target: $target_dir_absolute"
     log_warning "Git root: $git_root_dir"
+    log_info "Using git root as target directory"
+    target_dir="$git_root_dir"
+    target_dir_absolute="$git_root_dir"
   fi
 fi
 
@@ -374,7 +378,18 @@ fi
 
 # ---- ---- ----     Checksum Management     ---- ---- ----
 
-checksums_file="$target_dir/.ai-checksums"
+checksums_dir="$target_dir/.gitignored"
+checksums_file="$checksums_dir/.ai-checksums"
+
+# Ensure checksums directory exists inside .gitignored
+if [[ ! -d "$checksums_dir" ]]; then
+  log_info "Creating checksums directory: $checksums_dir"
+  command_string="mkdir -p '$checksums_dir'"
+  if ! execute_or_dry_run "$command_string" "create checksums directory"; then
+    log_error "Failed to create checksums directory: $checksums_dir"
+    exit 4
+  fi
+fi
 
 # Calculate SHA256 checksum of a file
 # Usage: get_file_checksum "/path/to/file"
@@ -426,20 +441,35 @@ function get_file_status {
   
   local file_basename="${opt_file_basename[2]}"
   local source_file="${opt_source_file[2]}"
+  local source_file_abs="${source_file:A}"
   local target_file="$target_instructions_dir/$file_basename"
+  local target_file_abs="${target_file:A}"
   
-  if [[ ! -e "$target_file" ]]; then
-    echo "not_installed"
-    return
-  fi
+  log_debug "status-check: $file_basename → target=$target_file"
   
   if [[ -L "$target_file" ]]; then
-    local link_target="${target_file:A}"
-    if [[ "$link_target" == "$source_file" ]]; then
+    local link_target
+    if ! link_target="$(readlink "$target_file" 2>/dev/null)"; then
+      log_debug "status-check:   symlink but unreadable (treat as wrong)"
+      echo "wrong_symlink"
+      return
+    fi
+    if [[ "$link_target" != /* ]]; then
+      link_target="${target_file:h}/$link_target"
+    fi
+    local link_target_abs="${link_target:A}"
+    log_debug "status-check:   symlink target=$link_target_abs"
+    if [[ "$link_target_abs" == "$source_file_abs" ]]; then
       echo "symlinked"
     else
       echo "wrong_symlink"
     fi
+    return
+  fi
+  
+  if [[ ! -e "$target_file" ]]; then
+    log_debug "status-check:   not installed (missing $target_file)"
+    echo "not_installed"
     return
   fi
   
@@ -449,7 +479,7 @@ function get_file_status {
     local target_checksum
     local stored_checksum
     
-    source_checksum="$(get_file_checksum "$source_file")"
+    source_checksum="$(get_file_checksum "$source_file_abs")"
     target_checksum="$(get_file_checksum "$target_file")"
     stored_checksum="$(get_stored_checksum "$file_basename")"
     
@@ -1094,6 +1124,7 @@ function display_menu {
     
     local file_status
     file_status="$(get_file_status --file-basename "$file_basename" --source-file "$file_path")"
+    log_debug "menu-entry: index=$file_index file=$file_basename status=$file_status"
     
     local status_indicator
     case "$file_status" in
@@ -1133,10 +1164,13 @@ function display_menu {
   
   # Prompt user with selection
   if [[ -n "$default_selection" ]]; then
-    echo "Current selection: $default_selection"
-    echo -n "Press Enter to accept, or type new selection: "
+    printf "Default selection (press Enter to accept):\n  %b\n" "${ANSI_BOLD}${default_selection}${ANSI_DEFAULT}"
+    printf "Type a new selection or press Enter to use the default shown above: "
+    log_debug "menu-default: $default_selection"
   else
-    echo -n "Enter selections by space-separated numbers (EX: '1 2'), or 'all': "
+    printf "Default action (press Enter): %b\n" "${ANSI_BOLD}skip (no changes)${ANSI_DEFAULT}"
+    printf "Enter selections by space-separated numbers (EX: '1 2'), or 'all': "
+    log_debug "menu-default: <skip>"
   fi
   
   # Read user input
@@ -1302,7 +1336,7 @@ if [[ -z "${flag_dry_run:-}" ]]; then
   log_debug "Target instructions dir: $target_instructions_dir"
   
   # Clear old checksums file
-  echo "" > "$checksums_file"
+  : > "$checksums_file"
   
   # Scan for copied files (regular files, not symlinks) and regenerate checksums
   if [[ -d "$target_instructions_dir" ]]; then
