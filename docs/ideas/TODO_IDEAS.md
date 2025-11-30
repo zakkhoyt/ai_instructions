@@ -1,17 +1,4 @@
 
-
-
-# Notes for plist/defaults
-Have AI create these docs
-* shell/plist/SCOUT.md
-* shell/plist/DEFAULTS.md
-* shell/plist/PLISTBUDDY.md
-* shell/plist/PLUTIL.md 
-* shell/plist/...
-
-# node based data mining
-* thesaurus / dictionary idea. Get AI to help
-
 # ssh-key
 Read this markdown file which helps to configure a computer to connect to another computer over ssh without using passwords. 
 

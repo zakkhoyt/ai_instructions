@@ -1,0 +1,1 @@
+/Users/zakkhoyt/code/repositories/z2k/github/userscripts/markdown_linker/markdown_linker.user.md
