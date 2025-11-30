@@ -1,1 +1,1 @@
-/Users/zakkhoyt/.ai/ai_platforms/copilot/.github/instructions/swift/swift-conventions.instructions.md
+../../instructions/swift/swift-conventions.instructions.md

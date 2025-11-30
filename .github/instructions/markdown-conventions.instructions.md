@@ -1,1 +1,1 @@
-/Users/zakkhoyt/.ai/ai_platforms/copilot/.github/instructions/markdown/markdown-conventions.instructions.md
+../../instructions/markdown/markdown-conventions.instructions.md

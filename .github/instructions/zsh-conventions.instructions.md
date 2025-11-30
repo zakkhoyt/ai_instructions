@@ -1,1 +1,1 @@
-/Users/zakkhoyt/.ai/ai_platforms/copilot/.github/instructions/zsh/zsh-conventions.instructions.md
+../../instructions/zsh/zsh-conventions.instructions.md

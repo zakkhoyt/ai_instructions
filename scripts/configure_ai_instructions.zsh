@@ -99,9 +99,65 @@ function log_debug {
 ANSI_RED2_FG=${ANSI_RED2_FG:-'\033[91m'}
 ANSI_GREEN2_FG=${ANSI_GREEN2_FG:-'\033[92m'}
 ANSI_YELLOW2_FG=${ANSI_YELLOW2_FG:-'\033[93m'}
+ANSI_BLUE2_FG=${ANSI_BLUE2_FG:-'\033[94m'}
+ANSI_MAGENTA2_FG=${ANSI_MAGENTA2_FG:-'\033[95m'}
+ANSI_CYAN2_FG=${ANSI_CYAN2_FG:-'\033[96m'}
 ANSI_INFO_GRAY_FG=${ANSI_INFO_GRAY_FG:-'\033[90m'}
 ANSI_BOLD=${ANSI_BOLD:-'\033[1m'}
 ANSI_DEFAULT=${ANSI_DEFAULT:-'\033[0m'}
+
+# Render colored/emoji status indicators for menu + legend
+function format_status_indicator {
+  local status_value="$1"
+  local indicator emoji color
+  case "$status_value" in
+    not_installed)
+      indicator="[ ]"
+      color="$ANSI_INFO_GRAY_FG"
+      emoji=""
+      ;;
+    symlinked)
+      indicator="[S]"
+      color="$ANSI_GREEN2_FG"
+      emoji="🔗"
+      ;;
+    copied_current)
+      indicator="[C]"
+      color="$ANSI_BLUE2_FG"
+      emoji="📄"
+      ;;
+    copied_outdated)
+      indicator="[O]"
+      color="$ANSI_YELLOW2_FG"
+      emoji="⏳"
+      ;;
+    copied_modified)
+      indicator="[M]"
+      color="$ANSI_MAGENTA2_FG"
+      emoji="✏️"
+      ;;
+    copied_unknown)
+      indicator="[U]"
+      color="$ANSI_CYAN2_FG"
+      emoji="❔"
+      ;;
+    wrong_symlink)
+      indicator="[?]"
+      color="$ANSI_RED2_FG"
+      emoji="⚠️"
+      ;;
+    *)
+      indicator="[ ]"
+      color="$ANSI_INFO_GRAY_FG"
+      emoji=""
+      ;;
+  esac
+  if [[ -n "$emoji" ]]; then
+    echo "${color}${indicator}${ANSI_DEFAULT} ${emoji}"
+  else
+    echo "${color}${indicator}${ANSI_DEFAULT}"
+  fi
+}
 
 # Execute a command or print what would be executed in dry-run mode
 # Usage: execute_or_dry_run "rm '$file'" "remove file"
@@ -231,8 +287,22 @@ ai_platform="${opt_ai_platform[2]:-copilot}"
 # Detect repository directory (where this script is located)
 script_dir="${0:A:h}"
 repo_dir="${script_dir:h}"  # Parent of scripts/ directory
-repo_instructions_dir="$repo_dir/ai_platforms/$ai_platform/.github/instructions"
-user_ai_instructions_dir="$user_ai_dir/ai_platforms/$ai_platform/.github/instructions"
+
+common_repo_instructions_dir="$repo_dir/instructions"
+platform_repo_instructions_dir="$repo_dir/ai_platforms/$ai_platform/.github/instructions"
+
+common_user_instructions_dir="$user_ai_dir/instructions"
+platform_user_instructions_dir="$user_ai_dir/ai_platforms/$ai_platform/.github/instructions"
+
+if [[ -d "$common_repo_instructions_dir" ]]; then
+  repo_instructions_dir="$common_repo_instructions_dir"
+  user_ai_instructions_dir="$common_user_instructions_dir"
+  log_debug "Using shared instructions directory: $repo_instructions_dir"
+else
+  repo_instructions_dir="$platform_repo_instructions_dir"
+  user_ai_instructions_dir="$platform_user_instructions_dir"
+  log_debug "Shared instructions directory missing; falling back to platform path: $repo_instructions_dir"
+fi
 
 log_debug "script_dir: $script_dir"
 log_debug "repo_dir: $repo_dir"
@@ -1102,6 +1172,13 @@ function update_instruction_list {
 # Usage: display_menu
 function display_menu {
   log_info "Available instruction files:"
+
+  local xtrace_was_on=false
+  if [[ -o xtrace ]]; then
+    xtrace_was_on=true
+    set +x
+    log_debug "Temporarily disabling xtrace for menu rendering"
+  fi
   
   # Get list of instruction files recursively
   local instruction_files
@@ -1122,20 +1199,10 @@ function display_menu {
     file_basenames+=("$file_basename")
     file_full_paths+=("$file_path")
     
-    local file_status
-    file_status="$(get_file_status --file-basename "$file_basename" --source-file "$file_path")"
+    local file_status="$(get_file_status --file-basename "$file_basename" --source-file "$file_path")"
     log_debug "menu-entry: index=$file_index file=$file_basename status=$file_status"
     
-    local status_indicator
-    case "$file_status" in
-      not_installed)   status_indicator="[ ]" ;;
-      symlinked)       status_indicator="[S]" ;;
-      wrong_symlink)   status_indicator="[?]" ;;
-      copied_current)  status_indicator="[C]" ;;
-      copied_outdated) status_indicator="[O]" ;;
-      copied_modified) status_indicator="[M]" ;;
-      copied_unknown)  status_indicator="[U]" ;;
-    esac
+    local status_indicator="$(format_status_indicator "$file_status")"
     
     printf "%2d. %s %s\n" "$file_index" "$status_indicator" "$file_basename"
     
@@ -1148,13 +1215,16 @@ function display_menu {
   done
   
   echo "Status Legend:"
-  echo "  [ ] Not installed    [S] Symlinked (current)"
-  echo "  [C] Copied (current) [O] Copied (outdated)"
-  echo "  [M] Copied (modified)[U] Copied (unknown)"
-  echo "  [?] Wrong symlink target"
+  printf "  %-18s %s\n" "$(format_status_indicator not_installed)" "Not installed"
+  printf "  %-18s %s\n" "$(format_status_indicator symlinked)" "Symlinked (current)"
+  printf "  %-18s %s\n" "$(format_status_indicator copied_current)" "Copied (current)"
+  printf "  %-18s %s\n" "$(format_status_indicator copied_outdated)" "Copied (outdated)"
+  printf "  %-18s %s\n" "$(format_status_indicator copied_modified)" "Copied (modified)"
+  printf "  %-18s %s\n" "$(format_status_indicator copied_unknown)" "Copied (unknown)"
+  printf "  %-18s %s\n" "$(format_status_indicator wrong_symlink)" "Wrong symlink target"
   
   # Build pre-filled selection string from already-installed files
-  local default_selection
+  local default_selection=""
   if [[ ${#installed_indices[@]} -gt 0 ]]; then
     # Join installed indices with spaces
     default_selection="${(j: :)installed_indices[@]}"
@@ -1223,6 +1293,11 @@ function display_menu {
   done
 
   slog_se_d "finished loop in $0"
+
+  if [[ "$xtrace_was_on" == true ]]; then
+    log_debug "Restoring xtrace after menu rendering"
+    set -x
+  fi
 }
 
 # ---- ---- ----     File Installation     ---- ---- ----
@@ -1328,8 +1403,6 @@ fi
 
 # Display interactive menu
 display_menu
-
-set +x
 # Regenerate checksums file based on currently installed copied files
 if [[ -z "${flag_dry_run:-}" ]]; then
   log_debug "Regenerating checksums file: $checksums_file"

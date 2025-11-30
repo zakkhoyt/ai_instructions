@@ -1,6 +1,1 @@
----
-applyTo: "**/*.swift"
----
-
-# Universal Swift Coding Conventions
-
+../../../../../instructions/swift/swift-conventions.instructions.md
