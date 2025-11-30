@@ -145,6 +145,14 @@ extension [String] {
 | `*(qual)`       | Glob qualifier  | `*(/)`       | Filter files in globbing         |
 | `${var(???)}`   | ❌ INVALID       | -            | Not valid syntax                 |
 ``` 
+
+
+
+* [X] ~~Add rectangular table example to markdown instructions~~ (2025-11-30)
+
+
+
+
 -->
 
 
@@ -155,5 +163,6 @@ Any time a markdown link is added to a document it must
 # Table of contents
 ## Footnotes
 * [GitHub Flavored Markdown: Footnotes](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#footnotes)
+
 
 

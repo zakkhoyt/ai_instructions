@@ -374,6 +374,36 @@ All markdown tables must be formatted with padded columns to form a literal 2D r
 - Manually pad tables when creating or editing if auto-formatting is unavailable
 - Tables should remain readable in both raw markdown and rendered HTML
 
+### Example: Rectangular Tables Only
+
+Avoid "jagged" tables where rows contain different numbers of pipes. Even if the rendered HTML looks fine, the raw markdown becomes hard to scan and easy to break during edits.
+
+❌ **Bad (rows have different lengths):**
+```markdown
+| Cut-Like Task | `cut` Example | Equivalent `awk` | Notes |
+| --- | --- | --- | --- |
+| Extract field by delimiter | `cut -d: -f1,3 /etc/passwd` | `awk -F: '{print $1 ":" $3}' /etc/passwd` | `awk` lets you reorder and add text. |
+| Select tab-separated columns | `cut -f2 file.tsv` | `awk -F"\t" '{print $2}' file.tsv` | Quote the tab (`$'\t'` also works). |
+| Handle multiple delimiters | *(requires `tr`/`perl`)* | `awk -F'[,:]' '{print $1, $3}' data.txt` | `cut` can’t use regex separators; `awk` can. |
+| Conditional extraction | *(needs pipeline)* | `awk -F, '$4 == "CA" {print $1, $2}' addresses.csv` | `cut` cannot add conditions. |
+| Preserve spacing when delimiter repeats | `cut -d, -f2` (collapses) | `awk -F, '{print $2}'` | `awk` can inspect empty fields even with consecutive delimiters by setting `FS` and optionally `OFS`. |
+| Trim whitespace around fields | *(needs `sed`)* | `awk -F, '{gsub(/^ *| *$/,"", $2); print $2}' data.csv` | Use `gsub` to clean before printing. |
+| Print field ranges | `cut -d: -f2-4` | `awk -F: '{print $2 ":" $3 ":" $4}'` | `awk` can also loop over fields if range length varies. |
+```
+
+✅ **Good (padded into a rectangle):**
+```markdown
+| Cut-Like Task                           | `cut` Example               | Equivalent `awk`                                        | Notes                                                                                                 |
+| --------------------------------------- | --------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Extract field by delimiter              | `cut -d: -f1,3 /etc/passwd` | `awk -F: '{print $1 ":" $3}' /etc/passwd`               | `awk` lets you reorder and add text.                                                                  |
+| Select tab-separated columns            | `cut -f2 file.tsv`          | `awk -F"\t" '{print $2}' file.tsv`                      | Quote the tab (`$'\t'` also works).                                                                   |
+| Handle multiple delimiters              | *(requires `tr`/`perl`)*    | `awk -F'[,:]' '{print $1, $3}' data.txt`                | `cut` can’t use regex separators; `awk` can.                                                          |
+| Conditional extraction                  | *(needs pipeline)*          | `awk -F, '$4 == "CA" {print $1, $2}' addresses.csv`     | `cut` cannot add conditions.                                                                          |
+| Preserve spacing when delimiter repeats | `cut -d, -f2` (collapses)   | `awk -F, '{print $2}'`                                  | `awk` can inspect empty fields even with consecutive delimiters by setting `FS` and optionally `OFS`. |
+| Trim whitespace around fields           | *(needs `sed`)*             | `awk -F, '{gsub(/^ *| *$/,"", $2); print $2}' data.csv` | Use `gsub` to clean before printing.                                                                  |
+| Print field ranges                      | `cut -d: -f2-4`             | `awk -F: '{print $2 ":" $3 ":" $4}'`                    | `awk` can also loop over fields if range length varies.                                               |
+```
+
 ## Summary Checklist
 
 When writing or reviewing markdown documentation, verify:
