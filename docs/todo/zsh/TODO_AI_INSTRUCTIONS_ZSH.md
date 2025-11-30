@@ -1,36 +1,6 @@
 
 
 
-# step conventions
-Update `instructions/zsh/zsh-conventions.instructions.md` regarding the `step` convention
-* "will" statements should be debug level:  `slog_step_se_d`
-* "success" statement should be debug level: `slog_step_se_d`
-* "warning" statement should be debug level: `slog_step_se_d`
-* "errors" statement should be remain at: `slog_step_se`
-
-Every step that executes a command/script, be sure that:
-* The command is composed as a string variable first
-* the `will`, `error`, `warning`, `success` messages containt that command (decorated with --code/--default)\x1B[1m
-Example:
-
-
-```zsh
-local cmd="swift ${(qqq)SP_SUBCOMMAND} \
-  --sdk ${(qqq)SDK_PATH} \
-  --arch ${(qqq)ARCHITECTURE} \
-  -Xswiftc -target -Xswiftc ${(qqq)TARGET} \
-  ${(qqq)@}"
-
-local -a message_args=("compile code using command: " --code "$cmd" --default)
-slog_step_se_d --context will "Will " "${(j| |)message_args[@]}"
-if ! gh_validate "$IS_DEBUG" > /dev/null 2>&1; then
-  slog_step_se --context error --rval "$rval" "Failed to " "${(j| |)message_args[@]}"
-  exit 1
-fi
-slog_step_se --context success "Did " "Failed to " "${(j| |)message_args[@]}"
-
-```
-
 
 # zsh expansion
 

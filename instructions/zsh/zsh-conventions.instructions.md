@@ -1481,6 +1481,34 @@ slog_step_se --context success "operation completed" --code "$result" --default
 7. **Debug log**: `slog_var_se_d` - Log result variable for debugging
 8. **Success log**: `--context success` - Reports successful completion
 
+### Step Logging Levels and Command Messages
+
+-   **Intent logs (`will`) must use debug level**: Call `slog_step_se_d --context will ...` for "will" statements so routine intent chatter stays hidden unless `--debug` is enabled.
+-   **Success logs must use debug level**: Use `slog_step_se_d --context success ...` to keep success spam out of normal stderr while still available for debugging.
+-   **Warning logs must use debug level**: When treating a failure as non-fatal, report it with `slog_step_se_d --context warning ...`; only true errors stay at non-debug level.
+-   **Error/fatal logs remain at normal severity**: Continue using `slog_step_se --context fatal|error ...` so failures are always visible.
+
+Every step that executes an external command/script must follow this pattern:
+
+1. **Compose the command first** in a string variable (e.g., `local cmd="rsync ..."`). Never inline the command directly inside the `if`/`||` statements without capturing it in a variable.
+2. **Build reusable message arguments** (commonly via an array like `local -a message_args=("sync files with " --code "$cmd" --default)`).
+3. **Use those arguments in every log message** (`will`, `success`, `warning`, `error`) so the exact command (decorated with `--code`/`--default`) is always shown.
+
+Example fatal step with the required logging levels and command handling:
+
+```zsh
+local cmd="swift ${(qqq)SP_SUBCOMMAND} --sdk ${(qqq)SDK_PATH} --arch ${(qqq)ARCHITECTURE} -Xswiftc -target -Xswiftc ${(qqq)TARGET} ${(qqq)@}"
+local -a message_args=("compile code using command: " --code "$cmd" --default)
+
+slog_step_se_d --context will "Will " "${(j| |)message_args[@]}"
+if ! gh_validate "$IS_DEBUG" > /dev/null 2>&1; then
+  local rval=$?
+  slog_step_se --context fatal --exit-code "$rval" "Failed to " "${(j| |)message_args[@]}"
+  exit "$rval"
+fi
+slog_step_se_d --context success "Did " "${(j| |)message_args[@]}"
+```
+
 ### Pattern 1: Fatal Steps (Critical Operations)
 
 Use `--context fatal` when failure should stop script execution:
