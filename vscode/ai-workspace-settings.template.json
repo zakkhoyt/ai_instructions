@@ -81,7 +81,7 @@
         "approve": true,
         "matchCommandLine": true
       },
-      "/`.+`/s": {
+      "/`. +`/s": {
         "approve": true,
         "matchCommandLine": true
       },

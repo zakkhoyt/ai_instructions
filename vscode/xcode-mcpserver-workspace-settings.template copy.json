@@ -1,0 +1,7 @@
+{
+  "settings": {
+    "chat.tools.eligibleForAutoApproval": {
+      "mcp_xcodebuildmcp_*": true
+    }
+  }
+}

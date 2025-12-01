@@ -1,1 +1,1 @@
-../../instructions/swift/swift-conventions.instructions.md
+/Users/zakkhoyt/.ai/instructions/swift/swift-conventions.instructions.md

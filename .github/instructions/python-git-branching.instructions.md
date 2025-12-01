@@ -1,1 +1,1 @@
-../../instructions/python/python-git-branching.instructions.md
+/Users/zakkhoyt/.ai/instructions/python/python-git-branching.instructions.md

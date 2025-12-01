@@ -1,1 +1,1 @@
-../../instructions/zsh/zsh-conventions.instructions.md
+/Users/zakkhoyt/.ai/instructions/zsh/zsh-conventions.instructions.md

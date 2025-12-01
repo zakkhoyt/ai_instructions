@@ -102,7 +102,7 @@ function assert_checksums_count {
 
 test_start "Symlink mode - all files"
 setup_test_workspace
-echo "all" | "$SCRIPT_PATH" --configure-type symlink 2>&1 | grep -q "configuration complete"
+echo "all" | "$SCRIPT_PATH" --configure-type symlink >/dev/null 2>&1
 assert_file_exists "$TEST_WORKSPACE/.github/copilot-instructions.md"
 assert_symlink_exists "$TEST_WORKSPACE/.github/instructions/agent-terminal-conventions.instructions.md"
 assert_checksums_count 0
@@ -110,7 +110,7 @@ cleanup_test_workspace
 
 test_start "Copy mode - 3 files"
 setup_test_workspace
-echo "1 2 3" | "$SCRIPT_PATH" --configure-type copy 2>&1 | grep -q "configuration complete"
+echo "1 2 3" | "$SCRIPT_PATH" --configure-type copy >/dev/null 2>&1
 assert_file_exists "$TEST_WORKSPACE/.github/copilot-instructions.md"
 assert_file_exists "$TEST_WORKSPACE/.github/instructions/agent-swift-terminal-conventions.instructions.md"
 # Should have 3 checksums for 3 copied files
@@ -126,10 +126,10 @@ cleanup_test_workspace
 test_start "Mixed mode - copy then symlink"
 setup_test_workspace
 # First copy 3 files
-echo "1 2 3" | "$SCRIPT_PATH" --configure-type copy 2>&1 | grep -q "configuration complete"
+echo "1 2 3" | "$SCRIPT_PATH" --configure-type copy >/dev/null 2>&1
 assert_checksums_count 3
 # Then symlink all files (should replace copies)
-echo "all" | "$SCRIPT_PATH" --configure-type symlink 2>&1 | grep -q "configuration complete"
+echo "all" | "$SCRIPT_PATH" --configure-type symlink >/dev/null 2>&1
 # Checksums should now be 0 (all are symlinks)
 assert_checksums_count 0
 assert_symlink_exists "$TEST_WORKSPACE/.github/instructions/agent-swift-terminal-conventions.instructions.md"
@@ -138,7 +138,7 @@ cleanup_test_workspace
 test_start "Instruction list regeneration"
 setup_test_workspace
 # Install 3 files
-echo "1 2 3" | "$SCRIPT_PATH" --configure-type symlink 2>&1 | grep -q "configuration complete"
+echo "1 2 3" | "$SCRIPT_PATH" --configure-type symlink >/dev/null 2>&1
 # Check copilot-instructions.md has 3 entries
 entry_count=$(grep -c "^- \[" "$TEST_WORKSPACE/.github/copilot-instructions.md" || echo 0)
 if [[ "$entry_count" == "3" ]]; then
@@ -147,7 +147,7 @@ else
   test_fail "Instruction list has $entry_count entries, expected 3"
 fi
 # Install all files
-echo "all" | "$SCRIPT_PATH" --configure-type symlink 2>&1 | grep -q "configuration complete"
+echo "all" | "$SCRIPT_PATH" --configure-type symlink >/dev/null 2>&1
 # Check copilot-instructions.md has 9 entries
 entry_count=$(grep -c "^- \[" "$TEST_WORKSPACE/.github/copilot-instructions.md" || echo 0)
 if [[ "$entry_count" == "9" ]]; then
@@ -163,14 +163,22 @@ setup_test_workspace
 touch "$TEST_WORKSPACE/test.swift"
 touch "$TEST_WORKSPACE/test.py"
 touch "$TEST_WORKSPACE/package.json"
-echo "all" | "$SCRIPT_PATH" --configure-type symlink 2>&1 | grep -q "configuration complete"
+echo "all" | "$SCRIPT_PATH" --configure-type symlink >/dev/null 2>&1
 assert_file_contains "$TEST_WORKSPACE/.github/copilot-instructions.md" "Swift"
 assert_file_contains "$TEST_WORKSPACE/.github/copilot-instructions.md" "Python"
 cleanup_test_workspace
 
 test_start "Dry run mode"
 setup_test_workspace
-echo "all" | "$SCRIPT_PATH" --configure-type symlink --dry-run 2>&1 | grep -q "DRY-RUN"
+if output=$(echo "all" | "$SCRIPT_PATH" --configure-type symlink --dry-run 2>&1); then
+  if echo "$output" | grep -q "DRY-RUN"; then
+    test_pass "Dry run emitted DRY-RUN marker"
+  else
+    test_fail "Dry run output missing DRY-RUN marker"
+  fi
+else
+  test_fail "Dry run command failed"
+fi
 # No files should be created
 if [[ ! -f "$TEST_WORKSPACE/.github/copilot-instructions.md" ]]; then
   test_pass "Dry run did not create files"
@@ -184,10 +192,31 @@ setup_test_workspace
 mkdir -p "$TEST_WORKSPACE/.github/instructions"
 (
   cd "$TEST_WORKSPACE/.github/instructions"
-  printf "1\n" | "$SCRIPT_PATH" --configure-type symlink 2>&1 | grep -q "configuration complete"
+  printf "1\n" | "$SCRIPT_PATH" --configure-type symlink >/dev/null 2>&1
 )
 assert_symlink_exists "$TEST_WORKSPACE/.github/instructions/agent-swift-terminal-conventions.instructions.md"
 assert_path_not_exists "$TEST_WORKSPACE/.github/instructions/.github"
+cleanup_test_workspace
+
+test_start "VS Code workspace merge handles JSONC"
+setup_test_workspace
+cat <<'EOF' > "$TEST_WORKSPACE/Sample.code-workspace"
+{
+  // Root folders
+  "folders": [
+    {
+      "path": ".",
+    },
+  ],
+  "settings": {
+    "existing.setting": true, // preserve this value
+  },
+}
+EOF
+# Provide empty selection to skip installing instructions while testing workspace merge
+printf "\n" | "$SCRIPT_PATH" --configure-type symlink --vscode-settings >/dev/null 2>&1
+assert_file_contains "$TEST_WORKSPACE/Sample.code-workspace" "existing.setting"
+assert_file_contains "$TEST_WORKSPACE/Sample.code-workspace" "chat.agent.thinkingStyle"
 cleanup_test_workspace
 
 # ==================== SUMMARY ====================

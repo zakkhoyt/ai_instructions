@@ -228,9 +228,45 @@ Ideal diff
 
 
 
+# xcode mcp servvers
+
+`scripts/configure_ai_instructions.zsh` now supports optional VSCode settings tailored for the Xcode MCP server.
+
+* New flag `--mcp-xcode` forces installation of the MCP settings template without prompting.
+* Outside of that flag, the script scans the target directory (after resolving git root) for `Package.swift`, `*.xcworkspace`, or `*.xcodeproj`.
+  * When any of those artifacts are found, the user is prompted to merge the MCP settings.
+  * Only the most recent `.code-workspace` file at the repo root is modified, and a backup is created before changes.
+* Settings come from `vscode/xcode-mcpserver-workspace-settings.template.json`; the merge routine supports JSON comments so template annotations are preserved.
+* The workspace merge uses the same jq-based deep-merge logic as the base AI template, so existing keys are preserved.
+
+
+* [ ] Merge mcp.json files
+
+## Other
+
+* The base workspace template now lives at `vscode/ai-workspace-settings.template.json`; the old filename has been removed.
+* Both the AI workspace template and the Xcode MCP template may include `//` and `/* */` comments. The merge step strips those comments via a small Python helper (with a sed fallback) before piping the JSON through `jq`.
 
 
 
+## Refs
+* [GitHub: Cameroncooke - Xcode Build Mcp](https://github.com/cameroncooke/XcodeBuildMCP?tab=readme-ov-file)
+* [Install in VSCode](https://insiders.vscode.dev/redirect/mcp/install?name=XcodeBuildMCP&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22xcodebuildmcp%40latest%22%5D%7D)
+
+
+![alt text](images/XcodeBuildMCP.png)
+
+<!-- ps aux | grep -i mcp (or the specific target name) ensures the Xcode MCP process is alive; long-running background launchd jobs can be inspected with launchctl list | grep MCP.
+If the server exposes a TCP socket, confirm it’s bound with lsof -nP -iTCP | grep <port> or target-specific netstat -an | grep <port>; successful LISTEN states indicate it’s ready.
+Use whatever health endpoint/command the server exposes (often curl http://localhost:<port>/health or nc localhost <port>) to verify it responds with the expected banner or JSON.
+Check recent logs (Console.app, log stream --predicate 'process == "XcodeMCP"', or the server’s own log file) for startup success messages and absence of crashes.
+From Xcode, run the command that depends on the MCP server (e.g., initiate the custom build step or tool that uses it); if the integration succeeds without timeouts, the server is functioning. -->
+
+
+
+
+
+# Dir Heirarchy
 
 LMK what you think. Are there better ways to do this? Ask me questions, then let's agree on a plan.  -->
 
