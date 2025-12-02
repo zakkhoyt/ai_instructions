@@ -235,10 +235,11 @@ META OPTIONS
                            - Sets AI agent thinking style and session location preferences
                            - Creates timestamped backup before modifying workspace file
                            Template: vscode/ai-workspace-settings.template.json (JSON comments supported)
-    --mcp-xcode             Install Xcode MCP workspace settings when Xcode files are detected
+    --mcp-xcode             Install Xcode MCP server configuration and Swift workspace settings
                            - Auto-detects Package.swift / *.xcworkspace / *.xcodeproj under target
                            - Prompts when artifacts exist; --mcp-xcode applies without prompting
-                           Template: vscode/xcode-mcpserver-workspace-settings.template.json
+                           MCP Template: vscode/mcp/xcode-mcpserver-workspace-mcp.json → .vscode/mcp.json
+                           Swift Template: vscode/swift-workspace-settings.template.json → workspace settings
 
 ENVIRONMENT
     Z2K_AI_DIR             Override default source directory location
@@ -869,8 +870,7 @@ function strip_json_comments_to_temp {
 
   log_debug "Stripping JSON comments from: $source_file"
 
-  local strip_script="${0:A:h}/strip_jsonc.py"
-  log_info "Looking for strip_jsonc.py at: $strip_script (exists: $([[ -f \"$strip_script\" ]] && echo yes || echo no), executable: $([[ -x \"$strip_script\" ]] && echo yes || echo no))"
+  local strip_script="$user_ai_dir/scripts/strip_jsonc.py"
   if [[ -x "$strip_script" ]]; then
     if ! "$strip_script" "$source_file" "$sanitized_file" 2>/dev/null; then
       log_error "Failed to normalize JSON with strip_jsonc.py"
@@ -1073,7 +1073,13 @@ function merge_xcode_mcp_config {
   merge_mcp_servers_config --template-file "$template_file" --description "Xcode MCP server configuration"
 }
 
-# Prompt (if needed) and merge Xcode MCP configuration when appropriate
+# Merge Swift workspace settings into the workspace file
+function merge_swift_workspace_settings {
+  local template_file="$user_ai_dir/vscode/swift-workspace-settings.template.json"
+  merge_workspace_settings_template --template-file "$template_file" --description "Swift workspace settings"
+}
+
+# Prompt (if needed) and merge Xcode MCP configuration and Swift workspace settings when appropriate
 function maybe_merge_xcode_mcp_settings {
   local should_merge=false
   if [[ -n "${flag_mcp_xcode:-}" ]]; then
@@ -1105,6 +1111,7 @@ function maybe_merge_xcode_mcp_settings {
 
   if [[ "$should_merge" == true ]]; then
     merge_xcode_mcp_config
+    merge_swift_workspace_settings
   fi
 }
 
@@ -1604,7 +1611,7 @@ if [[ -n "${flag_vscode_settings:-}" ]]; then
   merge_vscode_workspace_settings
 fi
 
-# Offer Xcode MCP workspace settings if requested or detected
+# Offer Xcode MCP server configuration and Swift workspace settings if requested or detected
 maybe_merge_xcode_mcp_settings
 
 # Synthesize main instruction file for copilot platform (only if it doesn't exist)
