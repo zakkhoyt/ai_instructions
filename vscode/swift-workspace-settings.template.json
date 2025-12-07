@@ -2,6 +2,5 @@
   "settings": {
     "swift.backgroundCompilation": false,
     "swift.disableAutoResolve": true
-
   }
 }
