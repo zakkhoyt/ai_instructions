@@ -32,13 +32,13 @@ import logging
 import sys
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Sequence, Union
 
 from strip_jsonc import sanitize_jsonc_text
 
 LOGGER = logging.getLogger(__name__)
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-JSONValue = dict[str, Any] | list[Any] | str | int | float | bool | None
+JSONValue = Union[dict[str, Any], list[Any], str, int, float, bool, None]
 
 
 def configure_logging(debug: bool = False) -> None:
@@ -192,14 +192,14 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     args = parse_args(argv)
     configure_logging(debug=args.debug)
-    LOGGER.info("Merging template %%s into %%s", args.template, args.destination)
+    LOGGER.info("Merging template %s into %s", args.template, args.destination)
 
     try:
         merge_files(args.destination, args.template, args.output, indent=args.indent)
     except RuntimeError:
         return 1
 
-    LOGGER.info("Wrote merged JSON to %%s", args.output)
+    LOGGER.info("Wrote merged JSON to %s", args.output)
     return 0
 
 

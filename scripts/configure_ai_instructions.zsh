@@ -903,17 +903,20 @@ function select_workspace_settings_file {
     return 0
   fi
 
-  local -a file_mtimes
+  local -a with_mtime
   local file=""
   for file in "${workspace_files[@]}"; do
     local mtime
     mtime=$(stat -f "%m" "$file" 2>/dev/null || stat -c "%Y" "$file" 2>/dev/null)
-    file_mtimes+=("$mtime:$file")
+    # Store "mtime:path" pairs; we will sort by numeric mtime later
+    with_mtime+=("$mtime:$file")
   done
 
-  local -a sorted_files
-  sorted_files=(${(On)file_mtimes[@]})
-  echo "${sorted_files[1]#*:}"
+  # Sort descending by mtime (newest first) and pick the path portion
+  local -a sorted
+  sorted=(${(On)with_mtime[@]})
+  local newest_entry="${sorted[1]}"
+  echo "${newest_entry#*:}"
 }
 
 # Split a template filename into optional topic prefix and remainder

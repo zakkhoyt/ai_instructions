@@ -54,18 +54,20 @@ autoload -Uz z2k_dbg
 
 ## Table of Contents
 
-1. Shellcheck Directives
-2. Header Comments
-3. Source Scripting Utilities
-4. Script Argument Parsing
-5. Help and Usage Functions
-6. Variable Naming Conventions
-7. Function Syntax
-8. Zsh Expansion (Required)
-9. Output and Logging
-10. Step Pattern: Structured Operation Logging
-11. Context Logging
-12. Recommendations
+<!-- markdown-link-check-disable -->
+1. [Shellcheck Directives](#shellcheck-directives)
+2. [Header Comments](#header-comments)
+3. [Source Scripting Utilities](#source-scripting-utilities)
+4. [Script Argument Parsing](#script-argument-parsing)
+5. [Help and Usage Functions](#help-and-usage-functions)
+6. [Variable Naming Conventions](#variable-naming-conventions)
+7. [Function Syntax](#function-syntax)
+8. [Zsh Expansion (Required)](#zsh-expansion-required)
+9. [Output and Logging](#output-and-logging)
+10. [Step Pattern: Structured Operation Logging](#step-pattern-structured-operation-logging)
+11. [Context Logging](#context-logging)
+12. [Recommendations](#recommendations)
+<!-- markdown-link-check-enable -->
 
 ---
 

@@ -148,12 +148,12 @@ else
 fi
 # Install all files
 echo "all" | "$SCRIPT_PATH" --configure-type symlink >/dev/null 2>&1
-# Check copilot-instructions.md has 8 entries (after removing redundant python git instructions)
+# Check copilot-instructions.md has 9 entries (current template set)
 entry_count=$(grep -c "^- \[" "$TEST_WORKSPACE/.github/copilot-instructions.md" || echo 0)
-if [[ "$entry_count" == "8" ]]; then
-  test_pass "Instruction list has 8 entries"
+if [[ "$entry_count" == "9" ]]; then
+  test_pass "Instruction list has 9 entries"
 else
-  test_fail "Instruction list has $entry_count entries, expected 8"
+  test_fail "Instruction list has $entry_count entries, expected 9"
 fi
 cleanup_test_workspace
 
