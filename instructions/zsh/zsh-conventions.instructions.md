@@ -12,41 +12,60 @@ applyTo: "**/*.zsh"
 
 When writing or modifying **ANY** Zsh script in this repository, ensure:
 
-- ✅ **Zsh expansion used** - Parameter expansion, array manipulation (see [Zsh Expansion](#zsh-expansion-required))
+- ✅ **Zsh expansion used** - Parameter expansion, array manipulation (see the "Zsh Expansion" section)
   - Use `${var:-default}`, `${#array[@]}`, `${(f)"string"}`, `${(F)array[@]}`, `${array:#pattern}`, etc.
   - Use `(f)` to split strings into arrays, `(F)` to join arrays into strings
   - Avoid external commands when Zsh builtins suffice (`dirname`, `basename`, `wc`, etc.)
 - ✅ **Shellcheck directives present** - Standard 3 directives after shebang
 - ✅ **Header comments complete** - "About this Script" section with description
-- ✅ **Source utilities correctly** - Use `source_dirs` array pattern (see [Source Scripting Utilities](#source-scripting-utilities))
-- ✅ **zparseopts used in 3 stages** - Standard pattern: help/debug/dry-run, trap control, script-specific (see [Script Argument Parsing](#script-argument-parsing))
+- ✅ **Source utilities correctly** - Use `source_dirs` array pattern (see the "Source Scripting Utilities" section)
+- ✅ **zparseopts used in 3 stages** - Standard pattern: help/debug/dry-run, trap control, script-specific (see the "Script Argument Parsing" section)
   - Stage 1: `--help`, `-d/--debug`, `--dry-run` (required)
   - Stage 2: `--trap-err`, `--trap-exit` (recommended)
   - Stage 3: Script-specific arguments (as needed)
 - ✅ **Logging functions used** - `slog_*` functions (or `log_*` for setup scripts)
 - ✅ **Function syntax correct** - Use `function name { }` (not `name() { }`)
-- ✅ **Functions use named arguments** - Prefer `zparseopts` over positional parameters (see [Function Arguments](#function-arguments-named-vs-positional))
+- ✅ **Functions use named arguments** - Prefer `zparseopts` over positional parameters (see the "Function Arguments" guidance)
 - ✅ **Variable naming follows conventions** - `lower_snake` for local/file-scoped, `UPPER_SNAKE` for cross-file/exported
-- ✅ **No reserved keywords** - Avoid `path`, `command`, `status`, `functions`, etc. (see [Reserved Keywords](#reserved-keywords))
+- ✅ **No reserved keywords** - Avoid `path`, `command`, `status`, `functions`, etc. (see the reserved keyword list below)
 
 **→ If unsure about any item, refer to the detailed sections below.**
 
 ---
 
+## Short Option Commentary Rule
+
+We always prefer long-form options. When a command (including `zparseopts`, builtins like `typeset`/`autoload`, or external tools) only exposes short flags, annotate every invocation so future edits know what each flag does.
+
+1. Add a block of `#` comments immediately above the command.
+2. Document **each** short flag on its own line, sorted lexicographically, in the format `# -X: human-readable description`.
+3. When practical, add a `See:` line that points to the man page or `--help` section explaining the options.
+4. Apply this rule everywhere—production scripts, helper functions, examples, and instruction files themselves.
+
+Example:
+
+```zsh
+# -U: do not inherit caller options
+# -z: treat file as zsh-style function
+# See: `man zshbuiltins # s/autoload`
+autoload -Uz z2k_dbg
+```
+
+
 ## Table of Contents
 
-1. [Shellcheck Directives](#shellcheck-directives)
-2. [Header Comments](#header-comments)
-3. [Source Scripting Utilities](#source-scripting-utilities)
-4. [Script Argument Parsing](#script-argument-parsing)
-5. [Help and Usage Functions](#help-and-usage-functions)
-6. [Variable Naming Conventions](#variable-naming-conventions)
-7. [Function Syntax](#function-syntax)
-8. [Zsh Expansion (Required)](#zsh-expansion-required)
-9. [Output and Logging](#output-and-logging)
-10. [Step Pattern: Structured Operation Logging](#step-pattern-structured-operation-logging)
-11. [Context Logging](#context-logging)
-12. [Recommendations](#recommendations)
+1. Shellcheck Directives
+2. Header Comments
+3. Source Scripting Utilities
+4. Script Argument Parsing
+5. Help and Usage Functions
+6. Variable Naming Conventions
+7. Function Syntax
+8. Zsh Expansion (Required)
+9. Output and Logging
+10. Step Pattern: Structured Operation Logging
+11. Context Logging
+12. Recommendations
 
 ---
 
@@ -495,7 +514,7 @@ Functions should use markdown-style comments with standardized section headers. 
 - **Code blocks**: Use markdown triple-backticks for code examples
 - **Inline code**: Use markdown backticks for inline code/variables
 - **Lists**: Use markdown asterisk syntax for bullet points
-- **Links**: Use markdown link syntax `[text](url)`
+- **Links**: Use markdown link syntax `[text](https://example.com)`
 
 **Complete documentation template:**
 
@@ -1191,7 +1210,7 @@ opt_labels_count=${#${(M)opt_labels_array:#--label}}
 
 ### Core Logging Functions
 
-After sourcing utilities (see [Source Scripting Utilities](#source-scripting-utilities)), scripts have access to two primary output function families:
+After sourcing utilities (see the "Source Scripting Utilities" section), scripts have access to two primary output function families:
 
 | Function          | Destination  | When                                     |
 | ----------------- | ------------ | ---------------------------------------- |

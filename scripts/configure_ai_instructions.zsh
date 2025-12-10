@@ -183,10 +183,12 @@ zparseopts -D -F -- \
   -dev-link=flag_dev_link \
   -dev-vscode=flag_dev_vscode \
   -vscode-settings=flag_vscode_settings \
+  -workspace-settings=flag_workspace_settings \
+  -user-settings=flag_user_settings \
   -mcp-xcode=flag_mcp_xcode \
   -regenerate-main=flag_regenerate_main \
   -source-dir:=opt_source_dir \
-  -target-dir:=opt_target_dir \
+  -dest-dir:=opt_dest_dir \
   -ai-platform:=opt_ai_platform \
   -configure-type:=opt_configure_type
 
@@ -206,7 +208,7 @@ OPTIONS
     --source-dir <dir>      User AI directory containing source instructions
                            (default: $Z2K_AI_DIR or $HOME/.ai)
     
-    --target-dir <dir>      Target directory to configure (must be git repo root)
+    --dest-dir <dir>      Target directory to configure (must be git repo root)
                            (default: current working directory)
     
     --ai-platform <platform>
@@ -228,13 +230,14 @@ META OPTIONS
                            (useful for quick access to repo files during development)
     --dev-vscode            Add AI dev directory to VS Code workspace
                            (enables IDE integration for development repo)
-    --vscode-settings       Merge AI workspace settings template into VS Code workspace
-                           - Configures GitHub Copilot chat auto-approvals for terminal commands
-                           - Auto-approves shell syntax: pipes, redirects, variable expansion, etc.
-                           - Auto-approves common commands: grep, sed, awk, jq, find, tee, xargs
-                           - Sets AI agent thinking style and session location preferences
-                           - Creates timestamped backup before modifying workspace file
-                           Template: vscode/ai-workspace-settings.template.json (JSON comments supported)
+    --vscode-settings       Deprecated alias for --workspace-settings
+    --workspace-settings    Launch menu to merge VS Code workspace templates
+                 - Supports *.code-workspace templates plus .vscode/*.json fragments
+                 - Honors optional ordering/topic prefixes (e.g., 01__template)
+                 - Creates backups before applying jq-based JSON merges
+    --user-settings         Launch menu to merge VS Code user settings templates
+                 - Applies files under vscode/user → $HOME/Library/Application Support/Code/User
+                 - Requires confirmation via interactive menu to avoid surprises
     --mcp-xcode             Install Xcode MCP server configuration and Swift workspace settings
                            - Auto-detects Package.swift / *.xcworkspace / *.xcodeproj under target
                            - Prompts when artifacts exist; --mcp-xcode applies without prompting
@@ -259,10 +262,13 @@ EXAMPLES
     ./${script_basename} --ai-platform claude --configure-type copy
 
     # Configure specific target directory
-    ./${script_basename} --target-dir /path/to/project
+    ./${script_basename} --dest-dir /path/to/project
 
-    # Merge VS Code workspace settings (chat auto-approvals, AI preferences)
-    ./${script_basename} --vscode-settings
+    # Merge VS Code workspace templates (chat auto-approvals, AI preferences)
+    ./${script_basename} --workspace-settings
+
+    # Merge VS Code user settings templates into your macOS profile
+    ./${script_basename} --user-settings
 
     # Development workflow: link dev directory and add to VS Code workspace
     ./${script_basename} --dev-link --dev-vscode
@@ -271,8 +277,8 @@ EXAMPLES
     ./${script_basename} --dry-run
 
     # Configure a VSCode workspace for as prompt free of an AI Agent experience as possible
-    ~/.ai/scripts/configure_ai_instructions.zsh --dev-vscode --vscode-settings --debug
-    ./${script_basename} --dev-vscode --vscode-settings --debug
+    ~/.ai/scripts/configure_ai_instructions.zsh --dev-vscode --workspace-settings --debug
+    ./${script_basename} --dev-vscode --workspace-settings --debug
 EOF
 }
 
@@ -282,11 +288,16 @@ if [[ -n "${flag_help:-}" ]]; then
   exit 0
 fi
 
+if [[ -n "${flag_vscode_settings:-}" && -z "${flag_workspace_settings:-}" ]]; then
+  log_warning "--vscode-settings is deprecated; please use --workspace-settings"
+  flag_workspace_settings="1"
+fi
+
 # ---- ---- ----     Variable Initialization     ---- ---- ----
 
 # Extract argument values
 user_ai_dir="${opt_source_dir[2]:-${Z2K_AI_DIR:-$HOME/.ai}}"
-target_dir="${opt_target_dir[2]:-$PWD}"
+dest_dir="${opt_dest_dir[2]:-$PWD}"
 configure_type="${opt_configure_type[2]:-symlink}"
 ai_platform="${opt_ai_platform[2]:-copilot}"
 
@@ -313,7 +324,7 @@ fi
 log_debug "script_dir: $script_dir"
 log_debug "repo_dir: $repo_dir"
 log_debug "user_ai_dir: $user_ai_dir"
-log_debug "target_dir: $target_dir"
+log_debug "dest_dir: $dest_dir"
 
 # ---- ---- ----     Input Validation     ---- ---- ----
 
@@ -353,38 +364,66 @@ case "$configure_type" in
 esac
 
 # Validate target directory exists
-if [[ ! -d "$target_dir" ]]; then
-  log_error "Target directory does not exist: $target_dir"
+if [[ ! -d "$dest_dir" ]]; then
+  log_error "Target directory does not exist: $dest_dir"
   exit 3
 fi
 
 # Check if target directory is a git repository
-target_dir_absolute="${target_dir:A}"
-if ! git_root_dir="$(cd "$target_dir" && git rev-parse --show-toplevel 2>/dev/null)"; then
-  log_warning "Target directory is not a git repository: $target_dir"
+dest_dir_absolute="${dest_dir:A}"
+if ! git_root_dir="$(cd "$dest_dir" && git rev-parse --show-toplevel 2>/dev/null)"; then
+  log_warning "Target directory is not a git repository: $dest_dir"
 else
-  if [[ "$target_dir_absolute" != "$git_root_dir" ]]; then
+  if [[ "$dest_dir_absolute" != "$git_root_dir" ]]; then
     log_warning "Target directory is not git repository root"
-    log_warning "Target: $target_dir_absolute"
+    log_warning "Target: $dest_dir_absolute"
     log_warning "Git root: $git_root_dir"
     log_info "Using git root as target directory"
-    target_dir="$git_root_dir"
-    target_dir_absolute="$git_root_dir"
+    dest_dir="$git_root_dir"
+    dest_dir_absolute="$git_root_dir"
   fi
 fi
 
-# Detect Xcode-related artifacts once target_dir is finalized
+# Detect Xcode-related artifacts once dest_dir is finalized
 typeset -a xcode_project_artifacts=()
 typeset xcode_find_output=""
-if xcode_find_output="$(find "$target_dir" \
-  \( \( -name "Package.swift" -a -type f \) -o \( -name "*.xcworkspace" -a -type d \) -o \( -name "*.xcodeproj" -a -type d \) \) \
-  -print 2>/dev/null)"; then
+if xcode_find_output="$(
+  find "$dest_dir" \
+    \( -path '*/.*' -prune \) -o \
+    \( \( -name "Package.swift" -a -type f \) -o \( -name "*.xcworkspace" -a -type d \) -o \( -name "*.xcodeproj" -a -type d \) \) -print 2>/dev/null
+)"; then
   if [[ -n "$xcode_find_output" ]]; then
     xcode_project_artifacts=(${(f)xcode_find_output})
     log_debug "Detected ${#xcode_project_artifacts[@]} Xcode artifact(s) under target directory"
   fi
 else
-  log_warning "Failed to scan for Xcode project files under $target_dir"
+  log_warning "Failed to scan for Xcode project files under $dest_dir"
+fi
+
+# Swift-only projects may not contain Package.swift or Xcode workspace files. Detect a single
+# Swift source file (skipping private directories like .build/.swiftpm) and treat it as enough
+# evidence to prompt for MCP integration.
+typeset swift_file_example=""
+if swift_file_example="$(
+  find "$dest_dir" \( -path '*/.*' -prune \) -o \( -name "*.swift" -a -type f -print -quit \) 2>/dev/null
+)"; then
+  if [[ -n "$swift_file_example" ]]; then
+    typeset already_listed="false"
+    for artifact_path in "${xcode_project_artifacts[@]}"; do
+      if [[ "$artifact_path" == "$swift_file_example" ]]; then
+        already_listed="true"
+        break
+      fi
+    done
+    if [[ "$already_listed" == "false" ]]; then
+      xcode_project_artifacts+=("$swift_file_example")
+      typeset swift_display="${swift_file_example#$dest_dir/}"
+      [[ "$swift_display" == "$swift_file_example" ]] && swift_display="$swift_file_example"
+      log_debug "Detected Swift source file (sample): $swift_display"
+    fi
+  fi
+else
+  log_warning "Failed to scan for Swift source files under $dest_dir"
 fi
 
 # Validate repository instructions directory exists
@@ -425,7 +464,7 @@ function get_platform_paths {
   esac
 }
 
-get_platform_paths "$ai_platform" "$target_dir"
+get_platform_paths "$ai_platform" "$dest_dir"
 
 log_debug "target_instructions_dir: $target_instructions_dir"
 log_debug "ai_platform_instruction_file: $ai_platform_instruction_file"
@@ -468,7 +507,7 @@ fi
 
 # ---- ---- ----     Checksum Management     ---- ---- ----
 
-checksums_dir="$target_dir/.gitignored"
+checksums_dir="$dest_dir/.gitignored"
 checksums_file="$checksums_dir/.ai-checksums"
 
 # Ensure checksums directory exists inside .gitignored
@@ -592,7 +631,7 @@ function get_file_status {
 # Usage: create_dev_symlink
 function create_dev_symlink {
   local dev_link_name="${user_ai_dir:t}"
-  local dev_link_path="$target_dir/$dev_link_name"
+  local dev_link_path="$dest_dir/$dev_link_name"
   
   log_info "Setting up development directory symlink..."
   log_debug "Dev symlink path: $dev_link_path"
@@ -654,7 +693,7 @@ function update_vscode_workspace {
   
   # Find all .code-workspace files at repo root
   local workspace_files
-  workspace_files=(${(f)"$(find "$target_dir" -maxdepth 1 -name "*.code-workspace" -type f 2>/dev/null)"})
+  workspace_files=(${(f)"$(find "$dest_dir" -maxdepth 1 -name "*.code-workspace" -type f 2>/dev/null)"})
   
   if [[ ${#workspace_files[@]} -eq 0 ]]; then
     log_info "No .code-workspace file found in repository root - skipping workspace update"
@@ -831,11 +870,28 @@ function update_vscode_workspace {
   fi
 }
 
-# Select the VS Code workspace file to modify (newest .code-workspace at repo root)
+# Select the VS Code workspace file to modify.
+# Preference order:
+#  1. $AI_VSCODE_WORKSPACE_FILE if set and exists
+#  2. Any .code-workspace under $dest_dir
+#  3. Any .code-workspace under $HOME (for global workspaces like ~/scripts.code-workspace)
+# When multiple candidates exist, the most recently modified file is chosen.
 # Prints empty string if none found.
 function select_workspace_settings_file {
+  setopt local_options null_glob
+
+  # Explicit override via environment variable
+  if [[ -n "${AI_VSCODE_WORKSPACE_FILE:-}" && -f "$AI_VSCODE_WORKSPACE_FILE" ]]; then
+    log_debug "Using AI_VSCODE_WORKSPACE_FILE override: $AI_VSCODE_WORKSPACE_FILE"
+    echo "$AI_VSCODE_WORKSPACE_FILE"
+    return 0
+  fi
+
   local -a workspace_files
-  workspace_files=(${(f)"$(find "$target_dir" -maxdepth 1 -name "*.code-workspace" -type f 2>/dev/null)"})
+  workspace_files=(
+    "$dest_dir"/*.code-workspace(N)
+    "$HOME"/*.code-workspace(N)
+  )
 
   if [[ ${#workspace_files[@]} -eq 0 ]]; then
     echo ""
@@ -848,149 +904,55 @@ function select_workspace_settings_file {
   fi
 
   local -a file_mtimes
+  local file=""
   for file in "${workspace_files[@]}"; do
     local mtime
     mtime=$(stat -f "%m" "$file" 2>/dev/null || stat -c "%Y" "$file" 2>/dev/null)
     file_mtimes+=("$mtime:$file")
   done
 
-  local sorted_files=(${(On)file_mtimes[@]})
+  local -a sorted_files
+  sorted_files=(${(On)file_mtimes[@]})
   echo "${sorted_files[1]#*:}"
 }
 
-# Strip // and /* */ comments from JSON while preserving quoted text.
-# Usage: strip_json_comments_to_temp --source-file "/path/to/file.json"
-function strip_json_comments_to_temp {
-  zparseopts -D -F -- \
-    -source-file:=opt_source_file
-
-  local source_file="${opt_source_file[2]}"
-  local sanitized_file
-  sanitized_file="$(mktemp)"
-
-  log_debug "Stripping JSON comments from: $source_file"
-
-  local strip_script="$user_ai_dir/scripts/strip_jsonc.py"
-  if [[ -x "$strip_script" ]]; then
-    if ! "$strip_script" "$source_file" "$sanitized_file" 2>/dev/null; then
-      log_error "Failed to normalize JSON with strip_jsonc.py"
-      rm -f "$sanitized_file"
-      return 1
-    fi
-  else
-    log_warning "strip_jsonc.py not found - using basic sed fallback for $source_file"
-    # Simple fallback: just copy the file and strip // comments (block comments may remain)
-    if ! sed 's|//.*$||' "$source_file" > "$sanitized_file"; then
-      log_error "Failed to strip JSON comments using sed fallback"
-      rm -f "$sanitized_file"
-      return 1
-    fi
+# Split a template filename into optional topic prefix and remainder
+# Output format: "topic|remainder"
+function split_template_basename {
+  local filename="$1"
+  local topic=""
+  local remainder="$filename"
+  if [[ "$filename" == *__* ]]; then
+    topic="${filename%%__*}"
+    remainder="${filename#*__}"
   fi
-
-  echo "$sanitized_file"
+  printf '%s|%s' "$topic" "$remainder"
 }
 
-# Merge VS Code workspace settings from a template file into the active workspace
-# Usage: merge_workspace_settings_template --template-file "/path/to/template" [--description "label"] [--workspace-file "/path"]
-function merge_workspace_settings_template {
+# Merge arbitrary JSONC template data into a destination file using deep merge semantics.
+# Dictionaries merge recursively, while arrays/primitives are replaced by the template values.
+# Usage: merge_json_files --template-file <path> --destination-file <path> [--description <text>] [--auto-init]
+function merge_json_files {
   zparseopts -D -F -- \
     -template-file:=opt_template_file \
+    -destination-file:=opt_destination_file \
     -description:=opt_description \
-    -workspace-file:=opt_workspace_file
+    -auto-init=flag_auto_init
 
   local template_file="${opt_template_file[2]}"
-  local description="${opt_description[2]:-template}"
-  local workspace_file="${opt_workspace_file[2]:-}"
+  local destination_file="${opt_destination_file[2]}"
+  local description="${opt_description[2]:-JSON merge}"
+  local auto_init=false
+  [[ -n "${flag_auto_init:-}" ]] && auto_init=true
 
-  log_info "Merging VS Code workspace settings from $description..."
-
-  if ! type jq >/dev/null 2>&1; then
-    log_warning "jq not found - skipping $description merge (jq required for JSON manipulation)"
-    return 0
-  fi
-
-  if [[ -z "$workspace_file" ]]; then
-    workspace_file="$(select_workspace_settings_file)"
-  fi
-
-  if [[ -z "$workspace_file" ]]; then
-    log_info "No .code-workspace file found - skipping $description merge"
-    return 0
-  fi
-
-  workspace_file="${workspace_file:A}"
-  log_debug "Workspace file selected for $description merge: $workspace_file"
-
-  if [[ ! -f "$template_file" ]]; then
-    log_error "Template file not found: $template_file"
+  if [[ -z "$template_file" || -z "$destination_file" ]]; then
+    log_error "merge_json_files requires --template-file and --destination-file"
     return 1
   fi
 
-  local backup_file="${workspace_file}.backup.$(date +%Y%m%d_%H%M%S)"
-  command_string="cp '$workspace_file' '$backup_file'"
-  if ! execute_or_dry_run "$command_string" "backup workspace file"; then
-    log_error "Failed to create workspace backup"
-    return 1
-  fi
-
-  local temp_file
-  temp_file="$(mktemp)"
-
-  local sanitized_workspace
-  sanitized_workspace="$(strip_json_comments_to_temp --source-file "$workspace_file")" || {
-    rm -f "$temp_file"
-    return 1
-  }
-
-  local sanitized_template
-  sanitized_template="$(strip_json_comments_to_temp --source-file "$template_file")" || {
-    rm -f "$temp_file" "$sanitized_workspace"
-    return 1
-  }
-
-  if ! jq -s '.[0] * {settings: ((.[0].settings // {}) * (.[1].settings // {}))}' \
-    "$sanitized_workspace" "$sanitized_template" > "$temp_file" 2>/dev/null; then
-    log_error "Failed to merge settings with jq"
-    rm -f "$temp_file" "$sanitized_workspace" "$sanitized_template"
-    return 1
-  fi
-
-  rm -f "$sanitized_workspace" "$sanitized_template"
-
-  command_string="mv '$temp_file' '$workspace_file'"
-  if ! execute_or_dry_run "$command_string" "update workspace with merged settings"; then
-    log_error "Failed to update workspace file"
-    rm -f "$temp_file"
-    return 1
-  fi
-
-  log_success "Merged workspace settings from $description"
-  if [[ -z "${flag_dry_run:-}" ]]; then
-    log_debug "Removing backup file: $backup_file"
-    rm -f "$backup_file"
-  fi
-}
-
-# Merge base AI workspace settings template into the workspace file
-function merge_vscode_workspace_settings {
-  local template_file="$user_ai_dir/vscode/ai-workspace-settings.template.json"
-  merge_workspace_settings_template --template-file "$template_file" --description "AI workspace settings template"
-}
-
-# Merge MCP server configuration into .vscode/mcp.json
-# Usage: merge_mcp_servers_config --template-file <path> --description <desc>
-function merge_mcp_servers_config {
-  zparseopts -D -F -- \
-    -template-file:=opt_template_file \
-    -description:=opt_description
-
-  local template_file="${opt_template_file[2]}"
-  local description="${opt_description[2]:-MCP server configuration}"
-
-  log_info "Merging $description..."
-
-  if ! type jq >/dev/null 2>&1; then
-    log_warning "jq not found - skipping $description merge (jq required for JSON manipulation)"
+  if [[ -n "${flag_dry_run:-}" ]]; then
+    log_info "DRY-RUN: Would merge $description"
+    log_debug "Template: $template_file → Destination: $destination_file"
     return 0
   fi
 
@@ -999,84 +961,321 @@ function merge_mcp_servers_config {
     return 1
   fi
 
-  local mcp_config_dir="$target_dir/.vscode"
-  local mcp_config_file="$mcp_config_dir/mcp.json"
-
-  # Create .vscode directory if it doesn't exist
-  if [[ ! -d "$mcp_config_dir" ]]; then
-    command_string="mkdir -p '$mcp_config_dir'"
-    if ! execute_or_dry_run "$command_string" "create .vscode directory"; then
-      log_error "Failed to create .vscode directory"
+  local destination_dir="${destination_file:h}"
+  if [[ ! -d "$destination_dir" ]]; then
+    if ! mkdir -p "$destination_dir"; then
+      log_error "Failed to create destination directory: $destination_dir"
       return 1
     fi
   fi
 
-  # Initialize mcp.json if it doesn't exist
-  if [[ ! -f "$mcp_config_file" ]]; then
-    log_debug "Creating new mcp.json file"
-    command_string="echo '{}' > '$mcp_config_file'"
-    if ! execute_or_dry_run "$command_string" "initialize mcp.json"; then
-      log_error "Failed to initialize mcp.json"
+  if [[ ! -f "$destination_file" ]]; then
+    if [[ "$auto_init" == true ]]; then
+      if ! printf '{}\n' > "$destination_file"; then
+        log_error "Failed to initialize destination file: $destination_file"
+        return 1
+      fi
+    else
+      log_error "Destination JSON file not found: $destination_file"
       return 1
     fi
   fi
 
-  local backup_file="${mcp_config_file}.backup.$(date +%Y%m%d_%H%M%S)"
-  command_string="cp '$mcp_config_file' '$backup_file'"
-  if ! execute_or_dry_run "$command_string" "backup mcp.json file"; then
-    log_error "Failed to create mcp.json backup"
+  local backup_file="${destination_file}.backup.$(date +%Y%m%d_%H%M%S)"
+  if ! cp "$destination_file" "$backup_file"; then
+    log_error "Failed to create backup for $destination_file"
     return 1
   fi
 
   local temp_file
   temp_file="$(mktemp)"
-
-  local sanitized_mcp_config
-  sanitized_mcp_config="$(strip_json_comments_to_temp --source-file "$mcp_config_file")" || {
-    rm -f "$temp_file"
-    return 1
-  }
-
-  local sanitized_template
-  sanitized_template="$(strip_json_comments_to_temp --source-file "$template_file")" || {
-    rm -f "$temp_file" "$sanitized_mcp_config"
-    return 1
-  }
-
-  # Deep merge: existing mcp.json with template's servers section
-  if ! jq -s '.[0] * {servers: ((.[0].servers // {}) * (.[1].servers // {}))}' \
-    "$sanitized_mcp_config" "$sanitized_template" > "$temp_file" 2>/dev/null; then
-    log_error "Failed to merge MCP configuration with jq"
-    rm -f "$temp_file" "$sanitized_mcp_config" "$sanitized_template"
+  local merge_script="$user_ai_dir/scripts/json_merge.py"
+  if [[ ! -x "$merge_script" ]]; then
+    log_error "json_merge.py not found or not executable: $merge_script"
+    rm -f "$backup_file" "$temp_file"
     return 1
   fi
 
-  rm -f "$sanitized_mcp_config" "$sanitized_template"
+  local -a merge_command=(
+    "$merge_script"
+    --destination "$destination_file"
+    --template "$template_file"
+    --output "$temp_file"
+    --indent 2
+  )
+  if [[ -n "${flag_debug:-}" ]]; then
+    merge_command+=(--debug)
+  fi
 
-  command_string="mv '$temp_file' '$mcp_config_file'"
-  if ! execute_or_dry_run "$command_string" "update mcp.json with merged configuration"; then
-    log_error "Failed to update mcp.json file"
-    rm -f "$temp_file"
+  if ! "${merge_command[@]}"; then
+    log_error "Failed to merge $description with json_merge.py"
+    rm -f "$temp_file" "$backup_file"
     return 1
   fi
 
-  log_success "Merged $description into .vscode/mcp.json"
-  if [[ -z "${flag_dry_run:-}" ]]; then
-    log_debug "Removing backup file: $backup_file"
-    rm -f "$backup_file"
+  if ! mv "$temp_file" "$destination_file"; then
+    log_error "Failed to update destination file: $destination_file"
+    rm -f "$temp_file" "$backup_file"
+    return 1
   fi
+
+  log_success "Merged $description"
+  rm -f "$backup_file"
 }
 
-# Merge Xcode MCP server configuration into .vscode/mcp.json
-function merge_xcode_mcp_config {
-  local template_file="$user_ai_dir/vscode/mcp/xcode-mcpserver-workspace-mcp.json"
-  merge_mcp_servers_config --template-file "$template_file" --description "Xcode MCP server configuration"
+typeset workspace_destination_file=""
+
+# Determine (and cache) the workspace .code-workspace file to modify
+function get_workspace_destination_file {
+  if [[ -n "$workspace_destination_file" ]]; then
+    echo "$workspace_destination_file"
+    return 0
+  fi
+
+  local selected_workspace
+  selected_workspace="$(select_workspace_settings_file)"
+  if [[ -z "$selected_workspace" ]]; then
+    log_info "No .code-workspace files detected under $dest_dir"
+    return 1
+  fi
+
+  workspace_destination_file="${selected_workspace:A}"
+  log_debug "Workspace destination selected: $workspace_destination_file"
+  echo "$workspace_destination_file"
 }
 
-# Merge Swift workspace settings into the workspace file
-function merge_swift_workspace_settings {
-  local template_file="$user_ai_dir/vscode/swift-workspace-settings.template.json"
-  merge_workspace_settings_template --template-file "$template_file" --description "Swift workspace settings"
+# Interactive menu for workspace (.code-workspace) and .vscode JSON templates
+function run_workspace_settings_menu {
+  local workspace_dir="$user_ai_dir/vscode/workspace"
+  local dot_vscode_dir="$workspace_dir/.vscode"
+
+  if ! type jq >/dev/null 2>&1; then
+    log_warning "jq not found - skipping workspace template merge"
+    return 0
+  fi
+
+  if [[ ! -d "$workspace_dir" ]]; then
+    log_info "No workspace templates directory found at $workspace_dir"
+    return 0
+  fi
+
+  setopt local_options null_glob
+
+  local -a workspace_files=("$workspace_dir"/*.code-workspace(N))
+  local -a config_files=("$dot_vscode_dir"/*.json(N))
+
+  local -a template_paths=()
+  local -a template_types=()
+  local -a template_targets=()
+  local -a template_labels=()
+
+  local file filename parts topic remainder label
+
+  for file in "${workspace_files[@]}"; do
+    [[ -f "$file" ]] || continue
+    filename="${file:t}"
+    parts="$(split_template_basename "$filename")"
+    IFS='|' read -r topic remainder <<< "$parts"
+    label="[workspace] ${topic:-${remainder%.code-workspace}} → active workspace"
+    template_paths+=("$file")
+    template_types+=("workspace")
+    template_targets+=("")
+    template_labels+=("$label")
+  done
+
+  for file in "${config_files[@]}"; do
+    [[ -f "$file" ]] || continue
+    filename="${file:t}"
+    parts="$(split_template_basename "$filename")"
+    IFS='|' read -r topic remainder <<< "$parts"
+    label="[.vscode] ${topic:-${remainder%.json}} → .vscode/$remainder"
+    template_paths+=("$file")
+    template_types+=("dotvscode")
+    template_targets+=("$remainder")
+    template_labels+=("$label")
+  done
+
+  if [[ ${#template_paths[@]} -eq 0 ]]; then
+    log_info "No workspace templates found in $workspace_dir"
+    return 0
+  fi
+
+  log_info "Workspace templates available:"
+  local idx=1
+  while [[ $idx -le ${#template_paths[@]} ]]; do
+    printf "%2d. %s\n" "$idx" "${template_labels[$idx]}"
+    ((idx++))
+  done
+
+  printf "Enter selections (e.g., '1 3' or 'all'). Press Enter to skip: "
+  local user_selection=""
+  read -r user_selection
+
+  if [[ -z "$user_selection" ]]; then
+    log_info "Skipping workspace template merge"
+    return 0
+  fi
+
+  local -a selected_indices=()
+  if [[ "$user_selection" == "all" ]]; then
+    for ((idx=1; idx<=${#template_paths[@]}; idx++)); do
+      selected_indices+=("$idx")
+    done
+  else
+    selected_indices=(${(s: :)user_selection})
+  fi
+
+  local selection template_path type target label_value workspace_file dest_file
+  for selection in "${selected_indices[@]}"; do
+    if [[ ! "$selection" =~ ^[0-9]+$ ]] || (( selection < 1 || selection > ${#template_paths[@]} )); then
+      log_warning "Invalid selection: $selection"
+      continue
+    fi
+
+    template_path="${template_paths[$selection]}"
+    type="${template_types[$selection]}"
+    target="${template_targets[$selection]}"
+    label_value="${template_labels[$selection]}"
+
+    case "$type" in
+      workspace)
+        if ! workspace_file="$(get_workspace_destination_file)"; then
+          log_warning "Cannot apply $label_value - no .code-workspace file detected"
+          continue
+        fi
+        merge_json_files --template-file "$template_path" --destination-file "$workspace_file" --description "$label_value"
+        ;;
+      dotvscode)
+        dest_file="$dest_dir/.vscode/$target"
+        merge_json_files --template-file "$template_path" --destination-file "$dest_file" --description "$label_value" --auto-init
+        ;;
+      *)
+        log_warning "Unknown template category: $type"
+        ;;
+    esac
+  done
+}
+
+# Interactive menu for VS Code user profile templates
+function run_user_settings_menu {
+  local user_templates_dir="$user_ai_dir/vscode/user"
+  local code_user_dir="$HOME/Library/Application Support/Code/User"
+
+  if ! type jq >/dev/null 2>&1; then
+    log_warning "jq not found - skipping user settings merge"
+    return 0
+  fi
+
+  if [[ ! -d "$user_templates_dir" ]]; then
+    log_info "No user settings templates found at $user_templates_dir"
+    return 0
+  fi
+
+  if [[ ! -d "$code_user_dir" ]]; then
+    log_warning "VS Code user settings directory not found: $code_user_dir"
+    return 0
+  fi
+
+  setopt local_options null_glob
+  local -a user_files=("$user_templates_dir"/*.json(N))
+
+  if [[ ${#user_files[@]} -eq 0 ]]; then
+    log_info "No user settings templates to merge"
+    return 0
+  fi
+
+  local -a template_paths=()
+  local -a template_targets=()
+  local -a template_labels=()
+
+  local file filename parts topic remainder label
+  for file in "${user_files[@]}"; do
+    [[ -f "$file" ]] || continue
+    filename="${file:t}"
+    parts="$(split_template_basename "$filename")"
+    IFS='|' read -r topic remainder <<< "$parts"
+    label="[user] ${topic:-${remainder%.json}} → $remainder"
+    template_paths+=("$file")
+    template_targets+=("$remainder")
+    template_labels+=("$label")
+  done
+
+  log_info "User settings templates available:"
+  local idx=1
+  while [[ $idx -le ${#template_paths[@]} ]]; do
+    printf "%2d. %s\n" "$idx" "${template_labels[$idx]}"
+    ((idx++))
+  done
+
+  printf "Enter selections (e.g., '2 4' or 'all'). Press Enter to skip: "
+  local user_selection=""
+  read -r user_selection
+
+  if [[ -z "$user_selection" ]]; then
+    log_info "Skipping user settings merge"
+    return 0
+  fi
+
+  local -a selected_indices=()
+  if [[ "$user_selection" == "all" ]]; then
+    for ((idx=1; idx<=${#template_paths[@]}; idx++)); do
+      selected_indices+=("$idx")
+    done
+  else
+    selected_indices=(${(s: :)user_selection})
+  fi
+
+  local selection template_path target dest_file label_value
+  for selection in "${selected_indices[@]}"; do
+    if [[ ! "$selection" =~ ^[0-9]+$ ]] || (( selection < 1 || selection > ${#template_paths[@]} )); then
+      log_warning "Invalid selection: $selection"
+      continue
+    fi
+
+    template_path="${template_paths[$selection]}"
+    target="${template_targets[$selection]}"
+    label_value="${template_labels[$selection]}"
+    dest_file="$code_user_dir/$target"
+    merge_json_files --template-file "$template_path" --destination-file "$dest_file" --description "$label_value" --auto-init
+  done
+}
+
+function apply_workspace_template_if_exists {
+  local relative_path="$1"
+  local description="$2"
+  local template_file="$user_ai_dir/vscode/workspace/$relative_path"
+
+  if [[ ! -f "$template_file" ]]; then
+    log_warning "Workspace template not found: $template_file"
+    return 0
+  fi
+
+  local workspace_file
+  if ! workspace_file="$(get_workspace_destination_file)"; then
+    log_warning "Skipping $description - no .code-workspace file detected"
+    return 0
+  fi
+
+  merge_json_files --template-file "$template_file" --destination-file "$workspace_file" --description "$description"
+}
+
+function apply_workspace_dotfile_template_if_exists {
+  local relative_path="$1"
+  local description="$2"
+  local template_file="$user_ai_dir/vscode/workspace/.vscode/$relative_path"
+
+  if [[ ! -f "$template_file" ]]; then
+    log_warning "Workspace .vscode template not found: $template_file"
+    return 0
+  fi
+
+  local filename="${template_file:t}"
+  local parts topic remainder
+  parts="$(split_template_basename "$filename")"
+  IFS='|' read -r topic remainder <<< "$parts"
+  local destination_file="$dest_dir/.vscode/$remainder"
+
+  merge_json_files --template-file "$template_file" --destination-file "$destination_file" --description "$description" --auto-init
 }
 
 # Prompt (if needed) and merge Xcode MCP configuration and Swift workspace settings when appropriate
@@ -1090,7 +1289,7 @@ function maybe_merge_xcode_mcp_settings {
     local idx=1
     local artifact_path=""
     for artifact_path in "${xcode_project_artifacts[@]}"; do
-      local artifact_display="${artifact_path#$target_dir/}"
+      local artifact_display="${artifact_path#$dest_dir/}"
       [[ "$artifact_display" == "$artifact_path" ]] && artifact_display="$artifact_path"
       log_info "  - $artifact_display"
       ((idx++))
@@ -1099,7 +1298,10 @@ function maybe_merge_xcode_mcp_settings {
         break
       fi
     done
-    printf "Install Xcode MCP server configuration now? [y/N]: "
+    log_info "=== Xcode MCP Server Integration ==="
+    log_info "This installs .vscode/mcp.json (servers) plus Swift workspace settings."
+    log_info "Tip: re-run with --mcp-xcode to auto-apply without prompting."
+    printf "Proceed with installing the Xcode MCP server integration now? [y/N]: "
     local user_choice=""
     read -r user_choice
     if [[ "${user_choice:l}" == y* ]]; then
@@ -1110,8 +1312,9 @@ function maybe_merge_xcode_mcp_settings {
   fi
 
   if [[ "$should_merge" == true ]]; then
-    merge_xcode_mcp_config
-    merge_swift_workspace_settings
+    apply_workspace_template_if_exists "xcode-mcpserver__workspace.code-workspace" "Xcode MCP workspace template"
+    apply_workspace_template_if_exists "swift__workspace.code-workspace" "Swift workspace template"
+    apply_workspace_dotfile_template_if_exists "xcode-mcpserver__mcp.json" "Xcode MCP server configuration"
   fi
 }
 
@@ -1126,7 +1329,7 @@ function update_gitignore {
     -dev-link-name:=opt_dev_link_name
   
   local dev_link_name="${opt_dev_link_name[2]}"
-  local gitignore_file="$target_dir/.gitignore"
+  local gitignore_file="$dest_dir/.gitignore"
   
   log_info "Updating .gitignore to ignore development symlink..."
   
@@ -1207,6 +1410,11 @@ function synthesize_copilot_instructions {
     log_error "Template file not found: $template_file"
     return 1
   fi
+
+  if [[ -n "${flag_dry_run:-}" ]]; then
+    log_info "DRY-RUN: Would synthesize copilot-instructions.md at $output_file"
+    return 0
+  fi
   
   # Check if output file exists and --regenerate-main wasn't passed
   if [[ -f "$output_file" ]] && [[ -z "${flag_regenerate_main:-}" ]]; then
@@ -1283,28 +1491,28 @@ function analyze_project_and_populate {
   
   local detected_languages=()
   for ext lang in "${(@kv)lang_map}"; do
-    if find "$target_dir" -maxdepth 3 -name "*.$ext" -type f 2>/dev/null | head -n 1 | grep -q .; then
+    if find "$dest_dir" -maxdepth 3 -name "*.$ext" -type f 2>/dev/null | head -n 1 | grep -q .; then
       detected_languages+=("$lang")
     fi
   done
   
   # Detect frameworks/tools
   local detected_frameworks=()
-  [[ -f "$target_dir/Package.swift" ]] && detected_frameworks+=("Swift Package Manager")
-  [[ -f "$target_dir/package.json" ]] && detected_frameworks+=("Node.js/npm")
-  [[ -f "$target_dir/Podfile" ]] && detected_frameworks+=("CocoaPods")
-  [[ -f "$target_dir/Gemfile" ]] && detected_frameworks+=("Ruby/Bundler")
-  [[ -f "$target_dir/requirements.txt" ]] && detected_frameworks+=("Python/pip")
-  [[ -f "$target_dir/Cargo.toml" ]] && detected_frameworks+=("Rust/Cargo")
-  [[ -f "$target_dir/go.mod" ]] && detected_frameworks+=("Go Modules")
-  [[ -f "$target_dir/pom.xml" ]] && detected_frameworks+=("Maven")
-  [[ -f "$target_dir/build.gradle" ]] && detected_frameworks+=("Gradle")
+  [[ -f "$dest_dir/Package.swift" ]] && detected_frameworks+=("Swift Package Manager")
+  [[ -f "$dest_dir/package.json" ]] && detected_frameworks+=("Node.js/npm")
+  [[ -f "$dest_dir/Podfile" ]] && detected_frameworks+=("CocoaPods")
+  [[ -f "$dest_dir/Gemfile" ]] && detected_frameworks+=("Ruby/Bundler")
+  [[ -f "$dest_dir/requirements.txt" ]] && detected_frameworks+=("Python/pip")
+  [[ -f "$dest_dir/Cargo.toml" ]] && detected_frameworks+=("Rust/Cargo")
+  [[ -f "$dest_dir/go.mod" ]] && detected_frameworks+=("Go Modules")
+  [[ -f "$dest_dir/pom.xml" ]] && detected_frameworks+=("Maven")
+  [[ -f "$dest_dir/build.gradle" ]] && detected_frameworks+=("Gradle")
   
   # Detect build tools
   local detected_build_tools=()
-  [[ -f "$target_dir/Makefile" ]] && detected_build_tools+=("Make")
-  [[ -f "$target_dir/CMakeLists.txt" ]] && detected_build_tools+=("CMake")
-  [[ -d "$target_dir/.github/workflows" ]] && detected_build_tools+=("GitHub Actions")
+  [[ -f "$dest_dir/Makefile" ]] && detected_build_tools+=("Make")
+  [[ -f "$dest_dir/CMakeLists.txt" ]] && detected_build_tools+=("CMake")
+  [[ -d "$dest_dir/.github/workflows" ]] && detected_build_tools+=("GitHub Actions")
   
   # Build replacement strings
   local lang_list="${(j:, :)detected_languages[@]}"
@@ -1606,9 +1814,14 @@ if [[ -n "${flag_dev_vscode:-}" ]]; then
   update_vscode_workspace --user-ai-dir "$user_ai_dir"
 fi
 
-# Merge VS Code workspace settings if requested
-if [[ -n "${flag_vscode_settings:-}" ]]; then
-  merge_vscode_workspace_settings
+# Launch workspace template menu if requested
+if [[ -n "${flag_workspace_settings:-}" ]]; then
+  run_workspace_settings_menu
+fi
+
+# Launch user settings template menu if requested
+if [[ -n "${flag_user_settings:-}" ]]; then
+  run_user_settings_menu
 fi
 
 # Offer Xcode MCP server configuration and Swift workspace settings if requested or detected

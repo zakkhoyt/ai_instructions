@@ -94,7 +94,7 @@ The `scripts/configure_ai_instructions.zsh` script is the heart of this reposito
 ~/.ai/scripts/configure_ai_instructions.zsh
 
 # Configure for a specific project
-~/.ai/scripts/configure_ai_instructions.zsh --target-dir /path/to/project
+~/.ai/scripts/configure_ai_instructions.zsh --dest-dir /path/to/project
 
 # Configure for Claude with copy mode instead of symlinks
 ~/.ai/scripts/configure_ai_instructions.zsh --ai-platform claude --configure-type copy
@@ -108,7 +108,7 @@ The `scripts/configure_ai_instructions.zsh` script is the heart of this reposito
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--source-dir <dir>` | User AI directory containing source instructions | `$Z2K_AI_DIR` or `$HOME/.ai` |
-| `--target-dir <dir>` | Target project directory (must be git repo root) | Current directory |
+| `--dest-dir <dir>` | Target project directory (must be git repo root) | Current directory |
 | `--ai-platform <platform>` | AI platform: `copilot`, `claude`, `cursor`, `coderabbit` | `copilot` |
 | `--configure-type <type>` | Installation method: `symlink` or `copy` | `symlink` |
 | `--help` | Display help message | - |
@@ -116,6 +116,10 @@ The `scripts/configure_ai_instructions.zsh` script is the heart of this reposito
 | `--dry-run` | Show what would be done without making changes | - |
 | `--dev-link` | Create symlink to AI dev directory and update `.gitignore` | - |
 | `--dev-vscode` | Add AI dev directory to VS Code workspace | - |
+| `--workspace-settings` | Merge VS Code workspace templates via menu | - |
+| `--user-settings` | Merge VS Code user settings templates via menu | - |
+| `--workspace-settings` | Merge VS Code workspace templates via menu | - |
+| `--user-settings` | Merge VS Code user settings templates via menu | - |
 
 ### Status Indicators
 
@@ -162,6 +166,23 @@ Adds this repository as a folder to your VS Code workspace file, making it easy 
 
 ```zsh
 ~/.ai/scripts/configure_ai_instructions.zsh --dev-vscode
+```
+
+#### VS Code Template Library (`--workspace-settings`, `--user-settings`)
+Template files live under `vscode/workspace` and `vscode/user` so you can merge JSONC snippets into either your repository workspace or global VS Code profile:
+
+- `vscode/workspace/*.code-workspace` → merged into the newest `*.code-workspace` at the repo root
+- `vscode/workspace/.vscode/*.json` → merged into `.vscode/<file>.json` inside the repo
+- `vscode/user/*.json` → merged into `$HOME/Library/Application Support/Code/User/<file>.json`
+
+File names may start with an optional `<topic>__` prefix (for example, `xcode__mcp.json`) to control display order while still mapping to the same destination file. Run the menus to apply a subset of templates:
+
+```zsh
+# Workspace templates (project-local)
+~/.ai/scripts/configure_ai_instructions.zsh --workspace-settings
+
+# User profile templates (global VS Code settings)
+~/.ai/scripts/configure_ai_instructions.zsh --user-settings
 ```
 
 ### Copy vs Symlink Mode

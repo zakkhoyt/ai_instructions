@@ -148,12 +148,12 @@ else
 fi
 # Install all files
 echo "all" | "$SCRIPT_PATH" --configure-type symlink >/dev/null 2>&1
-# Check copilot-instructions.md has 9 entries
+# Check copilot-instructions.md has 8 entries (after removing redundant python git instructions)
 entry_count=$(grep -c "^- \[" "$TEST_WORKSPACE/.github/copilot-instructions.md" || echo 0)
-if [[ "$entry_count" == "9" ]]; then
-  test_pass "Instruction list has 9 entries"
+if [[ "$entry_count" == "8" ]]; then
+  test_pass "Instruction list has 8 entries"
 else
-  test_fail "Instruction list has $entry_count entries, expected 9"
+  test_fail "Instruction list has $entry_count entries, expected 8"
 fi
 cleanup_test_workspace
 
@@ -163,7 +163,8 @@ setup_test_workspace
 touch "$TEST_WORKSPACE/test.swift"
 touch "$TEST_WORKSPACE/test.py"
 touch "$TEST_WORKSPACE/package.json"
-echo "all" | "$SCRIPT_PATH" --configure-type symlink >/dev/null 2>&1
+# Provide instruction selections followed by "n" to decline MCP integration prompt triggered by Swift detection
+printf "all\nn\n" | "$SCRIPT_PATH" --configure-type symlink >/dev/null 2>&1
 assert_file_contains "$TEST_WORKSPACE/.github/copilot-instructions.md" "Swift"
 assert_file_contains "$TEST_WORKSPACE/.github/copilot-instructions.md" "Python"
 cleanup_test_workspace
@@ -213,10 +214,25 @@ cat <<'EOF' > "$TEST_WORKSPACE/Sample.code-workspace"
   },
 }
 EOF
-# Provide empty selection to skip installing instructions while testing workspace merge
-printf "\n" | "$SCRIPT_PATH" --configure-type symlink --vscode-settings >/dev/null 2>&1
+# Select the first workspace template, then skip instruction installation
+printf "1\n\n" | "$SCRIPT_PATH" --configure-type symlink --workspace-settings >/dev/null 2>&1
 assert_file_contains "$TEST_WORKSPACE/Sample.code-workspace" "existing.setting"
 assert_file_contains "$TEST_WORKSPACE/Sample.code-workspace" "chat.agent.thinkingStyle"
+cleanup_test_workspace
+
+test_start "Dev VS Code adds user AI folder to workspace"
+setup_test_workspace
+cat <<'EOF' > "$TEST_WORKSPACE/Sample.code-workspace"
+{
+  "folders": [
+    { "path": "." }
+  ],
+  "settings": {}
+}
+EOF
+# Use --dev-vscode and feed a simple selection for the instructions menu
+echo "all" | "$SCRIPT_PATH" --configure-type symlink --dev-vscode >/dev/null 2>&1
+assert_file_contains "$TEST_WORKSPACE/Sample.code-workspace" ".ai"
 cleanup_test_workspace
 
 # ==================== SUMMARY ====================

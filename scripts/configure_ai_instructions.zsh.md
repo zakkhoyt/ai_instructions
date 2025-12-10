@@ -1,4 +1,12 @@
 
+
+* [ ] zsh-agent instructions to disable autocorrect / nocorrect
+* [ ] Improve debug output to include source file (decorated with --url)
+
+
+
+
+
 <!-- 
 Create a script (./configure_ai_instructions.zsh) to help install these ai instructions to a specific folder for a specific AI service. 
 
@@ -7,7 +15,7 @@ Terms:
 * `repo_instructions_dir` (`$repo_dir/instructions`) - this repository's directory where instructions are located
 * `user_ai_dir` - A user level directory that will contains the "source of truth"
 * `user_ai_instructions_dir` - a sub dir of `user_ai_dir` where the instructions are kept (`$user_ai_dir/instructions`)
-* `target_dir` - the directory to configure AI instructions for.
+* `dest_dir` - the directory to configure AI instructions for.
 * `<AI TODO>` - TODO task for AI agent to look up details on the internet
 
 
@@ -15,12 +23,12 @@ Args:
 * --source-dir <dir>: (let's call this var `user_ai_dir`). 
   * If not passed as arg, check environment variable `Z2K_AI_DIR` before defaulting to `$HOME/.ai`
 
-* --target-dir <path> : (let's call this var `target_dir`) Specify the directory to configure AI instructions for.
+* --dest-dir <path> : (let's call this var `dest_dir`) Specify the directory to configure AI instructions for.
   * default: PWD
   * this must also be a root directory of a git repository. 
   * Ask git for the root dir then compare
     * log a warning if no git repository is found
-    * log a warning if target_dir != git_root_dir
+    * log a warning if dest_dir != git_root_dir
 * --ai-platform <platform> : (let's call this var `ai_platform`) Specify the AI platform to configure instructions for.
   * valid options: 
     "copilot" aka "github-copilot", "github"
@@ -34,21 +42,21 @@ Args:
 
 # Prepare
 * init var `target_instructions_dir` from ai_platform
-  * copilot: "$target_dir/.github/instructions"
-  * claude: "$target_dir/.claude/settings.json"
-  * cursor: "$target_dir/.cursor/rules/mobile.mdc"
+  * copilot: "$dest_dir/.github/instructions"
+  * claude: "$dest_dir/.claude/settings.json"
+  * cursor: "$dest_dir/.cursor/rules/mobile.mdc"
   * coderabbit: <AI TODO>
 
 * init var `ai_platform_instruction_file` from ai_platform
-  * copilot: "$target_dir/.github/copilot-instructions.md"
-  * claude: "$target_dir/.claude/settings.json"
-  * cursor: "$target_dir/.cursor/rules/mobile.mdc"
+  * copilot: "$dest_dir/.github/copilot-instructions.md"
+  * claude: "$dest_dir/.claude/settings.json"
+  * cursor: "$dest_dir/.cursor/rules/mobile.mdc"
   * coderabbit: <AI TODO>
 
 * init var `ai_instruction_settings_file` from ai_platform
   * copilot: "$ai_platform_instruction_file"
   * cursor: "$ai_platform_instruction_file"
-  * claude: "$target_dir/CLAUDE.md"
+  * claude: "$dest_dir/CLAUDE.md"
   * coderabbit: <AI TODO>
   
 
@@ -76,15 +84,15 @@ Args:
 
 ## Support development of this repo along side the target repo
 * add a new cli flag: `--link-to-ai-dir`
-* if set, then create a symlink to `$user_ai_dir` in `$target_dir1`
+* if set, then create a symlink to `$user_ai_dir` in `$dest_dir1`
 ```zsh
 # I think this is the correct command
-ln -s $user_ai_dir $target_dir1
+ln -s $user_ai_dir $dest_dir1
 ```
   
 
-* [X] ~~*if `$target_dir1` contains a vscode-workspace file, modify it as if we had the VSCOde IDE open and "add folder to workspace"*~~ [2025-11-02]
-* [X] ~~*if `$target_dir1` contains a .gitignore file, modify it to ignore the symlink created ^*~~ [2025-11-02]
+* [X] ~~*if `$dest_dir1` contains a vscode-workspace file, modify it as if we had the VSCOde IDE open and "add folder to workspace"*~~ [2025-11-02]
+* [X] ~~*if `$dest_dir1` contains a .gitignore file, modify it to ignore the symlink created ^*~~ [2025-11-02]
 * [ ] The above turns out to be redundant so let's break ^ into two args
 1. --dev-link: create the symlink and update .gitignore
 2. --dev-vscode: add folder to workspace
@@ -227,6 +235,143 @@ Ideal diff
  -->
 
 
+# Merge all vscode files
+
+I'd like to take a better approach to how `$repo_root_dir/scripts/configure_ai_instructions.zsh` merges VSCode json files.
+
+
+We need to support both User settings and workspace setting files which each can have multiple files
+
+This repo will now store all vscode source files under `$repo_root_dir/vscode/*`
+* user settings: `$repo_root_dir/vscode/user/*`
+* workspace settings: `$repo_root_dir/vscode/workspace/*`
+* etc... (More details below)
+
+All files are JSONC format. 
+* Merging should be intelligent
+* Merged JSON should lint without errors. 
+* Merged JSON should not have duplicate keys
+* Comments should be merged/copied over as well, bound to the JSON line below it. 
+* Source and dest json should be pretty format (one per line) with comments above the relevante data (if any)
+* dictionaries should merge key/value pairs
+* arrays should be replaced (I think?)
+* Primitives should be replaced
+
+## User Settings
+
+User settings source and dest files will have matching basenames. 
+The script needs to match basenames of the source and dest dirs, merging the content of matching basenames. 
+
+
+### Destination Dirs/Files
+VSCode keeps the user's setting files here:
+* `$HOME/Library/Application Support/Code/User/*.json`
+* Examples:
+  * User's main settings file: `$HOME/Library/Application Support/Code/User/settings.json`
+  * User's mcp servers file: `$HOME/Library/Application Support/Code/User/mcp.json`
+  * User's keybindings file: `$HOME/Library/Application Support/Code/User/keybindings.json`
+
+### Source Dirs/Files
+* `$repo_root_dir/vscode/user/*.json`
+
+**Examples**
+* `$repo_root_dir/vscode/user/settings.json`
+* `$repo_root_dir/vscode/user/mcp.json`
+* `$repo_root_dir/vscode/user/keybindings.json`
+
+
+
+## Workspace Settings
+
+Workspace settings source and dest files will have matching basenames, except for 1 file, the "code-workspace" file. 
+This file is named differently in ever workspace, but does reliably use the `.code-workspace` extension. 
+Otherwise workspace files can be merged in the same manner as the user files, by matching the basenames per directory
+
+### Source Dirs/Files
+There are two source dirs (nested)
+
+* The Code workspace file itself: `$repo_root_dir/vscode/workspace/workspace.code-workspace`
+  * This file is a bit tricky because the dest basename is not predictable and will not match the source.  
+  * In this case we want to match the file extension: `*.code-workspace`. 
+  * If the destination directory has more than one `*.code-workspace` file, use the one with the most recent modified date.
+* Workspaces can have additional json files: `$repo_root_dir/vscode/workspace/.vscode/*.json`
+  * Similar to the user files, the script just needs to merge to the same file rootnames: 
+  * Examples:
+    * `$repo_root_dir/vscode/workspace/.vscode/launch.json`
+    * `$repo_root_dir/vscode/workspace/.vscode/mcp.json`
+    * `$repo_root_dir/vscode/workspace/.vscode/tasks.json`
+
+
+### Destination Dirs/Files
+* Code workspace file itself: `$dest_dir/*.code-workspace`
+* Workspaces have additional settings/config`$dest_dir/.vscode/*.json`
+  * Examples:
+    * `$dest_dir/.vscode/launch.json`
+    * `$dest_dir/.vscode/tasks.json`
+    * `$dest_dir/.vscode/mcp.json`
+
+
+## Multiple sources, 1 destination
+
+* Multiple source files can map to a single destination file. 
+* This will allow the source files to be broken out into useful categgories or topics.
+* Let's use a convention for the source files: `<dir_path>/[<topic>__]<common>.json` 
+  * Where `[<topic>__]` is an optional component of the filename
+  * EX 1: Code Workspace file:
+    * `$repo_root_dir/vscode/workspace/workspace.code-workspace` -> `$dest_dir/*.code-workspace`
+  
+  * EX 2: All of these will map to the same file:
+    * `$repo_root_dir/vscode/workspace/.vscode/mcp.json` -> `$dest_dir/.vscode/mcp.json`
+    * `$repo_root_dir/vscode/workspace/.vscode/xcode__mcp.json` -> `$dest_dir/.vscode/mcp.json`
+    * `$repo_root_dir/vscode/workspace/.vscode/jira01__mcp.json` -> `$dest_dir/.vscode/mcp.json`
+    * `$repo_root_dir/vscode/workspace/.vscode/jira02__mcp.json` -> `$dest_dir/.vscode/mcp.json`
+
+
+
+
+## Moving VSCode source files to new locations
+
+Let's relocate and rename our current configuraiton files like so:
+
+```zsh
+mkdir -p vscode/user
+echo "*.json files in this dir will be merged into `$HOME/Library/Application Support/Code/User/*.json` by `scripts/configure_ai_instructions.zsh`" > vscode/user/README.md
+
+mkdir -p vscode/workspace
+echo "*.code-workspace files in this dir will be merged into `$dest_dir/*.code-workspace` by `scripts/configure_ai_instructions.zsh`" > vscode/workspace/README.md
+
+mkdir -p vscode/workspace/.vscode
+echo "*.code-workspace files in this dir will be merged into `$dest_dir/.vscode/*.json` by `scripts/configure_ai_instructions.zsh`" > vscode/workspace/.vscode/README.md
+
+# workspace/*.code-workspace
+mv "vscode/ai-workspace-settings.template.json" "vscode/workspace/ai_autoapprove__workspace.code-workspace"
+mv "vscode/xcode-mcpserver-workspace-settings.template.json" "vscode/workspace/xcode-mcpserver__workspace.code-workspace"
+mv "vscode/swift-workspace-settings.template.json" "vscode/workspace/swift__workspace.code-workspace"
+
+# workspace/.vscode/*.json
+mv "vscode/mcp/xcode-mcpserver-workspace-mcp.json" "vscode/workspace/.vscode/xcode-mcpserver__mcp.json"
+
+```
+
+
+## CLI Args
+
+The files under `vscode/workspace` should be merged into the dest repo via a prompt menu, a lot like the instruction files (except no sym links here). 
+I'm not sure how easy it will be to pre-select items that are already installed in this menu, unless we use a cache file or md5 hashing. 
+
+THe files under `vscode/user` should like wise use a prompt menu, but only if a new arg `--user-settings` is present. Otherwise it should be skipped. 
+
+Research, LMK if I missed something or contradicted myself. Ask me questions. Summarize
+
+
+
+
+
+
+
+
+
+
 
 # xcode mcp servvers
 
@@ -237,7 +382,7 @@ Ideal diff
   * When any of those artifacts are found, the user is prompted to merge the MCP settings.
   * Only the most recent `.code-workspace` file at the repo root is modified, and a backup is created before changes.
 * Settings come from `vscode/xcode-mcpserver-workspace-settings.template.json`; the merge routine supports JSON comments so template annotations are preserved.
-* The workspace merge uses the same jq-based deep-merge logic as the base AI template, so existing keys are preserved.
+* The workspace merge reuses the Python-based `json_merge.py` helper, ensuring dictionaries merge recursively while arrays and primitives follow the template values.
 
 
 * [ ] Merge mcp.json files
@@ -245,7 +390,7 @@ Ideal diff
 ## Other
 
 * The base workspace template now lives at `vscode/ai-workspace-settings.template.json`; the old filename has been removed.
-* Both the AI workspace template and the Xcode MCP template may include `//` and `/* */` comments. The merge step strips those comments via a small Python helper (with a sed fallback) before piping the JSON through `jq`.
+* Both the AI workspace template and the Xcode MCP template may include `//` and `/* */` comments. The merge step runs `strip_jsonc.py` to sanitize JSONC and then feeds the result to `json_merge.py`, so no manual cleanup is required.
 
 
 

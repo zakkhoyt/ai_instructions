@@ -1,3 +1,14 @@
+
+Disable zsh autocorrect before issuing terminal commands, especially those with `build`.
+
+EX: `nocorrect swift build --target HatchNetworkClient`.
+
+The problem is that swift usually has a `.build` folder  which results in zsh trying to autocorrect it
+
+
+
+I notice that my default zsh environment has `correctall` listed under `setopt`. 
+
 <!-- 
 ✅ **COMPLETED** - New instruction file created at `instructions/agent/agent-terminal-conventions.instructions.md`
 
