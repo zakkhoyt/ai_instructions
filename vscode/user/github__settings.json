@@ -1,0 +1,12 @@
+{
+    "github-actions.org-features": true,
+    "github-actions.workflows.pinned.refresh.enabled": true,
+    "github.copilot.chat.agent.thinkingTool": true,
+    "github.copilot.nextEditSuggestions.enabled": true,
+    "github.customPullRequestTitle": true,
+    "github.gitProtocol": "ssh",
+    "githubPullRequests.defaultMergeMethod": "squash",
+    "githubPullRequests.fileListLayout": "tree",
+    "githubPullRequests.pullBranch": "never",
+    "githubPullRequests.pushBranch": "always"
+}

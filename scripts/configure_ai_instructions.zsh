@@ -870,28 +870,11 @@ function update_vscode_workspace {
   fi
 }
 
-# Select the VS Code workspace file to modify.
-# Preference order:
-#  1. $AI_VSCODE_WORKSPACE_FILE if set and exists
-#  2. Any .code-workspace under $dest_dir
-#  3. Any .code-workspace under $HOME (for global workspaces like ~/scripts.code-workspace)
-# When multiple candidates exist, the most recently modified file is chosen.
+# Select the VS Code workspace file to modify (newest .code-workspace at repo root)
 # Prints empty string if none found.
 function select_workspace_settings_file {
   setopt local_options null_glob
-
-  # Explicit override via environment variable
-  if [[ -n "${AI_VSCODE_WORKSPACE_FILE:-}" && -f "$AI_VSCODE_WORKSPACE_FILE" ]]; then
-    log_debug "Using AI_VSCODE_WORKSPACE_FILE override: $AI_VSCODE_WORKSPACE_FILE"
-    echo "$AI_VSCODE_WORKSPACE_FILE"
-    return 0
-  fi
-
-  local -a workspace_files
-  workspace_files=(
-    "$dest_dir"/*.code-workspace(N)
-    "$HOME"/*.code-workspace(N)
-  )
+  local -a workspace_files=("$dest_dir"/*.code-workspace(N))
 
   if [[ ${#workspace_files[@]} -eq 0 ]]; then
     echo ""
@@ -903,20 +886,15 @@ function select_workspace_settings_file {
     return 0
   fi
 
-  local -a with_mtime
-  local file=""
+  local -a file_mtimes
   for file in "${workspace_files[@]}"; do
     local mtime
     mtime=$(stat -f "%m" "$file" 2>/dev/null || stat -c "%Y" "$file" 2>/dev/null)
-    # Store "mtime:path" pairs; we will sort by numeric mtime later
-    with_mtime+=("$mtime:$file")
+    file_mtimes+=("$mtime:$file")
   done
 
-  # Sort descending by mtime (newest first) and pick the path portion
-  local -a sorted
-  sorted=(${(On)with_mtime[@]})
-  local newest_entry="${sorted[1]}"
-  echo "${newest_entry#*:}"
+  local sorted_files=(${(On)file_mtimes[@]})
+  echo "${sorted_files[1]#*:}"
 }
 
 # Split a template filename into optional topic prefix and remainder

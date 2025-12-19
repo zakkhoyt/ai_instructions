@@ -1,6 +1,37 @@
 
 
 
+
+# Adopt Swift 6 Settings
+* The `swiftSettings` in HatchModules/Package.swift contains an array of early opt in settings. 
+* `swift package migrate --to-feature InternalImportsByDefault` will migrate Package.swift and source code, making the transition easy
+* Combined with AI this could be a good move
+
+
+# Docc 
+Write a new zsh script for compiling `*.docc` archives. See 
+
+
+
+
+
+# AI take a stab at rendering a dependency graph
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Use a different derived data dir (.gitignored) so that I an use xcode at the same time
 * How to do this with xcodebuild?
 

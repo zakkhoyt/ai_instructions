@@ -1,5 +1,50 @@
 
 
+
+
+* [ ] Add more atlassian__mcp.json
+  * [ ] user
+  * [ ] workspace
+* [ ] clean7
+  * [ ] user
+  * [ ] workspace
+
+
+ActionItem: Update `scripts/configure_ai_instructions.zsh`
+* context: If `code-workspace` file cannot be auto-discovered (and single result) 
+  * [ ] We have env var support, but let's add an explicit argument as well which should take precendence. 
+    * Allow multiple like so: `-code-workspace+:=opt_code_workspace_files`
+    * Also let's update modify `AI_VSCODE_WORKSPACE_FILE` to support multiple. Rename/retype to `-a AI_VSCODE_WORKSPACE_FILES` 
+  * [ ] if zero code-workspace_files are defined via arg or env var, then fall back to autodiscovering
+    * [ ] Only look in the dest repo dir (root only). Remove the fall back looking in `$HOME`
+    * [ ] if >=1 matches, prompt the user to select which to apply to (multiselect enabled). Default should be the most recenly modified one. Format the menu similar to existing menus
+    * [ ] if 0 matches, then prompt the user to enter the path
+    * [ ] Apply to all selected, including support for none/empty list (just move on)
+* [ ] Add a new flag, `{-no-prompt/-no-ask=flag_no_prompt}`. 
+  * [ ] If set, we need to discuss how to handle each prompt. This will be a back and forth convo. 
+* [ ] update comments and --help
+* [ ] ensure that all files that are modified are first backed up prior to any mutation. 
+  * [ ] back them up under `.gitignored/.ai/` (create if needed)
+  * [ ] create nested dirs to mirror absolute path of the file. EX: `$repo_root_dir/.gitignored/.ai/Users/zakkhoyt/Library/Application Support/Code/User/settings.json`
+  * [ ] leave backup files/dirs in place vs deleting them
+  * [ ] when backing up files, allow overwriting the file which is bound to happen pretty quickly
+  * [ ] log (--debug) every time a file backup is created. Log the backup file path using --url decoration
+    * [ ] also debug log every time a file is mutated which should include the shell command that invokes the python script
+      * [ ] use absolute paths
+      * [ ] decorate the command using `--code`. 
+      * [ ] the filepaths will be included in the command so no need to log them separately
+* Let's discuss the args that impact the code-workspace file. 
+  * We have `--dev-vscode`
+  * We will have `--code-workspace`
+  * Any others?
+  * Can these be consolidated? Or are they better as separate / complimentary? 
+  * Should we rename them to express that they are related?
+
+
+
+
+
+
 * [ ] zsh-agent instructions to disable autocorrect / nocorrect
 * [ ] Improve debug output to include source file (decorated with --url)
 

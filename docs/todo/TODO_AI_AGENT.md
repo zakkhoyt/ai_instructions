@@ -1,3 +1,12 @@
+
+* When i ask a question, or ask about a topic, here is how I'd like you to respond to me in the chat:
+  * Always include reference links when responding to a question in chat. 
+* For you knowledge, I keep very detailed notes about everything using markdown files. This means I do a LOT of writing markdown code. 
+  * Quite frequently I will want to copy information from this agent chat session into my markdown notes. This means that I will frequently want you to pre-present information formatted as markdown source code / markdown code (NOT Rendered markdown)
+  * For example, code in markdown code fence format. URLs in markdown link format. 
+
+
+
 <!-- 
 ✅ **COMPLETED** - New instruction file created at `instructions/agent/agent-terminal-conventions.instructions.md`
 

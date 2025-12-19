@@ -1,0 +1,52 @@
+{
+	"servers": {
+		// This is atlassian's official MCP server definition, however
+		// it uses Oauth2 only which needs to be set up via web authentication
+		// every 2 days. 
+		//
+		// If this doesn't work for you, use one of the two "mcp-atlassian" defines below
+		"atlassian/atlassian-mcp": {
+			"type": "http",
+			"url": "https://mcp.atlassian.com/v1/sse",
+			"gallery": "https://api.mcp.github.com",
+			"version": "1.0.0"
+		},
+		
+		
+		// // A 3rd party MCP server definition that uses API token authentication
+		// // which can last fora  whole year
+		// "mcp-atlassian": {
+		// 	"command": "docker",
+		// 	"args": [
+		// 		"run",
+		// 		"--rm",
+		// 		"-i",
+		// 		// "--env-file", "${workspaceFolder}/.vscode/atlassian.env",
+		// 		// "--env-file", "/Users/zakkhoyt/.hatch/config/vscode/mcp-atlassian.env",
+		// 		"--env-file", "$HOME/.hatch/config/vscode/mcp-atlassian.env",
+		// 		"ghcr.io/sooperset/mcp-atlassian:latest",
+		// 		"--transport", "stdio"
+		// 	],
+		// 	"type": "stdio"
+		// }
+
+		// Use a wrapper script to inject env vars from the user's shell
+		// ```zsh
+		// # $HOME/.hatch/scripts/mcp-atlassian-wrapper.sh
+		// #!/usr/bin/env zsh
+		// docker run --rm -i \
+		// 	-e JIRA_URL="$MY_JIRA_URL" \
+		// 	-e JIRA_USERNAME="$MY_JIRA_USER" \
+		// 	-e JIRA_API_TOKEN="$MY_JIRA_TOKEN" \
+		// 	ghcr.io/sooperset/mcp-atlassian:latest \
+		// 	--transport stdio
+		// ```
+		"mcp-atlassian": {
+			// "command": "/Users/zakkhoyt/.hatch/scripts/_source/mcp_atlassian_wrapper/mcp_atlassian_wrapper.zsh",
+			"command": "/Users/zakkhoyt/.hatch/scripts/mcp_atlassian_wrapper.zsh",
+			"args": [],
+			"type": "stdio"
+		}
+	},
+	"inputs": []
+}
