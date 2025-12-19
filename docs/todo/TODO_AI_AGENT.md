@@ -1,9 +1,32 @@
 
+<!-- 
+✅ **COMPLETED** - New instruction file created at `instructions/agent/agent-chat-response-conventions.instructions.md`
+
+## Summary
+
+A new instruction file has been created specifically for AI agent chat response behavior:
+
+**Location**: `instructions/agent/agent-chat-response-conventions.instructions.md`
+
+**Key Topics Covered**:
+1. **Markdown Source Format** - Present information as markdown source code, not rendered markdown
+2. **Reference Links** - Always include reference links in markdown source format
+3. **Code Snippets** - Use markdown code fences for all code examples
+4. **URLs and Links** - Present URLs in markdown link syntax `[text](url)`
+
+**Configuration**: The instruction has been registered with the configure_ai_instructions.zsh script and is now active in the repository.
+
+---
+
+# Original Request
+
 * When i ask a question, or ask about a topic, here is how I'd like you to respond to me in the chat:
-  * Always include reference links when responding to a question in chat. 
-* For you knowledge, I keep very detailed notes about everything using markdown files. This means I do a LOT of writing markdown code. 
-  * Quite frequently I will want to copy information from this agent chat session into my markdown notes. This means that I will frequently want you to pre-present information formatted as markdown source code / markdown code (NOT Rendered markdown)
-  * For example, code in markdown code fence format. URLs in markdown link format. 
+  * For you knowledge, I keep very detailed notes about everything using markdown files. This means I do a LOT of writing markdown code. 
+    * Quite frequently I will want to copy information from this agent chat session into my markdown notes. This means that I will frequently want you to pre-present information formatted as markdown source code / markdown code (NOT Rendered markdown)
+    * For example, code in markdown code fence format. URLs in markdown link format, etc...
+    * So when I say "markdown source" or "markdown code", this is what I'm referring to
+  * Always include reference links when responding to a question in chat. Present reference links in `markdown source` format
+-->
 
 
 

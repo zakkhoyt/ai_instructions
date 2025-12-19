@@ -20,6 +20,7 @@ The following instruction files are active in this repository and define coding 
 <!-- This section is automatically updated by configure_ai_instructions.zsh -->
 <!-- Do not manually edit between these markers -->
 
+- [Agent Chat Response Conventions](.github/instructions/agent-chat-response-conventions.instructions.md)
 - [Agent Swift Terminal Conventions](.github/instructions/agent-swift-terminal-conventions.instructions.md)
 - [Agent Terminal Conventions](.github/instructions/agent-terminal-conventions.instructions.md)
 - [Git Branching](.github/instructions/git-branching.instructions.md)
