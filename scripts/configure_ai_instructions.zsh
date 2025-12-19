@@ -186,6 +186,8 @@ zparseopts -D -F -- \
   -workspace-settings=flag_workspace_settings \
   -user-settings=flag_user_settings \
   -mcp-xcode=flag_mcp_xcode \
+  -instructions=flag_instructions \
+  -prompt=flag_prompt \
   -regenerate-main=flag_regenerate_main \
   -source-dir:=opt_source_dir \
   -dest-dir:=opt_dest_dir \
@@ -240,9 +242,17 @@ META OPTIONS
                  - Requires confirmation via interactive menu to avoid surprises
     --mcp-xcode             Install Xcode MCP server configuration and Swift workspace settings
                            - Auto-detects Package.swift / *.xcworkspace / *.xcodeproj under target
-                           - Prompts when artifacts exist; --mcp-xcode applies without prompting
+                           - Use with --prompt to interactively confirm installation
+                           - Without --prompt, shows what would be installed but doesn't prompt
                            MCP Template: vscode/mcp/xcode-mcpserver-workspace-mcp.json → .vscode/mcp.json
                            Swift Template: vscode/swift-workspace-settings.template.json → workspace settings
+    --instructions          Auto-install all applicable instruction files
+                           - Skips instructions that are already installed
+                           - Use with --prompt to show interactive menu for file selection
+                           - Without --prompt, installs all uninstalled files automatically
+    --prompt                Enable interactive prompts for installations
+                           - When set: shows interactive menus for confirmation/selection
+                           - When not set: shows info about what's available but doesn't prompt
 
 ENVIRONMENT
     Z2K_AI_DIR             Override default source directory location
@@ -1259,12 +1269,46 @@ function apply_workspace_dotfile_template_if_exists {
   merge_json_files --template-file "$template_file" --destination-file "$destination_file" --description "$description" --auto-init
 }
 
+# Check if Xcode MCP server is already installed
+# Returns 0 (success) if installed, 1 if not installed
+function is_xcode_mcp_installed {
+  local mcp_file="$dest_dir/.vscode/mcp.json"
+  
+  # Check if mcp.json exists
+  if [[ ! -f "$mcp_file" ]]; then
+    return 1
+  fi
+  
+  # Check if it contains xcode-mcp-server configuration
+  if command -v jq >/dev/null 2>&1; then
+    if jq -e '.mcpServers."xcode-mcp-server"' "$mcp_file" >/dev/null 2>&1; then
+      return 0
+    fi
+  else
+    # Fallback: simple grep check if jq not available
+    if grep -q "xcode-mcp-server" "$mcp_file"; then
+      return 0
+    fi
+  fi
+  
+  return 1
+}
+
 # Prompt (if needed) and merge Xcode MCP configuration and Swift workspace settings when appropriate
 function maybe_merge_xcode_mcp_settings {
   local should_merge=false
+  
+  # Check if MCP is already installed
+  if is_xcode_mcp_installed; then
+    log_success "Xcode MCP Server already installed - skipping"
+    return 0
+  fi
+  
+  # If --mcp-xcode flag is set, auto-install without prompting
   if [[ -n "${flag_mcp_xcode:-}" ]]; then
     should_merge=true
   elif [[ ${#xcode_project_artifacts[@]} -gt 0 ]]; then
+    # MCP not installed, but we detected Xcode artifacts
     log_info "Detected ${#xcode_project_artifacts[@]} Xcode-related artifact(s) that support the MCP server:"
     local preview_limit=5
     local idx=1
@@ -1279,15 +1323,25 @@ function maybe_merge_xcode_mcp_settings {
         break
       fi
     done
+    
     log_info "=== Xcode MCP Server Integration ==="
     log_info "This installs .vscode/mcp.json (servers) plus Swift workspace settings."
-    log_info "Tip: re-run with --mcp-xcode to auto-apply without prompting."
-    printf "Proceed with installing the Xcode MCP server integration now? [y/N]: "
-    local user_choice=""
-    read -r user_choice
-    if [[ "${user_choice:l}" == y* ]]; then
-      should_merge=true
+    
+    # Check if --prompt flag is set
+    if [[ -n "${flag_prompt:-}" ]]; then
+      log_info "Tip: re-run with --mcp-xcode to auto-apply without prompting."
+      printf "Proceed with installing the Xcode MCP server integration now? [y/N]: "
+      local user_choice=""
+      read -r user_choice
+      if [[ "${user_choice:l}" == y* ]]; then
+        should_merge=true
+      else
+        log_info "Skipping Xcode MCP server configuration"
+      fi
     else
+      log_info "To install MCP server, re-run with one of these flags:"
+      log_info "  - Use --mcp-xcode to auto-install without prompting"
+      log_info "  - Use --prompt --mcp-xcode to be prompted for confirmation"
       log_info "Skipping Xcode MCP server configuration"
     fi
   fi
@@ -1570,6 +1624,26 @@ function update_instruction_list {
 
 # ---- ---- ----     Interactive Menu     ---- ---- ----
 
+# Check if any instructions need to be installed
+# Returns 0 if all instructions are already installed, 1 if some need installation
+function has_instructions_to_install {
+  local instruction_files
+  instruction_files=(${(f)"$(find "$user_ai_instructions_dir" -name "*.instructions.md" -type f | sort)"})
+  
+  for file_path in "${instruction_files[@]}"; do
+    local file_basename="${file_path:t}"
+    local file_status="$(get_file_status --file-basename "$file_basename" --source-file "$file_path")"
+    
+    # If any file is not installed or outdated, we have work to do
+    if [[ "$file_status" == "not_installed" || "$file_status" == "copied_outdated" ]]; then
+      return 1
+    fi
+  done
+  
+  # All instructions are installed and current
+  return 0
+}
+
 # Display menu of available instruction files and process user selections
 # Pre-fills selection with already-installed files for convenient re-linking/updating
 # User can select individual files or 'all' to install all files
@@ -1813,8 +1887,56 @@ if [[ "$ai_platform" == "copilot" ]] && [[ ! -f "$ai_platform_instruction_file" 
   synthesize_copilot_instructions
 fi
 
-# Display interactive menu
-display_menu
+# Handle instruction file installation based on flags
+if [[ -n "${flag_instructions:-}" ]]; then
+  # --instructions flag is set
+  if has_instructions_to_install; then
+    log_success "All instruction files are already installed and current - skipping"
+  else
+    if [[ -n "${flag_prompt:-}" ]]; then
+      # --prompt --instructions: Show interactive menu
+      log_info "=== Instruction File Installation ==="
+      display_menu
+    else
+      # --instructions alone: Auto-install all uninstalled files
+      log_info "=== Auto-installing instruction files ==="
+      local instruction_files
+      instruction_files=(${(f)"$(find "$user_ai_instructions_dir" -name "*.instructions.md" -type f | sort)"})
+      
+      for file_path in "${instruction_files[@]}"; do
+        local file_basename="${file_path:t}"
+        local file_status="$(get_file_status --file-basename "$file_basename" --source-file "$file_path")"
+        
+        # Auto-install files that are not installed or outdated
+        if [[ "$file_status" == "not_installed" || "$file_status" == "copied_outdated" ]]; then
+          install_instruction_file --file-basename "$file_basename" --source-file "$file_path"
+        else
+          log_debug "Skipping already-installed file: $file_basename"
+        fi
+      done
+      log_success "Auto-installation complete"
+    fi
+  fi
+else
+  # No --instructions flag
+  if [[ -n "${flag_prompt:-}" ]]; then
+    # --prompt alone: Show interactive menu
+    log_info "=== Instruction File Installation ==="
+    display_menu
+  else
+    # No flags: Show info about available instructions but don't install
+    if has_instructions_to_install; then
+      log_info "Some instruction files are not installed or need updates"
+      log_info "To install instructions, re-run with one of these flags:"
+      log_info "  - Use --instructions to auto-install all uninstalled files"
+      log_info "  - Use --prompt to show interactive menu for file selection"
+      log_info "  - Use --instructions --prompt to prompt before installing"
+    else
+      log_success "All instruction files are already installed and current"
+    fi
+  fi
+fi
+
 # Regenerate checksums file based on currently installed copied files
 if [[ -z "${flag_dry_run:-}" ]]; then
   log_debug "Regenerating checksums file: $checksums_file"
