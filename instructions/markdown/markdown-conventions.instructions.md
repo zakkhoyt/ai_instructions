@@ -286,6 +286,24 @@ See https://docs.github.com/en/actions/hosting-your-own-runners    # No descript
 Click [here](https://brew.sh/)                                      # Generic link text
 ```
 
+## Images
+
+Use HTML `<img>` tags for every image so that width can be controlled explicitly. Markdown image syntax (`![alt](src)`) is not allowed.
+
+- Always include a `width` attribute; default to `width="300"` unless a different value is required.
+- Do **not** set a `height` attribute so the browser can preserve aspect ratio.
+- If you include an `alt` attribute, derive it from the final path component of `src`, converted to `snake_case` (e.g., `images/myTruck.png` → `my_truck`).
+
+✅ **Good:**
+```markdown
+<img src="images/myTruck.png" alt="my_truck" width="300">
+```
+
+❌ **Bad:**
+```markdown
+![my truck](images/myTruck.png)  # Missing HTML tag and width control
+```
+
 ## Code Blocks
 
 Always specify language for syntax highlighting:

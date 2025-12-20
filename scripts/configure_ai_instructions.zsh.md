@@ -1,4 +1,160 @@
 
+SYNOPSIS
+    configure_ai_instructions.zsh [OPTIONS]
+
+DESCRIPTION
+    Configure AI instructions for various platforms by copying or symlinking
+    instruction files from a central source to target project directories.
+
+OPTIONS
+    --source-dir <dir>      User AI directory containing source instructions
+                           (default: $Z2K_AI_DIR or $HOME/.ai)
+    
+    --dest-dir <dir>      Target directory to configure (must be git repo root)
+                           (default: current working directory)
+    
+    --ai-platform <platform>
+                           AI platform to configure for
+                           Options: copilot, claude, cursor, coderabbit
+                           (default: copilot)
+    
+    --configure-type <type> How to install instructions
+                           Options: copy, symlink
+                           (default: symlink)
+
+META OPTIONS
+    --help                  Display this help message and exit
+    --debug                 Enable debug logging
+    --dry-run               Show what would be done without making changes
+    --regenerate-main       Force regeneration of main instruction file from template
+                           (WARNING: This will overwrite any custom edits)
+    --dev-link              Create symlink to AI dev directory and update .gitignore
+                           (useful for quick access to repo files during development)
+    --dev-vscode            Add AI dev directory to VS Code workspace
+                           (enables IDE integration for development repo)
+    --vscode-settings       Deprecated alias for --workspace-settings
+    --workspace-settings    Launch menu to merge VS Code workspace templates
+                 - Supports *.code-workspace templates plus .vscode/*.json fragments
+                 - Honors optional ordering/topic prefixes (e.g., 01__template)
+                 - Creates backups before applying jq-based JSON merges
+    --user-settings         Launch menu to merge VS Code user settings templates
+                 - Applies files under vscode/user → $HOME/Library/Application Support/Code/User
+                 - Requires confirmation via interactive menu to avoid surprises
+    --mcp-xcode             Install Xcode MCP server configuration and Swift workspace settings
+                           - Auto-detects Package.swift / *.xcworkspace / *.xcodeproj under target
+                           - Use with --prompt to interactively confirm installation
+                           - Without --prompt, shows what would be installed but doesn't prompt
+                           MCP Template: vscode/mcp/xcode-mcpserver-workspace-mcp.json → .vscode/mcp.json
+                           Swift Template: vscode/swift-workspace-settings.template.json → workspace settings
+    --instructions          Auto-install all applicable instruction files
+                           - Skips instructions that are already installed
+                           - Use with --prompt to show interactive menu for file selection
+                           - Without --prompt, installs all uninstalled files automatically
+    --prompt                Enable interactive prompts for installations
+                           - When set: shows interactive menus for confirmation/selection
+                           - When not set: shows info about what's available but doesn't prompt
+                           - 
+
+# CLI Not behaving properly
+
+## --instructions --prompt
+### Expect
+This should present me with the instrutions menu no matter if any are installed or not. Let the user select what to do interactively
+```zsh
+$ ~/.ai/scripts/configure_ai_instructions.zsh --instructions --prompt
+```
+### Actual
+
+I got the Xcode mcp menu? that's supposed ot be behind `--mcp-xcode --prompt`
+```zsh
+[INFO] ℹ️ Updating source of truth from repository...
+[SUCCESS]: ✅ User instructions already up to date (same as repository)
+[INFO] ℹ️ Configuring AI instructions for copilot platform
+[INFO] ℹ️ Source directory: /Users/zakkhoyt/.ai/instructions
+[INFO] ℹ️ Target directory: /Users/zakkhoyt/code/repositories/z2k/github/lgtv-cli/.github/instructions
+[INFO] ℹ️ Configuration type: symlink
+[INFO] ℹ️ Detected 3 Xcode-related artifact(s) that support the MCP server:
+[INFO] ℹ️   - Docs/swift-package-grapher/swift-package-describe/Package.swift
+[INFO] ℹ️   - Package.swift
+[INFO] ℹ️   - Tests/LGTVWebOSControllerTests/LGTVWebOSControllerTests.swift
+[INFO] ℹ️ === Xcode MCP Server Integration ===
+[INFO] ℹ️ This installs .vscode/mcp.json (servers) plus Swift workspace settings.
+[INFO] ℹ️ Tip: re-run with --mcp-xcode to auto-apply without prompting.
+Proceed with installing the Xcode MCP server integration now? [y/N]: 
+```
+Ansering N just finished the script
+
+```zsh
+[INFO] ℹ️ Skipping Xcode MCP server configuration
+[SUCCESS]: ✅ All instruction files are already installed and current - skipping
+[SUCCESS]: ✅ AI instruction configuration complete!
+[INFO] ℹ️ No files were installed
+[INFO] ℹ️ Next steps:
+  • Instructions will be automatically detected by GitHub Copilot
+  • Restart VS Code if needed to ensure instructions are loaded
+
+```
+
+
+## --instructions
+
+I guess this one worked okay. It found that ther's nothing to do with instructions. I assume if there was an updated to one of the instrution files in the repo it would detect this and install it? It should
+
+### Expect
+
+```zsh
+$ ~/.ai/scripts/configure_ai_instructions.zsh --instructions 
+```
+```zsh
+[INFO] ℹ️ Updating source of truth from repository...
+[SUCCESS]: ✅ User instructions already up to date (same as repository)
+[INFO] ℹ️ Configuring AI instructions for copilot platform
+[INFO] ℹ️ Source directory: /Users/zakkhoyt/.ai/instructions
+[INFO] ℹ️ Target directory: /Users/zakkhoyt/code/repositories/z2k/github/lgtv-cli/.github/instructions
+[INFO] ℹ️ Configuration type: symlink
+[INFO] ℹ️ Detected 3 Xcode-related artifact(s) that support the MCP server:
+[INFO] ℹ️   - Docs/swift-package-grapher/swift-package-describe/Package.swift
+[INFO] ℹ️   - Package.swift
+[INFO] ℹ️   - Tests/LGTVWebOSControllerTests/LGTVWebOSControllerTests.swift
+[INFO] ℹ️ === Xcode MCP Server Integration ===
+[INFO] ℹ️ This installs .vscode/mcp.json (servers) plus Swift workspace settings.
+[INFO] ℹ️ To install MCP server, re-run with one of these flags:
+[INFO] ℹ️   - Use --mcp-xcode to auto-install without prompting
+[INFO] ℹ️   - Use --prompt --mcp-xcode to be prompted for confirmation
+[INFO] ℹ️ Skipping Xcode MCP server configuration
+[SUCCESS]: ✅ All instruction files are already installed and current - skipping
+[SUCCESS]: ✅ AI instruction configuration complete!
+[INFO] ℹ️ No files were installed
+[INFO] ℹ️ Next steps:
+  • Instructions will be automatically detected by GitHub Copilot
+  • Restart VS Code if needed to ensure instructions are loaded
+```
+### Actual
+
+```zsh
+```
+
+
+
+
+
+## <>
+
+### Expect
+
+```zsh
+```
+### Actual
+
+```zsh
+```
+
+
+
+
+
+
+
 
 
 
