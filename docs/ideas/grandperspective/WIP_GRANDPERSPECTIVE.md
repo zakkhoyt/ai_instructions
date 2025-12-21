@@ -1,5 +1,26 @@
 
 
+ActionItems
+* [ ] Re-read AI instructions, especially `markdown`, `zsh`, and `swift`
+* [ ] Read this entire document and carry out the research mentioned: `docs/ideas/grandperspective/WIP_GRANDPERSPECTIVE.md`
+* [ ] Check off every box in this document before then writing a couple of new documents:
+* [ ] `docs/ideas/grandperspective/GRANDPERSPECTIVE_ANALYSIS.md` - This document will detail everything about the GrandPerspective app
+  * How it works
+  * Data formats
+  * Graph types
+  * How to control it from CLI
+  * Every UI control, options, settings, and every type of input and output
+* [ ] `docs/ideas/grandperspective/GRANDPERSPECTIVE_REPLACMENT_PLAN.md` - 
+  * [ ] Write up a document that considers all of the considerations mentioned in this document
+  * [ ] Make a recommendation on each
+  * [ ] Language to use
+  * [ ] Plot types to consider
+  * [ ] Data Structures to use
+  * [ ] data format translations
+  * [ ] Graph Rendering 
+  * [ ] Image formats
+
+
 # Grand Perspective
 
 This computer has the application installed:
@@ -34,22 +55,31 @@ GrandPerspective's Inputs
 
 * I really want to be able to control GrandPerspective from command line. EX: Launch and begin a scan on some directory. 
   * I can't figure out how to do that from a `zsh` script. There is no `--help`, no `man`, etc...
+* [ ] how can i control GrandPerspective in this manner using zsh only?
+* [ ] how can i control GrandPerspective in this manner using zsh + osascript?
 
 
-## Graphing How Disk Space is Used / Free
 
-### Graph Types
-* `box plot` - Confirma this is the plot type the GrandPerspective uses to display?  Are there any aliases for this?
-* What are some other graph types that can show how diskspace is consumed?
 
-### Graphing Libraries
-* mermaid * display in markdown or other dedicated viewers
-* plantUML - data stored in human readable `*.puml` files
-  * These can be rendered out to svg, pdf, png, etc...
-  * Also from what I understand these can be converted to `dot` and `mermaid`. I have no experience though
-* graphviz - 
+# Graphing How Disk Space is Used / Free
 
-### Programming Languages
+The goal is to write up a new library that can do what GrandPerspective does plus some. 
+The implementation is undecided so far, but I'd like:
+<!-- 
+* Scan result data to use well established file formats and conventions
+* render a session from memory (after a scan)
+* save the session to disk for loading later
+* render a session from a file (after a scan)
+* Be able to render the scan of the disk usage
+* Be able to render a legend key 
+* Be able to render styled text as (info panels)
+
+ -->
+
+
+
+## Programming Languages
+
 
 * `zsh` - raw zsh scripting using:
   * cli tools that ship with `macOS`
@@ -59,35 +89,52 @@ GrandPerspective's Inputs
   * make a library target to do the disk space computing / crawling
   * library can depend on SwiftShell (a `zsh` bridge from `Swift`, allowing access to that world)
   * much more capable at handling JSON computations vs zsh
-* xcode + swift. We could make a full macOS application:
+* `xcode` + `swift`. We could make a full macOS application. This is less desirable is it now limits users to macOS, and limits devs to `mac` + `xcode`, but doable
   * has a GUI
   * applicatoin menus
   * supports system menus / icon menus
   * roll our own graphs with `CoreGraphics` / `SwiftUI`
   * Display custom graphs with `SwiftCharts` (not sure if it supports the graph types)
 
-* Once we have a list of graph types, I'd like some lists generated
+I'd prefer not to use `python` for this project. i know it has great graphing libraries, but zsh and swift
 
-```
+## Graph Types
+* [ ] `box plot` - Confirm this is the plot type the GrandPerspective uses to display?  Are there any aliases for this?
+* [ ] What are some other graph types that can show how diskspace is consumed?
 
-## Build own script to do GrandPerspective type things
+## Graphing Libraries
 
-* [ ] what's that graph style called?
-* [ ] what's the file format that GP uses? 
-  * [ ] are they any json equivalent formats?
-  * [ ] how to generate one from shellscript?
-  * [ ] how to generate one from swift?
-  * [ ] which is more performant?
-* [ ] what are our output options?:
-  * 
+These are the graphing options that I am comfortable with considering for this project. 
+For each, list if it is up to the job, 
+* [ ] mermaid * display in markdown or other dedicated viewers
+  * [ ] output markdown or mermaid files
+  * [ ] Does not output rendered files, but I'm sure there are tools that can render mermaid
+* [ ] plantUML - data stored in human readable `*.puml` files
+  * [ ] outputs `*.puml` files
+  * [ ] Can be rendered out to svg, pdf, png, etc...
+  * [ ] Also from what I understand these can be converted to `dot` and `mermaid`. I have no experience though
+* [ ] graphviz - I've done a lot with graphviz
+  * [ ] outputs `*.dot` files
+  * [ ] Can be rendered out to svg, pdf, png, etc...
+* [ ] CoreGraphics / SwiftUI. We can graph our make our own if need be
+* [ ] SwiftCharts. I'm not sure if this has the built in types we are after
+* [ ] Other OpenSource swift graphing libraries which can render the plots we are after?
+
+
+## Output File Types
+
+* "Scan Data" (what ever GrandPerspective outputs), or equivalent
+* Vector graphics iamge format (*.svg, *.pdf)
+* Rasterized image format (*.png, *.jpg)
+* ideally, a JSON/JSON5 representation of the scan session
+* ideally, a text format of the plot. *.dot, *.puml, *.mermaid, etc... That  kind of a thing
 
 
 
+## Library Options
 
-
+I'd like you to dig into GrandPerspective and document all of it's features and options
 Below are many screenshots that I took of GrandPerspective's UI which are stored under `~/.ai/docs/ideas/grandperspective/images`. The filepath and filename are suggestive of the content
-
-
 
 * Select a staring dir to scan<br>
   * <img alt="Select a staring dir to scan" src="images/select_dir_to_scan/GrandPerspective_scan_select_start_dir_00.png" width="300"><br>
