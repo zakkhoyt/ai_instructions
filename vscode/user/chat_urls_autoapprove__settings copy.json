@@ -1,0 +1,56 @@
+// # Web colors: 
+// * https://www.w3schools.com/colors/colors_picker.asp
+// * https://en.wikipedia.org/wiki/Web_colors
+{
+    "chat.agent.thinkingStyle": "expanded",
+    "chat.mcp.gallery.enabled": true,
+    "chat.mcp.serverSampling": {
+        "Global in Code: XcodeBuildMCP": {
+            "allowedModels": [
+                "copilot/claude-sonnet-4.5",
+                "copilot/auto",
+                "copilot/gpt-5.1-codex"
+            ]
+        }
+    },
+    "chat.tools.urls.autoApprove": {
+        "https://*.avsforum.com": true,
+        "https://*.digitaltrends.com": true,
+        "https://*.jina.ai": true,
+        "https://*.laserpointerstore.com": true,
+        "https://*.makeuseof.com": true,
+        "https://*.reddit.com": true,
+        "https://*.redditmedia.com": true,
+        "https://*.sanwulasers.com": true,
+        "https://*.thermalmaster.com": true,
+        "https://duckduckgo.com": true,
+        "https://www.androidpolice.com": {
+            "approveRequest": false,
+            "approveResponse": true
+        },
+        "https://www.avsforum.com": true,
+        "https://www.digitaltrends.com": true,
+        "https://www.flatpanelshd.com": {
+            "approveRequest": true,
+            "approveResponse": false
+        },
+        "https://www.laserpointerstore.com": true,
+        "https://www.laserpointerstore.com/collections": true,
+        "https://www.laserpointerstore.com/collections/laser-pointers": true,
+        "https://www.laserpointerstore.com/collections/laser-pointers/405nm": true,
+        "https://www.lg.com": {
+            "approveRequest": true,
+            "approveResponse": false
+        },
+        "https://www.makeuseof.com": true,
+        "https://www.reddit.com": true,
+        "https://www.reddit.com/r": true,
+        "https://www.redditmedia.com": true,
+        "https://www.sanwulasers.com": true,
+        "https://www.thermalmaster.com": true,
+        "https://www.tomsguide.com": {
+            "approveRequest": true,
+            "approveResponse": false
+        }
+    }
+}

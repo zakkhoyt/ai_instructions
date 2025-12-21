@@ -1,0 +1,25 @@
+{
+    "swift.backgroundCompilation": false,
+    "swift.createTasksForLibraryProducts": true,
+    "swift.debugger.path": "/usr/bin/lldb",
+    "swift.disableAutoResolve": true,
+    "swift.excludePathsFromPackageDependencies": [
+        ".git",
+        ".github",
+        ".gitignored"
+    ],
+    "swift.ignoreSearchingForPackagesInSubfolders": [
+        ".",
+        ".build",
+        "Packages",
+        "out",
+        "bazel-out",
+        "bazel-bin",
+        ".gitignored"
+    ],
+    "swift.scriptSwiftLanguageVersion": "5",
+    "swift.showTestExplorer": true,
+    "swift.swiftEnvironmentVariables": {
+        "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer"
+    }
+}

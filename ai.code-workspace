@@ -124,6 +124,7 @@
       "xargs": true
     },
     "chat.tools.edits.autoApprove": {},
-    "chat.tools.eligibleForAutoApproval": {}
+    "chat.tools.eligibleForAutoApproval": {},
+    "explorer.fileNesting.enabled": true
   }
 }

@@ -1,4 +1,7 @@
 
+
+
+
 SYNOPSIS
     configure_ai_instructions.zsh [OPTIONS]
 
@@ -57,7 +60,7 @@ META OPTIONS
 
 # CLI Not behaving properly
 
-## --instructions --prompt
+## `--instructions --prompt`
 ### Expect
 This should present me with the instrutions menu no matter if any are installed or not. Let the user select what to do interactively
 ```zsh
@@ -98,9 +101,15 @@ Ansering N just finished the script
 
 ## --instructions
 
-I guess this one worked okay. It found that ther's nothing to do with instructions. I assume if there was an updated to one of the instrution files in the repo it would detect this and install it? It should
+I guess this one worked okay. 
+It reported that there's nothing to do with instructions. I assume if there was an updated to one of the instrution files in the repo it would detect this and install it? It should
 
-### Expect
+
+**ActionItems**
+
+* [ ] as an overall for this script, separate sections in the output logs
+
+### Actual
 
 ```zsh
 $ ~/.ai/scripts/configure_ai_instructions.zsh --instructions 
@@ -129,9 +138,12 @@ $ ~/.ai/scripts/configure_ai_instructions.zsh --instructions
   • Instructions will be automatically detected by GitHub Copilot
   • Restart VS Code if needed to ensure instructions are loaded
 ```
-### Actual
+### Expected
 
 ```zsh
+
+
+
 ```
 
 

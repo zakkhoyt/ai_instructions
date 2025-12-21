@@ -9,11 +9,3 @@ Are there other more modern apps/tools to do this? Anythign in homebrew?
 what is this plot type called?
 it looks like this app can read "scan data" files. What kind of format/standard is it expecting? What other apps can read/write that format?
 ```
-
-
-# Swift Package Manager
-
-## Convert EchoPretty to use SwiftArgumentParser
-* keep custom --demo modes
-* what will the --help look like then?
-* retain current --help but trigger with a new args

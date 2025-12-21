@@ -1,0 +1,19 @@
+{
+  // "explorer.fileNesting.enabled": true,
+  // // *: Matches any string, may only be used once per child pattern
+  // "explorer.fileNesting.patterns": {
+  //     // "item": "value1, value2, ..."
+  //     // "*.swift": "${capture}+*.swift",     // works
+  //     // "*.md": "${capture}_*.md",           // works
+  //     "*.md": "${capture}*.md"
+  //     // "README.md": "${dirname}/CONTRIBUTING.md, ${dirname}/LICENSE", // bundles these other files together
+  //     // "*.ts": "${basename}.${extname}.map, ${basename}.d.${extname}, ${basename}.test.${extname}", 
+  //     // "*.md": "${capture}_*.md",
+  //     // "TODO_*.md": "${capture}*.md",
+  //     // "*.md": "${capture}*.md"
+  //     // "TODO*.md": "TODO_*.md",
+  //     // "VSCODE*.md": "VSCODE_*.md",
+
+  //     // "[A-Z0-9]+*.md": "[A-Z0-9]+_*.md",
+  // },
+}

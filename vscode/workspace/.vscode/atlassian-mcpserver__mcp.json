@@ -1,0 +1,17 @@
+{
+  "servers": {
+    // Reference: https://apidog.com/blog/jira-mcp-server/
+    "mcp-atlassian": {
+      "command": "uvx",
+      "args": [
+        "mcp-atlassian",
+        "--jira-url=$JIRA_URL",
+        "--jira-username=$JIRA_USERNAME",
+        "--jira-token=$JIRA_MCP_SERVER_TOKEN"
+        // "--jira-url=https://your-company.atlassian.net",
+        // "--jira-username=your.email@company.com",
+        // "--jira-token=your_api_token"
+      ]
+    }
+  }
+}
