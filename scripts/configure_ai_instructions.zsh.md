@@ -1,7 +1,7 @@
 
 
 
-
+```zsh
 SYNOPSIS
     configure_ai_instructions.zsh [OPTIONS]
 
@@ -24,11 +24,6 @@ OPTIONS
     --configure-type <type> How to install instructions
                            Options: copy, symlink
                            (default: symlink)
-
-META OPTIONS
-    --help                  Display this help message and exit
-    --debug                 Enable debug logging
-    --dry-run               Show what would be done without making changes
     --regenerate-main       Force regeneration of main instruction file from template
                            (WARNING: This will overwrite any custom edits)
     --dev-link              Create symlink to AI dev directory and update .gitignore
@@ -56,7 +51,14 @@ META OPTIONS
     --prompt                Enable interactive prompts for installations
                            - When set: shows interactive menus for confirmation/selection
                            - When not set: shows info about what's available but doesn't prompt
-                           - 
+
+
+# META OPTIONS
+#     --help                  Display this help message and exit
+#     --debug                 Enable debug logging
+#     --dry-run               Show what would be done without making changes
+
+```
 
 # CLI Not behaving properly
 

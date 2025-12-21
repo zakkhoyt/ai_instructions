@@ -1,3 +1,62 @@
+# Links
+
+I use markdown documents for nearly everything. Not just my professional life, but my personal life too. I think in markdown and largely operate in markdown. 
+
+I like my markdown documents FULL of references.
+
+
+> [!NOTE]
+> See for yourself:
+> ```zsh
+> $ cd ~/Documents/notes 
+> $ rg -A+5 --ignore-case "^# REFERENCES" 
+> ```
+
+> [!NOTE]
+> See for yourself:
+
+
+> [!TIP]
+> See for yourself:
+
+
+> [!IMPORTANT]
+> See for yourself:
+
+
+> [!WARNING]
+> See for yourself:
+
+
+> [!CAUTION]
+> See for yourself:
+
+
+
+* A reference section at the end of a document
+````markdown
+# References
+````
+
+
+I expect links in documents like this always. Reference links and shopping links
+
+
+When the agent is tasked with writing up any markdown document (writing a *.md to my disk), I always expect
+* reference links. When topic in the document originate from a website, a man page, a command line's `--help` argument, etc... expect this to be documented in the *.md file
+* Reference links should be 1 of 2 formats
+  * if the url/link is part of the content being written, I expect a markdown style link
+  * If the url isn't so relevant to the content being written then a GitHub style footnotes are acceptable
+* I generally prefer non-footnot links to be sectioned off in an unoredered list, using `*`, not `-`
+
+
+
+
+
+
+
+
+
 
 # Markdown
 
