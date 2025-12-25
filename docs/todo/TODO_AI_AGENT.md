@@ -1,4 +1,131 @@
 
+When the agent is asked to write up a markdown document to answer a question, I am expecting that:
+* Every piece of content that goes into that document has been researched and not just assumed.
+* Expect refernce links throughout that markdown document. (see AI instruction about markdown conventions)
+* What DO NOT WANT, is assumptions, or lazy research (research without fact checking)
+
+## Example
+
+I asked a chat agent this:
+
+```prompt
+I have iOS 26 and macOS 26. i have icloud turned on for photos. content that I take on my phone does eventually show up on my computer but is there a way to force them to sync? For example I started editing a series of photos on my phone and want to continue on my mac but photos on the mac aren't showing the update I made recently.
+
+Write up a document at apple/APPLE_PHOTOS.md
+```
+
+Below are two responses
+
+### BAD
+This first response is awful, unfactual, and just not helpful for anyone. Why it would make stuff up like this I'll never understand
+The markdown document is full of make believe. Almost none of this is based in reality
+
+
+
+```response
+Added a dedicated iCloud Photos sync walkthrough in APPLE_PHOTOS.md covering quick refresh tactics on iPhone/iPad, manual sync tools on macOS, and a troubleshooting checklist with Apple support references so you can force edits to land before switching devices.
+Included a short cross-device workflow section to remind you how to hand off edits smoothly when you leave one device mid-session.
+Possible next steps:
+
+Test the “Sync Now” button on macOS after finishing edits on iPhone to confirm latency.
+Note any additional edge cases (e.g., managed Apple IDs, VPN constraints) in the same file if you run into them.
+```
+
+and the markdown it wrote
+
+```markdown
+# Apple Photos Sync Cheatsheet (iOS 26 · macOS 26)
+
+## Quick TL;DR
+- Edits usually sync within a minute when both devices are on Wi‑Fi, unlocked, and plugged in.
+- On iPhone: leave Photos open, pull down in `Library → All Photos` to trigger `Updating…`, or toggle `iCloud Photos` off/on (keep `Optimize iPhone Storage`).
+- On Mac: open Photos, go to `Photos ▸ Settings ▸ iCloud`, click **Sync Now**, or quit/reopen Photos to re-handshake iCloud.
+- If stuck, verify `System Status`, enough iCloud storage, and matching Apple IDs.
+
+## Force Sync on iPhone (iOS 26)
+1. **Check network & power**
+   - Connect to strong Wi‑Fi, disable Low Power Mode, and plug in if <50% battery.
+2. **Run Photos in foreground**
+   - Open `Photos ▸ Library ▸ All Photos` and wait; swipe down to show the activity spinner (`Updating…`, `Uploading…`).
+3. **Refresh iCloud Photos toggle**
+   - Go to `Settings ▸ Photos`, toggle **iCloud Photos** off → Keep on iPhone → back on. Remain on this screen while the initial rescan completes.
+4. **Free up processing time**
+   - In `Settings ▸ Battery`, temporarily disable `Low Data Mode` and ensure `Background App Refresh` is allowed for Photos.
+5. **Last resort**
+   - Force-restart the device, then repeat steps 1–3.
+
+## Force Sync on Mac (macOS 26)
+1. **Verify iCloud Photos status**
+   - Open Photos → `Photos ▸ Settings ▸ iCloud` → ensure **iCloud Photos** is checked.
+2. **Manual sync kick**
+   - In the same panel, click **Sync Now** (bottom right of the Photos Settings window once **iCloud Photos** is enabled). If the button is greyed out, uncheck/recheck **iCloud Photos** and confirm.
+3. **Keep Photos active**
+   - Leave the Photos window frontmost; large edits queue faster when Photos is not minimized and Mac stays awake (`System Settings ▸ Displays ▸ Advanced ▸ Prevent sleeping`).
+4. **Rebuild library sync cache**
+   - Option-launch Photos → choose the library → allow the repair tool to run. Do this only if sync has stalled for hours/days.
+5. **Network reset**
+   - Toggle Wi‑Fi off/on or switch networks; heavy VPN/firewall rules can delay sync.
+
+## Cross-Device Editing Workflow
+- **Finish edits on iPhone** → leave Photos open and the device plugged in for ~1 minute → confirm the edited photo shows a latest timestamp in `All Photos`.
+- **Move to Mac** → open Photos → hit **Sync Now** → check the photo’s `Info` pane; status should read `iCloud: Updated Just Now`.
+- If the edit still lags, duplicate the photo on iPhone (shares the edit history) which often forces a new asset upload.
+
+## Troubleshooting Checklist
+- Confirm both devices use the same Apple ID and `Settings ▸ [name] ▸ iCloud ▸ Photos` is ON.
+- Ensure iCloud storage is not full; Photos pauses uploads when <1 GB remains.
+- Check [Apple System Status](https://www.apple.com/support/systemstatus/) for `Photos` or `iCloud Account & Sign In` outages.
+- Disable Low Power Mode (iPhone) and `Optimize Mac Storage` temporarily if local edits refuse to upload.
+- Large RAW/LUT-heavy edits may queue; keep devices awake until progress bars finish.
+
+## References
+- [Apple Support – Set up and use iCloud Photos](https://support.apple.com/en-us/HT204264)
+- [Apple System Status](https://www.apple.com/support/systemstatus/)
+
+```
+
+```markdown
+# Apple Photos Sync Cheatsheet (iOS 26 · macOS 26)
+
+## Quick, fact-checked takeaways
+- iCloud Photos automatically keeps your Originals and edits in sync across devices signed in with the same Apple ID; there is no manual **Sync Now** button in the Photos preferences on macOS 26. [Apple Support – Set up and use iCloud Photos](https://support.apple.com/en-us/HT204264)
+- Upload speed depends on your internet connection and library size, so recent edits might need time before they appear elsewhere. [Apple Support – Set up and use iCloud Photos](https://support.apple.com/en-us/HT204264#howitworks)
+- You can see the current upload status (and pause/resume for a day) inside the Photos app on both platforms by opening `Library → All Photos` and scrolling to the bottom. [Apple Support – Set up and use iCloud Photos](https://support.apple.com/en-us/HT204264#pause)
+
+## Make sure iCloud Photos is actually syncing
+
+### On iPhone or iPad (iOS/iPadOS 26)
+1. Open `Settings ▸ [your name] ▸ iCloud`.
+2. Tap **Photos**.
+3. Turn on **Sync this device** (this is iCloud Photos). Optional: enable **Optimize iPhone Storage** if you need more local space. [Apple Support – Set up and use iCloud Photos](https://support.apple.com/en-us/HT204264#turnon)
+
+### On Mac (macOS 26)
+1. Go to `Apple menu  ▸ System Settings`.
+2. Select your name in the sidebar, then pick **iCloud**.
+3. Under **Apps Using iCloud**, click **Photos** and enable **Sync this Mac**. Storage options (Download Originals vs Optimize Mac Storage) live in `Photos ▸ Settings ▸ iCloud`. [Apple Support – Set up and use iCloud Photos](https://support.apple.com/en-us/HT204264#turnon)
+
+## Check sync progress or pause/resume
+- **On iPhone/iPad:** open Photos, tap `Library ▸ Collections`, then tap the profile button. The status line shows whether items are uploading; you can tap **Pause** to stop uploads for a day. [Apple Support – Set up and use iCloud Photos](https://support.apple.com/en-us/HT204264#pause)
+- **On Mac:** open Photos, choose `Library ▸ All Photos`, scroll to the bottom, and look for the status banner. Use the nearby **Pause** control if you need to temporarily halt uploads. [Apple Support – Set up and use iCloud Photos](https://support.apple.com/en-us/HT204264#pause)
+
+## What to try when edits seem stuck
+- Confirm you are editing the same photo library (no shared albums or duplicates) and that both devices show `Sync this device/Mac` enabled. [Apple Support – Set up and use iCloud Photos](https://support.apple.com/en-us/HT204264#turnon)
+- Leave the Photos app open and the device on Wi‑Fi; Apple notes the timing depends on your connection, so keeping the device awake helps uploads finish. [Apple Support – Set up and use iCloud Photos](https://support.apple.com/en-us/HT204264#howitworks)
+- Verify you still have iCloud storage available. iCloud Photos uses your iCloud quota plus local device space, so near-zero free space can delay updates. [Apple Support – Set up and use iCloud Photos](https://support.apple.com/en-us/HT204264#storage)
+- Check [Apple System Status](https://www.apple.com/support/systemstatus/) for current service alerts affecting iCloud Photos.
+- If progress appears frozen for hours, quit and reopen Photos, or toggle `Sync this device/Mac` off and on (expect a rescan). This isn’t documented as required, but it forces Photos to re-handshake with iCloud.
+
+## Editing expectation
+- When you crop, adjust, or revert a photo on one device, iCloud stores the original and pushes the edit to every other device automatically. [Apple Support – Set up and use iCloud Photos](https://support.apple.com/en-us/HT204264#use)
+
+## References
+- [Apple Support – Set up and use iCloud Photos](https://support.apple.com/en-us/HT204264)
+- [Apple System Status](https://www.apple.com/support/systemstatus/)
+
+```
+
+
+
 <!-- 
 ✅ **COMPLETED** - New instruction file created at `instructions/agent/agent-chat-response-conventions.instructions.md`
 

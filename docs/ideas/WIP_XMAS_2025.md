@@ -1,4 +1,12 @@
 
+# Notes 
+## ANSI keyboard listener
+
+
+
+
+----
+
 # Homebrew
 * [ ] setup `zakkhoyt/tap`
 * [ ] write a `ruby-conventions-instruction.md`, add to ~/.ai
@@ -28,7 +36,43 @@
 # AI 
 
 
+
+
 ## Script
+
+
+### Rework instructions menu
+
+I think i'd like to change how this menu works. Right now there is no way to uninstalled or change from copy to link, etc...
+
+What if we could instead, enter a letter for each position?
+
+Maybe it's time to build that ANSI menu system with keyboard listeners
+
+```zsh
+ 1. [ ] agent-chat-response-conventions.instructions.md
+ 2. [S] 🔗 agent-swift-terminal-conventions.instructions.md
+ 3. [S] 🔗 agent-terminal-conventions.instructions.md
+ 4. [S] 🔗 git-branching.instructions.md
+ 5. [S] 🔗 markdown-conventions.instructions.md
+ 6. [S] 🔗 python-conventions.instructions.md
+ 7. [S] 🔗 swift-conventions.instructions.md
+ 8. [S] 🔗 userscript-conventions.instructions.md
+ 9. [ ] zsh-compatibility-notes.instructions.md
+10. [S] 🔗 zsh-conventions.instructions.md
+Status Legend:
+  [ ]       Not installed
+  [S] 🔗     Symlinked (current)
+  [C] 📄     Copied (current)
+  [O] ⏳     Copied (outdated)
+  [M] ✏️    Copied (modified)
+  [U] ❔     Copied (unknown)
+  [?] ⚠️    Wrong symlink target
+Default selection (press Enter to accept):
+  2 3 4 5 6 7 8 10
+Type a new selection or press Enter to use the default shown above:
+```
+
 
 ### Rework Args
 * There are several parts of the arguments thats aren't working
@@ -51,11 +95,6 @@ META OPTIONS
 ```zsh
 zsh code
 ```
-
-
-
-
-
 
 ### Instructions Not Working
 * `--instructions` | `--instructions --prompt`
