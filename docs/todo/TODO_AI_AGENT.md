@@ -1,10 +1,26 @@
 
+
+
+
+
+
+
+
+
+<!-- 
+Update AI instructions to summarize my frustration, experience, and desired behavior going forward. 
+
+
+
 When the agent is asked to write up a markdown document to answer a question, I am expecting that:
 * Every piece of content that goes into that document has been researched and not just assumed.
 * Expect refernce links throughout that markdown document. (see AI instruction about markdown conventions)
 * What DO NOT WANT, is assumptions, or lazy research (research without fact checking)
 
 ## Example
+
+
+Here is an example of where i get frustrated
 
 I asked a chat agent this:
 
@@ -84,6 +100,28 @@ and the markdown it wrote
 
 ```
 
+
+### Better. 
+
+After realizing the above was a waste of time i replied:
+
+
+```prompt
+I feel like you're making all this up. Let's back up and actually fact check evrerything you wrote against ios26 and macOS26
+```
+
+
+```response
+Fact Check
+
+Apple’s documentation states iCloud Photos syncs Originals and edits automatically, with no manual “Sync Now” control in Photos for macOS; the cheat sheet now spells that out explicitly and cites the official support article so every claim can be verified. See APPLE_PHOTOS.md:3-23.
+The enablement steps for iOS 26 and macOS 26 are rewritten straight from Apple’s “Turn on iCloud Photos” instructions, covering Sync this device/Mac plus the storage options location. See APPLE_PHOTOS.md:10-23.
+The only Apple-documented way to influence timing is to keep devices online and watch the status banner/pause toggle inside Photos; the updated “Check sync progress” and “What to try” sections focus on those supported levers instead of undocumented tricks. See APPLE_PHOTOS.md:20-33.
+Cross-device edit behavior is confirmed by Apple’s “Edits show up on all of your devices” section and is summarized in APPLE_PHOTOS.md:31-33.
+```
+
+updated markdown
+
 ```markdown
 # Apple Photos Sync Cheatsheet (iOS 26 · macOS 26)
 
@@ -122,7 +160,7 @@ and the markdown it wrote
 - [Apple Support – Set up and use iCloud Photos](https://support.apple.com/en-us/HT204264)
 - [Apple System Status](https://www.apple.com/support/systemstatus/)
 
-```
+``` -->
 
 
 

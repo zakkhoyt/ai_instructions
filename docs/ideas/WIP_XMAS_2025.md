@@ -36,7 +36,23 @@
 # AI 
 
 
+## vscode auto approve cases
 
+These images capture some persistent cases where I'm still being prompted to allow certain terminal commands
+
+Let's take a look at how we can modify the settings files under `vscode/user` and `vscode/workspace` to do better
+
+* `docs/todo/images/Code_20251123232614.png`
+* `docs/todo/images/Code_20251225155003.png`
+* `docs/todo/images/Code_20251225155008.png`
+* `docs/todo/images/Visual Studio Code_20251210002318.png`
+* `docs/todo/images/Visual Studio Code_20251210010829.png`
+* `docs/todo/images/Visual Studio Code_20251210010921.png`
+* `docs/todo/images/Visual Studio Code_20251210011125.png`
+* `docs/todo/images/Visual Studio Code_20251210011218.png`
+* `docs/todo/images/vscode_ai_agent_prompt_00.png`
+* `docs/todo/images/vscode_ai_agent_prompt_01.png`
+* `docs/todo/images/vscode_ai_agent_prompt_02.png`
 
 ## Script
 
