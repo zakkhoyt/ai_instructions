@@ -1752,8 +1752,8 @@ if [[ -n "${flag_debug_exit:-}" ]]; then
 fi
 
 # Stage 3: Parse script-specific arguments - AS NEEDED
-# Note: -D -E here to error on any remaining unrecognized options
-zparseopts -D -E -- \
+# Note: -D removes parsed options, no -E to stop at first unrecognized
+zparseopts -D -- \
   -mode:=opt_mode \
   -other-arg:=opt_other_arg
 
@@ -1767,21 +1767,62 @@ other_arg="${opt_other_arg[-1]:-default_value}"
   - Extract values immediately after parsing (e.g., `is_dry_run`, `flag_debug_level`)
 - **Stage 2 (Recommended)**: Trap debugging control - uses `-D` only
   - Set up trap handlers immediately after parsing
-- **Stage 3 (As Needed)**: Script-specific arguments - uses `-D -E` to catch errors
+- **Stage 3 (As Needed)**: Script-specific arguments - uses `-D` only
   - Extract values immediately after parsing using `${var[-1]:-default}` pattern
+  - After all stages, check if `$@` is non-empty to detect unrecognized options
 
 **Key Points:**
 - Use `${array[-1]:-default}` to extract values from zparseopts arrays (gets last element)
 - Extract and process variables immediately after each zparseopts stage
-- Only Stage 3 uses `-E` flag to error on unrecognized options
+- None of the stages use `-E` or `-F` flags in this sequential pattern
 
 ### Use zparseopts
 
 Script arguments should be handled using `zparseopts` where possible, or where conversion is easy. If converting requires a significant refactor, retain the current approach.
 
+**zparseopts Flag Reference:**
+-   **`-D`**: Remove recognized options from `$@` (like `shift`) - **always use this**
+-   **`-E`**: Continue parsing even when encountering unrecognized options (skip over them) - **use for parallel multi-stage parsing**
+-   **`-F`**: Fail immediately with error on first unrecognized option - **rarely needed, prefer checking `$@` after parsing**
+-   **Neither `-E` nor `-F`**: Stop parsing at first unrecognized option (leaves it in `$@`) - **use for sequential multi-stage parsing**
+
+**Multi-Stage Parsing Patterns:**
+
+**Pattern 1: Sequential stages** (each modifies `$@`, next stage sees remainder):
+```zsh
+# Stage 1: Use -D only (no -E, no -F)
+zparseopts -D -- -help=flag_help {d,-debug}+=flag_debug
+# Stage 2: Use -D only
+zparseopts -D -- -trap-err=flag_trap_err
+# Stage 3: Use -D only
+zparseopts -D -- -mode:=opt_mode
+# Check for unrecognized options
+if [[ ${#@} -gt 0 ]]; then
+  echo "ERROR: Unrecognized options: $@" >&2
+  exit 1
+fi
+```
+
+**Pattern 2: Parallel stages** (each function receives full `"$@"`):
+```zsh
+function parse_file_options {
+  zparseopts -D -E -- -dir:=opt_dir -depth:=opt_depth
+}
+function parse_player_options {
+  zparseopts -D -E -- -player:=opt_player -volume:=opt_volume
+}
+# In main():
+parse_file_options "$@"    # Removes -dir/-depth, skips -player/-volume
+parse_player_options "$@"  # Removes -player/-volume
+# Check for unrecognized options
+if [[ ${#@} -gt 0 ]]; then
+  echo "ERROR: Unrecognized options: $@" >&2
+  exit 1
+fi
+```
+
 **Key Conventions:**
--   **For new code**: Always call `zparseopts` with at least the `-D -F` arguments
--   **For existing code**: When converting to `zparseopts`, omitting `-D`, `-E`, or any capital letter is tolerable, but prefer matching the new standard
+-   **For new code**: Always use `-D`, choose `-E` based on parsing pattern
 -   **Argument definition order**: Capital letter arguments should be listed first and separated from others using `--`
 -   **Multi-line format**: Define arguments one per line using the trailing `\` syntax
 -   **Long-form names**: Always include a long-form name (e.g., `--help`) for arguments
@@ -1792,23 +1833,6 @@ Script arguments should be handled using `zparseopts` where possible, or where c
     -   Key/value arguments (e.g., `--mode create` or `--mode=create`): Prefix with `opt_` or `OPT_`
 -   **Associative arrays**: Consider using the `-A <kv_array>` syntax if it does not conflict with other argument styles
 -   **Avoid flag arrays**: Avoid using the `-a <flag_array>` syntax as it is mutually exclusive with the flag variable approach
-
-
-**Example for existing code (audit or conversion to zparseopts):**
-```zsh
-zparseopts -D -- \
-  -help=flag_help \
-  {d,-debug}+=flag_debug \
-  # other script relevant args
-```
-
-**Example for new code:**
-```zsh
-zparseopts -D -- \
-  -help=flag_help \
-  {d,-debug}+=flag_debug \
-  # other script relevant args
-```
 
 ### Stage 2: Trap Debugging Support (Recommended)
 

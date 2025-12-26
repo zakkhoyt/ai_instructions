@@ -15,6 +15,7 @@
             ]
         }
     },
+    "chat.tools.terminal.ignoreDefaultAutoApproveRules": true,
     "chat.tools.terminal.autoApprove": {
         "*": {
             "approve": true,
@@ -129,6 +130,34 @@
         "sed": true,
         "tee": true,
         "xargs": true
+    },
+    "chat.tools.urls.autoApprove": {
+        "https://duckduckgo.com": true,
+        "https://*.androidpolice.com": {
+            "approveRequest": false,
+            "approveResponse": true
+        },
+        "https://*.avsforum.com": true,
+        "https://*.digitaltrends.com": true,
+        "https://*.flatpanelshd.com": {
+            "approveRequest": true,
+            "approveResponse": false
+        },
+        "https://*.jina.ai": true,
+        "https://*.laserpointerstore.com": true,
+        "https://*.lg.com": {
+            "approveRequest": true,
+            "approveResponse": false
+        },
+        "https://*.makeuseof.com": true,
+        "https://*.reddit.com": true,
+        "https://*.redditmedia.com": true,
+        "https://*.sanwulasers.com": true,
+        "https://*.thermalmaster.com": true,
+        "https://*.tomsguide.com": {
+            "approveRequest": true,
+            "approveResponse": false
+        }
     },
     "chatgpt.lang": "en"
 }

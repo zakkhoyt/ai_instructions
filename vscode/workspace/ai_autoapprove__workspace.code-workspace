@@ -81,7 +81,7 @@
         "approve": true,
         "matchCommandLine": true
       },
-      "/`. +`/s": {
+      "/`.+`/s": {
         "approve": true,
         "matchCommandLine": true
       },
@@ -119,6 +119,34 @@
       "xargs": true
     },
     "chat.tools.edits.autoApprove": {},
-    "chat.tools.eligibleForAutoApproval": {}
+    "chat.tools.eligibleForAutoApproval": {},
+    "chat.tools.urls.autoApprove": {
+      "https://duckduckgo.com": true,
+      "https://*.androidpolice.com": {
+        "approveRequest": false,
+        "approveResponse": true
+      },
+      "https://*.avsforum.com": true,
+      "https://*.digitaltrends.com": true,
+      "https://*.flatpanelshd.com": {
+        "approveRequest": true,
+        "approveResponse": false
+      },
+      "https://*.jina.ai": true,
+      "https://*.laserpointerstore.com": true,
+      "https://*.lg.com": {
+        "approveRequest": true,
+        "approveResponse": false
+      },
+      "https://*.makeuseof.com": true,
+      "https://*.reddit.com": true,
+      "https://*.redditmedia.com": true,
+      "https://*.sanwulasers.com": true,
+      "https://*.thermalmaster.com": true,
+      "https://*.tomsguide.com": {
+        "approveRequest": true,
+        "approveResponse": false
+      }
+    }
   }
 }
