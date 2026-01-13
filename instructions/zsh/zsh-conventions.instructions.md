@@ -1716,7 +1716,7 @@ Some directories use different logging functions:
 ```zsh
 # Stage 1: Parse standard arguments (help, debug, dry-run) - REQUIRED
 # Note: -D removes parsed opts, no -E to allow unrecognized opts to pass through
-zparseopts -D -- \
+zparseopts -D -E -- \
   -help=flag_help \
   {d,-debug}+=flag_debug \
   -dry-run=flag_dry_run
@@ -1728,7 +1728,7 @@ if [[ -n "${flag_help:-}" ]]; then
 fi
 
 # Set up debug mode if requested
-flag_debug_level=${#flag_debug[@]}
+flag_debug_level=${#flag_debug:-0}
 if [[ $flag_debug_level -gt 0 ]]; then
   export IS_DEBUG=true
 fi
@@ -1738,7 +1738,7 @@ is_dry_run=${flag_dry_run:+true}
 
 # Stage 2: Parse trap control flags - RECOMMENDED
 # Note: -D removes parsed opts, no -E to allow unrecognized opts to pass through
-zparseopts -D -- \
+zparseopts -D -E -- \
   {-trap-err,-debug-err}=flag_debug_err \
   {-trap-exit,-debug-exit}=flag_debug_exit
 
@@ -1844,7 +1844,7 @@ fi
 
 ```zsh
 # Stage 1: Main script arguments (required)
-zparseopts -D -- \
+zparseopts -D -E -- \
   -help=flag_help \
   {d,-debug}+=flag_debug \
   # ... other script relevant arguments
@@ -1855,11 +1855,11 @@ if [[ -n "${flag_help:-}" ]]; then
 fi
 
 # Stage 2: Trap debugging arguments (optional - omit this entire block if not needed)
-zparseopts -D -- \
+zparseopts -D -E -- \
   {-trap-err,-debug-err}=flag_debug_err \
   {-trap-exit,-debug-exit}=flag_debug_exit
 
-flag_debug_level=${#flag_debug[@]}
+flag_debug_level=${#flag_debug:-0}
 
 if [[ -n "${flag_debug_err:-}" || $flag_debug_level -ge 2 ]]; then 
   for source_dir in "${source_dirs[@]}"; do

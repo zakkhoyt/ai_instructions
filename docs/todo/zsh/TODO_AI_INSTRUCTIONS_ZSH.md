@@ -147,7 +147,7 @@ function step {
   #   {-trap-exit,-debug-exit}=flag_debug_exit
   
   # # Count # of -d, --debug (or shorthand)
-  # flag_debug_level=${#flag_debug[@]}
+  # flag_debug_level=${#flag_debug:-0}
   
   # if [[ -n $flag_debug || $flag_debug_level -ge 1 ]]; then
   #   # legacy

@@ -40,7 +40,7 @@
 
 These images capture some persistent cases where I'm still being prompted to allow certain terminal commands
 
-Let's take a look at how we can modify the settings files under `vscode/user` and `vscode/workspace` to do better
+* [ ] Let's take a look at how we can modify the settings files under `vscode/user` and `vscode/workspace` to do better
 
 * `docs/todo/images/Code_20251123232614.png`
 * `docs/todo/images/Code_20251225155003.png`
@@ -53,6 +53,13 @@ Let's take a look at how we can modify the settings files under `vscode/user` an
 * `docs/todo/images/vscode_ai_agent_prompt_00.png`
 * `docs/todo/images/vscode_ai_agent_prompt_01.png`
 * `docs/todo/images/vscode_ai_agent_prompt_02.png`
+
+
+* Also it seems there's new setting to auto allow URL requests and responses from certain domains. I generally want to auto approve anything here too. I have heavy router and network security setup to block dangerous domains. 
+* [ ] Let's take a look at how we can modify the settings files under `vscode/user` and `vscode/workspace` to do better
+
+
+* Also take a look at my user settings and how those have changed as I've been doing a lot of 1 off clickign to get through the task at hand. Maybe there's somethign to be learned from those? I 
 
 ## Script
 

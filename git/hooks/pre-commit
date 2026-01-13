@@ -74,7 +74,7 @@ if [[ -n "${flag_help:-}" ]]; then
 fi
 
 # Set up debug mode if requested
-flag_debug_level=${#flag_debug[@]}
+flag_debug_level=${#flag_debug:-0}
 slog_var_se_d "flag_debug_level" "$flag_debug_level"
 if [[ $flag_debug_level -gt 0 ]]; then
   export IS_DEBUG=true
