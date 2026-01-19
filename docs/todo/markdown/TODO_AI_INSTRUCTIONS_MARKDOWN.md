@@ -1,3 +1,12 @@
+
+# Page Number Links
+* [ ] When ever linking to pdf, text file, or what have you... if that link includes a common location syntax, then also include that location in the link's text. 
+  * EX: 
+    * URL: https://apple.com/manual/some-app-mac-user-guide_11_2.pdf#page=493
+    * Markdown Link: [Some App User Guide 11.2 – Algorithms (p 493)](https://apple.com/manual/some-app-mac-user-guide_11_2.pdf#page=493) 
+
+
+
 # Links
 
 I use markdown documents for nearly everything. Not just my professional life, but my personal life too. I think in markdown and largely operate in markdown. 
