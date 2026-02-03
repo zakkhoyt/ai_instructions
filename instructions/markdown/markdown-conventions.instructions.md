@@ -359,42 +359,64 @@ Use `1.` for all items (auto-numbering):
 
 ## Table Formatting
 
-### Column Padding
+**CRITICAL**: Rectangular table formatting is **MANDATORY**. This rule applies 100% of the time to ALL markdown tables.
 
-All markdown tables must be formatted with padded columns to form a literal 2D rectangle in the source code. This improves readability when viewing the raw markdown file.
+### Column Padding (REQUIRED)
 
-**Format requirements**:
-1. Calculate the maximum width for each column
-2. Pad all cells to match their column's maximum width
-3. Align separators (pipes) vertically
-4. Use single space padding inside each cell
+**Every markdown table MUST be formatted with padded columns to form a literal 2D rectangle in the source code.**
 
-✅ **Good:**
+**Format requirements (MANDATORY)**:
+1. **Calculate the maximum width for each column**
+2. **Pad ALL cells to match their column's maximum width**
+3. **Align separators (pipes) vertically**
+4. **Use single space padding inside each cell**
+5. **Every line MUST end at the same column number with ` |`**
+6. **Every row MUST have identical character width**
+
+✅ **Good (REQUIRED format):**
 ```markdown
-| Syntax          | Type            | Example      | Purpose                          |
-| --------------- | --------------- | ------------ | -------------------------------- |
-| `${(flags)var}` | Parameter flags | `${(qq)arr}` | Control expansion behavior       |
-| `${var[sub]}`   | Subscript       | `${arr[1]}`  | Array indexing (square brackets) |
-| `${var:mod}`    | Modifier        | `${path:t}`  | Path/string modification (colon) |
-| `*(qual)`       | Glob qualifier  | `*(/)`       | Filter files in globbing         |
+| Logic Pro Command    | Logic Shortcut   | REAPER Command                     | REAPER Shortcut                |
+| -------------------- | ---------------- | ---------------------------------- | ------------------------------ |
+| Show Smart Tempo     | Track menu       | Create Measure from Time Selection | Alt+Shift+C                    |
+| Enable Flex          | Cmd+F            | Add Stretch Marker                 | Shift+W                        |
+| Flex Tool            | Opt+Pointer      | Stretch Marker Drag                | Hover+Drag                     |
+| Split at Cursor      | Cmd+T            | Split at Cursor                    | S                              |
+| Quantize Audio       | Region Inspector | Quantize Items to Grid             | Right-click → Item Processing  |
+| Navigate Transients  | (varies)         | Next Transient                     | Tab                            |
+| Navigate Transients  | (varies)         | Previous Transient                 | Shift+Tab                      |
+| Open Item Properties | (Inspector)      | Item Properties                    | F2                             |
+| Insert Track         | Cmd+Opt+N        | Insert Track                       | Cmd+T                          |
 ```
 
-❌ **Bad:**
+❌ **Bad (FORBIDDEN - jagged table):**
 ```markdown
-| Syntax | Type | Example | Purpose |
-| --- | --- | --- | --- |
-| `${(flags)var}` | Parameter flags | `${(qq)arr}` | Control expansion behavior |
-| `${var[sub]}` | Subscript | `${arr[1]}` | Array indexing (square brackets) |
+<!-- 
+FORBIDDEN: 
+Table is jagged which makes it very difficult to read in markdown source code format. 
+Each line has different number of characters/columns from the others.
+Lines end at different column numbers and are not padded/consistent.
+-->
+| Logic Pro Command | Logic Shortcut | REAPER Command | REAPER Shortcut |
+|-------------------|----------------|----------------|-----------------|
+| Show Smart Tempo | Track menu | Create Measure from Time Selection | Alt+Shift+C |
+| Enable Flex | Cmd+F | Add Stretch Marker | Shift+W |
+| Flex Tool | Opt+Pointer | Stretch Marker Drag | Hover+Drag |
+| Split at Cursor | Cmd+T | Split at Cursor | S |
+| Quantize Audio | Region Inspector | Quantize Items to Grid | Right-click → Item Processing |
+| Navigate Transients | (varies) | Next Transient | Tab |
+| Navigate Transients | (varies) | Previous Transient | Shift+Tab |
+| Open Item Properties | (Inspector) | Item Properties | F2 |
+| Insert Track | Cmd+Opt+N | Insert Track | Cmd+T |
 ```
 
-**Implementation notes**:
-- Use VS Code extension "Format Tables" or similar tools to automatically format tables
+**Implementation (REQUIRED)**:
+- **MUST use** VS Code extension "Format Tables" or similar tools to automatically format tables
 - Manually pad tables when creating or editing if auto-formatting is unavailable
-- Tables should remain readable in both raw markdown and rendered HTML
+- **NO EXCEPTIONS**: All tables must be rectangular in source code
 
-### Example: Rectangular Tables Only
+### Rectangular Tables: Additional Example
 
-Avoid "jagged" tables where rows contain different numbers of pipes. Even if the rendered HTML looks fine, the raw markdown becomes hard to scan and easy to break during edits.
+**FORBIDDEN**: "Jagged" tables where rows have different character counts. Even if the rendered HTML looks fine, the raw markdown source MUST form a perfect rectangle.
 
 ❌ **Bad (rows have different lengths):**
 ```markdown
@@ -436,6 +458,6 @@ When writing or reviewing markdown documentation, verify:
 - [ ] Code blocks specify language
 - [ ] Internal links use relative paths
 - [ ] External links have descriptive text
-- [ ] Tables formatted with padded columns (2D rectangle in source)
+- [ ] **REQUIRED**: Tables formatted with padded columns (2D rectangle in source - MANDATORY)
 
 ````
