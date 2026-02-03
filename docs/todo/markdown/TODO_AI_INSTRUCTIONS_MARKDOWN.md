@@ -1,6 +1,21 @@
 
+
+
+
+
+
+
+
+
+
+Let's update/modify agent instructions for markdown: `instructions/agent/agent-markdown-research.instructions.md`
+
 # Page Number Links
 * [ ] When ever linking to pdf, text file, or what have you... if that link includes a common location syntax, then also include that location in the link's text. 
+  * Common Syntaxes w/new link text
+    * `page=NNN`, `p=nnn`
+      * `(p NNN)`
+    * `line=nnn`, `l=nnn`
   * EX: 
     * URL: https://apple.com/manual/some-app-mac-user-guide_11_2.pdf#page=493
     * Markdown Link: [Some App User Guide 11.2 – Algorithms (p 493)](https://apple.com/manual/some-app-mac-user-guide_11_2.pdf#page=493) 
@@ -234,3 +249,49 @@ Any time a markdown link is added to a document it must
 
 
 
+
+
+
+
+<!-- 
+please update markdown insturctions under the `insturctions/**` documents
+
+## BAD: 
+* Table is jagged which makes it very difficult to read in markdown source code format. 
+* IE: Each line has seemingly differen number of characters/colums from the others
+* IE: Lines end at differen column numbers and are not padded/consisistent
+```markdown
+| Logic Pro Command | Logic Shortcut | REAPER Command | REAPER Shortcut |
+|-------------------|----------------|----------------|-----------------|
+| Show Smart Tempo | Track menu | Create Measure from Time Selection | Alt+Shift+C |
+| Enable Flex | Cmd+F | Add Stretch Marker | Shift+W |
+| Flex Tool | Opt+Pointer | Stretch Marker Drag | Hover+Drag |
+| Split at Cursor | Cmd+T | Split at Cursor | S |
+| Quantize Audio | Region Inspector | Quantize Items to Grid | Right-click → Item Processing |
+| Navigate Transients | (varies) | Next Transient | Tab |
+| Navigate Transients | (varies) | Previous Transient | Shift+Tab |
+| Open Item Properties | (Inspector) | Item Properties | F2 |
+| Insert Track | Cmd+Opt+N | Insert Track | Cmd+T |
+```
+
+## GOOD: 
+* Table is padded with spaces which makes is readable in source code format. 
+* IE: every line has the same number of characters. 
+* IE: All lines end at the same colum # with ` |\n` 
+```markdown
+| Logic Pro Command    | Logic Shortcut   | REAPER Command                     | REAPER Shortcut                |
+| -------------------- | ---------------- | ---------------------------------- | ------------------------------ |
+| Show Smart Tempo     | Track menu       | Create Measure from Time Selection | Alt+Shift+C                    |
+| Enable Flex          | Cmd+F            | Add Stretch Marker                 | Shift+W                        |
+| Flex Tool            | Opt+Pointer      | Stretch Marker Drag                | Hover+Drag                     |
+| Split at Cursor      | Cmd+T            | Split at Cursor                    | S                              |
+| Quantize Audio       | Region Inspector | Quantize Items to Grid             | Right-click → Item Processing  |
+| Navigate Transients  | (varies)         | Next Transient                     | Tab                            |
+| Navigate Transients  | (varies)         | Previous Transient                 | Shift+Tab                      |
+| Open Item Properties | (Inspector)      | Item Properties                    | F2                             |
+| Insert Track         | Cmd+Opt+N        | Insert Track                       | Cmd+T                          |
+```
+
+
+Summarize intended changes for confirmation before carrying out 
+-->

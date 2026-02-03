@@ -2,6 +2,11 @@
 
 
 
+
+
+
+
+
 # Adopt Swift 6 Settings
 * The `swiftSettings` in HatchModules/Package.swift contains an array of early opt in settings. 
 * `swift package migrate --to-feature InternalImportsByDefault` will migrate Package.swift and source code, making the transition easy

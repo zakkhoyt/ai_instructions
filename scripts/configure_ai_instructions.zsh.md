@@ -1,5 +1,64 @@
 
 
+The script `scripts/configure_ai_instructions.zsh` used to do a much better  job than it currently does.
+I'm specificaly talking about the `[INFO] ℹ️ === Instruction File Installation ===` section
+* The script used to always display a menu allowing the user to do everything in the `Status Legend` by specifying a letter for each entry in the list of instructions
+```zsh
+  [ ]       Not installed
+  [S] 🔗     Symlinked (current)
+  [C] 📄     Copied (current)
+  [O] ⏳     Copied (outdated)
+  [M] ✏️    Copied (modified)
+  [U] ❔     Copied (unknown)
+  [?] ⚠️    Wrong symlink target
+```
+
+for example if nothing was installed it would display something like this:
+```zsh
+[INFO] ℹ️ === Instruction File Installation ===
+[INFO] ℹ️ Available instruction files:
+ 1. [ ] agent-chat-response-conventions.instructions.md
+ 2. [ ] agent-markdown-research.instructions.md
+ 3. [ ] agent-swift-terminal-conventions.instructions.md
+ 4. [ ] agent-terminal-conventions.instructions.md
+ 5. [ ] git-branching.instructions.md
+ 6. [ ] markdown-conventions.instructions.md
+ 7. [ ] python-conventions.instructions.md
+ 8. [ ] swift-conventions.instructions.md
+ 9. [ ] userscript-conventions.instructions.md
+1.  [ ] zsh-compatibility-notes.instructions.md
+2.  [ ] zsh-conventions.instructions.md
+Status Legend:
+  [ ]       Not installed
+  [S] 🔗     Symlinked (current)
+  [C] 📄     Copied (current)
+  [O] ⏳     Copied (outdated)
+  [M] ✏️    Copied (modified)
+  [U] ❔     Copied (unknown)
+  [?] ⚠️    Wrong symlink target
+Default action (press Enter): skip (no changes)
+Enter selections by space-separated numbers (EX: '1 2'), or 'all': all
+```
+Where `1 2 
+
+
+
+* [ ] the numbered list of instruction files looks to be broken after entry 9 wraps back to `1.`, `2.` etc... This needs fixing
+* [ ] The menu is currently only seemingly displayed if no instructions are installed, If some are the menu is skipped which breaks the abilty for the user to modify the install details, add new files, update existing files, switch from linking to copies, etc...
+  * recently some work was done on this script maybe around the `--instructions` or `--prompt`. This is when the behavior took a turn for the worse. 
+    * Please summarize what both of those args are supposed to do, and how they interact. I'd like to understnad and provide feedback before changes are made
+
+
+
+
+
+
+
+
+
+
+
+
 
 ```zsh
 SYNOPSIS

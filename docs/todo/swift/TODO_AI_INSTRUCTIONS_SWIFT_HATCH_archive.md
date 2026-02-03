@@ -566,10 +566,12 @@ If the repo contains any of these files, then this is the our main hatch iOS app
 
 * `iOS/hatch-sleep-app/Nightlight.xcodeproj`
 * `iOS/hatch-sleep-app/Nightlight.xcworkspace`
+* `iOS/hatch-sleep-app/HatchModules/Package.swift`
 
 
 
-## Debugging
+
+### Debugging
 
 When building for debugging I prefer to run the `iOS` apps on `macOS` using `Designed for iPhone` (not `Catalyst`)
 
@@ -583,7 +585,7 @@ xcodebuild -workspace "./Nightlight.xcworkspace" \
   build
 ```
 
-## Testing
+### Testing
 in most cases, Designed for iPHone can't be used for unit tests, so when testing use the iphonesimulators 
 
 ```zsh
