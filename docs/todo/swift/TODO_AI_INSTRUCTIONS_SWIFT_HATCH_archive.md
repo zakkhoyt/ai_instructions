@@ -1,0 +1,594 @@
+
+
+
+Leverage existing scripts which output the correct commands to use\x1B[1m
+
+* update for xcode26 / iOS?? iphone??
+
+
+# Build the iOS application
+
+* pwd: `iOS/hatch-sleep-app`
+* file exists: Nightlight.xcworkspace
+
+
+* Hints: `iOS/hatch-sleep-apple/Scripts/the-tool.zsh --help`
+  * This script is a wrapper for building, testing, cleaning, debugging the main `hatch_sleep_app` (called "Nightlight" in the schemes)
+
+`--help` prints lots of context clues, leading to proper build commands
+```zsh
+pushd "iOS/hatch-sleep-apple"; ./Scripts/the-tool.zsh --help 
+```
+
+```zsh
+set -o pipefail && xcodebuild -workspace "./Nightlight.xcworkspace" \
+  -scheme "Nightlight_Development_iPhone_Only" \
+  -destination 'platform=macOS,variant=Designed for iPhone' \
+  build 
+```
+```zsh
+set -o pipefail && xcodebuild -workspace "./Nightlight.xcworkspace" \
+  -scheme "Nightlight_Development_iPhone_Only" \
+  -destination "platform=iOS Simulator,name=iPhone 16" \
+  test 
+```
+
+```zsh
+$ xcodebuild build \
+  -workspace "$workspace_file" \
+  -scheme "$workspace_scheme" \
+  -destination 'platform=macOS,variant=Designed for iPhone' \
+  -configuration Debug \
+  -sdk iphoneos \
+  -json 2>&1 | tee "assets/build_WalkingSkeletonApp_${timestamp}.log"
+```
+
+
+
+
+
+# cheatsheet
+
+## build app for debugging
+```zsh
+pushd "iOS/hatch-sleep-apple" && 
+set -o pipefail && xcodebuild -workspace "./Nightlight.xcworkspace" \
+  -scheme "Nightlight_Development" \
+  -destination "platform=iOS Simulator,name=iPhone 16" \
+  build \
+  | tee ".gitignored/xcodebuild/Nightlight_Nightlight_20260202_135001.log"
+```
+
+
+
+
+## Building to run the iOS app on mac (Desigined for iPhone)
+
+This is the default case for things like pull requests, feature branches. This is how I run my debug builds
+* scheme: `Nightlight_Development_iPhone_Only`
+* 
+
+
+
+
+
+
+
+
+
+
+
+
+
+# pre-build macro targets when opeinign the project or first thin after a clean
+
+The problme is that a developer opens the workspace (which is an IOS app). When they stumble on code that uses our custom Swift macros (`#LogAll`, and `@NamedClientClosure`), Xcode will render errors because it doesn't know what those are yet. 
+
+To fix this, the dev can select each of those Macros' schemes, set the platform to `My Mac`, compile, then go back to the iOS scheme they were on (and change the platform back to iOS)
+
+There must be a simper way. We can't be the only ones using SwiftMacros in an iOS project. 
+
+
+Some thoughts: We do have a few things compile when the xcworkspace is opened to scheme `Nightlight_Development` (the main scheme). 
+This scheme is configured with `Build` pre-action (a shellscript which executes `Setup.command`)
+
+```sh
+echo "Launching Scripts/Setup.command"
+$SRCROOT/Setup.command
+```
+
+I was thinking we could add an xcodebuild command to `Setup.command` which should ensure those macros are compiled. 
+
+
+
+Help me build a shell command to build these targets for the macOS platform
+```zsh
+# Need to specify "My Mac", however you do that with xcodebuild
+xcodebuild build \
+  -workspace Nightlight.xcworkspace \
+  -scheme HatchLoggerMacros \
+  -destination 'platform=macOS' \
+  -configuration Debug
+
+# xcodebuild test \
+#   -scheme HatchLoggerMacrosImplementation \
+#   -destination 'platform=macOS' 
+
+xcodebuild test \
+  -workspace Nightlight.xcworkspace \
+  -scheme HatchLoggerMacros \
+  -destination 'platform=macOS' 2>&1 \
+ | tail -50
+
+
+cd /Users/zakkhoyt/code/repositories/hatch/hatch_sleep/1/iOS/hatch-sleep-app && \
+xcodebuild test 
+  -workspace Nightlight.xcworkspace 
+  -scheme HatchLoggerMacrosImplementation 
+  -destination 'platform=macOS' 2>&1 | \
+tail -100
+
+
+
+xcodebuild -workspace Nightlight.xcworkspace -list 2>&1 | grep -i "macro\|logger" | head -20
+```
+
+
+If there are better ways to to do this kind of thing, I'm def open to ideas. 
+
+
+
+
+
+---
+# Swift Package Warnings
+
+
+
+
+```zsh
+$ bundle exec fastlane unit_tests_development clean:true
+Resolve Package Graph
+Invalid Resource 'Resources/Assets.xcassets': File not found.Invalid Resource 'Resources/Localizable.xcstrings': File not found.2025-11-10 18:10:34.666 xcodebuild[31882:10462810]  DTDKRemoteDeviceConnection: Failed to start remote service "com.apple.mobile.notification_proxy" on device. Error: Error Domain=com.apple.dtdevicekit Code=811 "Failed to start remote service "com.apple.mobile.notification_proxy" on device." UserInfo={NSUnderlyingError=0xa2d4a0990 {Error Domain=com.apple.dt.MobileDeviceErrorDomain Code=-402653158 "The device
+```
+
+
+
+
+```zsh
+$ Scripts/the-tool --nightlight --clean --build --nightlight --debug 2>/dev/null | tee "/Users/zakkhoyt/.ai/docs/todo/swift/compiler_warnings_xcodebuild_10.log"
+IS_DEBUG=--debug
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -workspace ./Nightlight.xcworkspace -scheme Nightlight_Development -destination "platform=iOS Simulator,name=iPhone 16" clean build
+
+Resolve Package Graph
+Invalid Resource 'Resources/Assets.xcassets': File not found.Invalid Resource 'Resources/Localizable.xcstrings': File not found.
+```
+
+
+
+
+
+---
+
+# Swift6 Compiler Warnings
+
+Create an issue in hatch-baby/mobile to 
+
+
+We have enabled early Swift6 adoptions and as such have a lot of compiler warnings. The goal here it add a comment (or body entry) to a pull request when the content increases that number (or a raw number at the very least). This will only apply to PRs that modify iOS code. 
+
+Write a zsh script taht computes the number of compiler warnings, then categorizes them by removing dynamic parts of the logs like which file:line (we will want this data later though). 
+
+Produce a report that lists each category of wraning (highest count to smallest) then lists the specific full message of that warning
+
+
+Here are some commans I've been using to do this manually
+```zsh
+cd iOS/hatch-sleep-app
+
+# clean then compile
+xcodebuild clean build 
+  -workspace Nightlight.xcworkspace 
+  -scheme Nightlight_Development
+  -destination 'platform=iOS Simulator'
+
+# or
+bundle exec fastlane unit_tests_development clean:true
+```
+
+
+
+## Extracting and Categorizing Warnings
+
+
+<!-- * get compiler output
+* filter logs down to warnings `grep '⚠️' |  grep '.swift:\|.m:\|.h:'`
+* sort warnings into 2 groups
+  * swift related (mentions `.swift`)
+  * non-swift related (`obj-c`, asset catalogs, linker, etc...)
+* for each group
+  * categorize into warning categories (static portion of log messages)
+  * sort by categories (highest count to lowest)
+  * sort each category's logs by filename
+ -->
+* get compiler output
+* filter logs down to warnings `grep '⚠️' |  grep '.swift:\|.m:\|.h:'`
+* copy message to front of log, removing any words in single quotes (these are dynamic)
+* sort by lex
+  * categorize into warning categories (static portion of log messages)
+  * sort by categories (highest count to lowest)
+  * sort each category's logs by filename
+
+* sort warnings into 2 groups
+  * swift related (mentions `.swift`)
+  * non-swift related (`obj-c`, asset catalogs, linker, etc...)
+
+
+We can use xcodebuild or fastlane. I've been compiling the unit tests which tends to flush out all the warnings (maybe it's the `clean`)
+
+Let's follow an example. 
+
+### fastlane 
+> [!NOTE]
+> [Fastlane unit test output: compiler_warnings_bef_10.log](compiler_warnings_bef_10.log)
+> [Filtered logs: compiler_warnings_bef_10.log](compiler_warnings_bef_10.log)
+
+
+Capture compiler output to a log file
+```zsh
+bundle exec unit_tests_development clean:true > compiler_warnings_bef_10.log 2>&1
+```
+
+Filter the log file messages. The way we filter them depends on if we want to capture the line of code (with visual arrow) causing the warning, of if we want to synthesize it, or exclude it. I'm going to go with synthesizing since this makes the log parsing easier. 
+
+Filter the logs file down to only Swift compiler warnings. 
+*  lines that include `⚠️`
+*  lines that include `.swift:`. 
+
+```zsh
+# Easy, warning one per line, but no code_visual
+cat /Users/zakkhoyt/.ai/docs/todo/swift/compiler_warnings_bef_10.log | grep '⚠️' |  grep '.swift:\|.m:\|.h:'`
+
+# # More complex parsing: grab each warning and the following 2 lines which contain code_visual
+# cat /Users/zakkhoyt/.ai/docs/todo/swift/compiler_warnings_bef_10.log | grep '⚠️' -B2 > /Users/zakkhoyt/.ai/docs/todo/swift/compiler_warnings_bef_30.log
+```
+
+Some logs are easier to parse because the message isn't "variable" (doesn't have a dynamic value in the message)
+
+#### Static Warning Logs
+
+In this case `'viewModel'` is dynamic (could be any variable name)
+```log
+[17:50:28]: ▸ ⚠️  /Users/zakkhoyt/code/repositories/hatch/hatch_sleep/0/iOS/hatch-sleep-app/HatchBrain/Sources/HatchBrain/Model/Devices/IoT/IoTShadowAdaptorConnectionManager.swift:141:9: case will never be executed
+```
+
+* date: (infer)
+* timestamp: `17:52:47`
+* file_absolute: `/Users/zakkhoyt/code/repositories/hatch/hatch_sleep/0/iOS/hatch-sleep-app/HatchBrain/Sources/HatchBrain/Model/Devices/IoT/IoTShadowAdaptorConnectionManager.swift`
+* file_relative: `iOS/hatch-sleep-app/HatchBrain/Sources/HatchBrain/Model/Devices/IoT/IoTShadowAdaptorConnectionManager.swift`
+* line: `141`
+* column: `9`
+* compiler_warning: `case will never be executed`
+
+`code_visual` can be parsed from the compiler output, or synthesized from `file`, `line`, and `column`. This example looks like so:
+```swift
+               case .none: return "None"
+                     ^~~~
+```
+
+#### Dynamic Warning Logs
+
+
+```log
+[17:49:53]: ▸ ⚠️  /Users/zakkhoyt/code/repositories/hatch/hatch_sleep/0/iOS/hatch-sleep-app/HatchModules/Modules/HatchReusableUIComponents/Sources/Model/ConnectorLinePreferenceKeys/DarkContainerPreferenceKey.swift:11:16: static property 'defaultValue' is not concurrency-safe because it is nonisolated global shared mutable state; this is an error in the Swift 6 language mode
+```
+
+* date: (infer)
+* timestamp: `17:49:53`
+* file_absolute: `/Users/zakkhoyt/code/repositories/hatch/hatch_sleep/0/iOS/hatch-sleep-app/HatchModules/Modules/HatchReusableUIComponents/Sources/Model/ConnectorLinePreferenceKeys/DarkContainerPreferenceKey.swift`
+* file_relative: `iOS/hatch-sleep-app/HatchModules/Modules/HatchReusableUIComponents/Sources/Model/ConnectorLinePreferenceKeys/DarkContainerPreferenceKey.swift`
+* line: `11`
+* column: `16`
+* compiler_warning: `static property 'defaultValue' is not concurrency-safe because it is nonisolated global shared mutable state; this is an error in the Swift 6 language mode`
+* code_visual: (must compute)
+  * xcodebuild gives this for free, but it's easy to make from the other properties
+    * ```zsh
+          static var defaultValue = [DarkContainerAnchor]()
+                     ^
+      ```
+
+
+#### Staged files
+* `docs/todo/swift/compiler_warnings_bef_40.log`: Copied log message to front of message followed by `" | "`
+* `docs/todo/swift/compiler_warnings_bef_41.log`: A temp file where I copy the message from previous step, then remove the "dynamic" info (anything in between single quotes)
+* `docs/todo/swift/compiler_warnings_bef_42.log`
+
+
+
+
+### xcodebuild
+
+> [!NOTE]
+> [Fastlane unit test output: compiler_warnings_xcodebuild_10.log](compiler_warnings_xcodebuild_10.log)
+> [Filtered logs: compiler_warnings_xcodebuild_20.log](compiler_warnings_xcodebuild_20.log)
+
+Filter the logs file down to only Swift compiler warnings:
+* Filter by `: warning: ` (or include the line number sytnax with regex `\d+: warning: `). 
+* Filter by `.swift:`.  
+
+
+```zsh
+# Clean, build, save stdout and stderr output
+xcodebuild -workspace "./Nightlight.xcworkspace" \
+  -scheme "Nightlight_Development" \
+  -destination "platform=iOS Simulator,name=iPhone 16" \
+  'clean' 'build' \
+  2>&1 \
+ | tee "compiler_warnings_xcodebuild_10"
+
+# Filter down to lines with swift warnings
+swift_warning_lines=(${(f)"$(cat compiler_warnings_xcodebuild_10.log | grep -E '\d+: warning: ' | grep -E '\.swift'"})
+echo "Found ${#swift_warning_lines[@]} Swift compiiler warnings"
+echo "swift_warning_lines:\n${(F)swift_warning_lines[@]}"
+echo "Found ${#swift_warning_lines[@]} Swift compiiler warnings"
+```
+
+
+
+Some logs are easier to parse because the message isn't "variable" (doesn't have a dynamic value in the message)
+
+#### Static Warning Logs
+
+```log
+/Users/zakkhoyt/code/repositories/hatch/hatch_sleep/0/iOS/hatch-sleep-app/HatchBrain/Sources/HatchBrain/Model/Devices/IoT/IoTShadowAdaptorConnectionManager.swift:141:9: warning: case will never be executed
+```
+
+* date: (infer)
+* timestamp: `17:52:47`
+* file_absolute: `/Users/zakkhoyt/code/repositories/hatch/hatch_sleep/0/iOS/hatch-sleep-app/HatchBrain/Sources/HatchBrain/Model/Devices/IoT/IoTShadowAdaptorConnectionManager.swift`
+* file_relative: `iOS/hatch-sleep-app/HatchBrain/Sources/HatchBrain/Model/Devices/IoT/IoTShadowAdaptorConnectionManager.swift`
+* line: `141`
+* column: `9`
+* compiler_warning: `case will never be executed`
+
+`code_visual` can be parsed from the compiler output, or synthesized from `file`, `line`, and `column`. This example looks like so:
+```swift
+               case .none: return "None"
+                     ^~~~
+```
+
+
+#### Dynamic Warning Logs
+
+```zsh
+In this case `'viewModel'` is dynamic (could be any variable name)
+```
+
+
+* date: (infer)
+* timestamp: `17:52:47`
+* file_absolute: `/Users/zakkhoyt/code/repositories/hatch/hatch_sleep/0/iOS/hatch-sleep-app/NightlightUnitTests/SwiftUIViewModels/LoginFlowViewModelTests.swift`
+* file_relative: `iOS/hatch-sleep-app/NightlightUnitTests/SwiftUIViewModels/LoginFlowViewModelTests.swift`
+* line: `170`
+* column: `13`
+* compiler_warning: `static property 'defaultValue' is not concurrency-safe because it is nonisolated global shared mutable state; this is an error in the Swift 6 language mode`
+
+`code_visual` would look like this
+```swift
+    static var defaultValue = [DarkContainerAnchor]()
+               ^
+```
+
+---
+
+`.swift:378:38: `
+
+```zsh
+# log='/Users/zakkhoyt/.ai/docs/todo/swift/compiler_warnings_bef_10.log'
+# move warning to front of the message
+cat $log | grep '⚠️' |  grep '.swift:' | sed -E 's|(.*\.swift:[0-9]+:[0-9]+: )(.*)|\2\1\2\n\n|g'
+
+# extract warnings to own array
+cat $log | grep '⚠️' |  grep '.swift:' | sed -E 's|(.*\.swift:[0-9]+:[0-9]+: )(.*)|\2\n\n|g'
+
+```
+
+
+# Regex Find/Replace
+## Find
+```re
+\.swift:\d+:\d+: 
+```
+## Replace (ShellVSCodeXCode)
+```re
+replace
+```
+
+
+
+```zsh
+log='/Users/zakkhoyt/.ai/docs/todo/swift/compiler_warnings_bef_41_pre.log'
+# move warning to front of the message
+cat $log | sed -E 's|(.*\.swift:[0-9]+:[0-9]+: )(.*)|\2\1\2\n\n|g'
+
+# extract warnings to own array
+cat $log | sed -E "s|('[^']*')|<dynamic>|g"
+cat $log | sed -E "s|( ?'[^']*' ?)|___|g"
+```
+
+# Regex Find/Replace
+## Find
+```re
+( ?'[^']*')
+( ?'[^']*' ?)
+```
+## Replace (ShellVSCodeXCode)
+```re
+```
+
+
+
+
+
+
+
+
+```zsh
+# fastlane output captured to a file
+log='/Users/zakkhoyt/.ai/docs/todo/swift/compiler_warnings_bef_10.log'
+
+# filter to warning lines
+cat $log | grep '⚠️' 
+
+# extract count of uniq messages
+
+# extract message (still dynamic)
+cat $log | grep '⚠️' | sed -E "s|(.*)(\.swift:[0-9]+:[0-9]+: )(.*)|\3|g" 
+
+# extract messages (replacing dynamic content with `<dynamic>`, so they can be correlated and counted)
+cat $log | grep '⚠️' | sed -E "s|(.*)(\.swift:[0-9]+:[0-9]+: )(.*)|\3|g" | sed -E "s|('[^']*')|<dynamic>|g"
+
+
+cat $log | grep '⚠️' | sed -E "s|(.*)(\.swift:[0-9]+:[0-9]+: )(.*)|\3|g" | sed -E "s|('[^']*')|<dynamic>|g" | sort 
+cat $log | grep '⚠️' | sed -E "s|(.*)(\.swift:[0-9]+:[0-9]+: )(.*)|\3|g" | sed -E "s|('[^']*')|<dynamic>|g" | sort | uniq -c
+
+# full transform of log file
+cat $log | grep '⚠️' | sed -E "s|(.*)(\.swift:[0-9]+:[0-9]+: )(.*)|\3|g" | sed -E "s|('[^']*')|<dynamic>|g" | sort | uniq -c | sort -r
+
+# Complete to come up with counts
+bundle exec unit_tests_development clean:true > compiler_warnings_bef_10.log; cat $log | grep '⚠️' | sed -E "s|(.*)(\.swift:[0-9]+:[0-9]+: )(.*)|\3|g" | sed -E "s|('[^']*')|<dynamic>|g" | sort | uniq -c | sort -r
+
+
+# TODO: join the count of each with the full log lines (which point to the file, etc...)
+
+echo "123 <dynamic> is deprecated: Use IoTDeviceStateEmitterClient directly for device state."
+
+# 1: count
+# 2: message_a
+# 3: "<dynamic>"
+# 4: message_b
+message="123 <dynamic> is deprecated: Use IoTDeviceStateEmitterClient directly for device state."
+message=" 123 <dynamic> is deprecated: Use IoTDeviceStateEmitterClient directly for device state."
+message="  62 main actor-isolated instance method <dynamic> cannot be used to satisfy nonisolated requirement from protocol <dynamic>; this is an error in the Swift 6 language mode"
+
+echo "$message" | sed -E "s|^[:space:]*([0-9]+)[:space:]*(.*)(<dynamic>)(.*)|\4|g"
+echo "$message" | sed -E "s|^[:space:]*([0-9]+)[:space:]*(.*)(<dynamic>)(.*)|1: \1\n2: \2\n3: \3\n4: \4|g"
+echo "$message" | sed -E "s|^[ ]*([0-9]+)[ ]*(.*)(<dynamic>)(.*)|1: \1\n2: \2\n3: \3\n4: \4|g"
+echo "$message" | sed -E "s|^[ ]*([0-9]+)[ ]*(.*)(<dynamic>)(.*)|\1\n\2\n\3\n\4|g"
+
+capture_groups=(${(f)"$(echo "$message" | sed -E "s|^[ ]*([0-9]+)[ ]*(.*)(<dynamic>)(.*)|\1\n\2\n\3\n\4|g")"}); echo "capture_groups:\n${(F)capture_groups[@]}"
+echo "capture_groups:\n${(F)capture_groups[@]}"
+
+# preserves empty lines
+capture_groups=("${(@f)$(echo "$message" | sed -E "s|^[ ]*([0-9]+)[ ]*(.*)(<dynamic>)(.*)|\1\n\2\n\3\n\4|g")}");
+echo "capture_groups:\n${(F)capture_groups[@]}"
+slog_array_se "capture_groups" "${capture_groups[@]}"
+
+
+
+# preserves empty lines
+capture_groups=("${(@f)$(echo "$message" | sed -E "s|^[ ]*([0-9]+)[ ]*(.*)(<dynamic>)(.*)|\1\n\2\n\3\n\4|g")}");
+echo "capture_groups:\n${(F)capture_groups[@]}"
+slog_array_se "capture_groups" "${capture_groups[@]}"
+
+message_parts=("${(@f)$(echo "$message" | sed -E "s|^[ ]*([0-9]+)[ ]*(.*)(<dynamic>)(.*)|'\2'\n'\4'|g")}");
+echo "message_parts:\n${(F)message_parts[@]}"
+slog_array_se "message_parts" "${message_parts[@]}"
+message_parts=("${(f)$(echo "$message" | sed -E "s|^[ ]*([0-9]+)[ ]*(.*)(<dynamic>)(.*)|'\2'\n'\4'|g")}");
+echo "message_parts:\n${(F)message_parts[@]}"
+slog_array_se "message_parts" "${message_parts[@]}"
+
+
+capture_groups=(${(f)"$(echo "$message" | sed -E "s|^[ ]*([0-9]+)[ ]*(.*)(<dynamic>)(.*)|\1\n\2\n\3\n\4|g")"}); echo "capture_groups:\n${(F)capture_groups[@]}"
+
+```
+
+
+
+
+
+
+
+
+````markdown
+
+# 62 `main actor-isolated instance method <dynamic> cannot be used to satisfy nonisolated requirement from protocol <dynamic>; this is an error in the Swift 6 language mode`
+```log
+[17:49:53]: ▸ ⚠️  /Users/zakkhoyt/code/repositories/hatch/hatch_sleep/0/iOS/hatch-sleep-app/HatchModules/Modules/HatchReusableUIComponents/Sources/Views/Form/HatchTextFieldView.swift:401:14: call to main actor-isolated instance method 'placeholder(when:alignment:placeholder:)' in a synchronous nonisolated context; this is an error in the Swift 6 language mode
+[17:49:54]: ▸ ⚠️  /Users/zakkhoyt/code/repositories/hatch/hatch_sleep/0/iOS/hatch-sleep-app/HatchModules/Modules/Features/HatchGuidanceSnippetsFeature/Sources/Views/CardStackHiddenView.swift:101:26: call to main actor-isolated instance method 'dynamicFont(_:color:)' in a synchronous nonisolated context; this is an error in the Swift 6 language mode
+[17:49:55]: ▸ ⚠️  /Users/zakkhoyt/code/repositories/hatch/hatch_sleep/0/iOS/hatch-sleep-app/HatchModules/Modules/Features/HatchPersonalizedScheduleFeature/Sources/Helpers/KidRoutine+Helpers.swift:42:18: call to main actor-isolated instance method 'dynamicFont(_:color:)' in a synchronous nonisolated context; this is an error in the Swift 6 language mode
+[17:50:26]: ▸ ⚠️  /Users/zakkhoyt/code/repositories/hatch/hatch_sleep/0/iOS/hatch-sleep-app/HatchBrain/Sources/HatchBrain/HatchBLE/Device/DeviceConnector/ShadowIoTBLEDeviceConnector.swift:256:17: main actor-isolated instance method 'shadowAdaptorScanner(_:shouldUpgradeFirmwareFor:firmware:completion:)' cannot be used to satisfy nonisolated requirement from protocol 'ShadowAdaptorScannerDatasource'; this is an error in the Swift 6 language mode
+[17:50:26]: ▸ ⚠️  /Users/zakkhoyt/code/repositories/hatch/hatch_sleep/0/iOS/hatch-sleep-app/HatchBrain/Sources/HatchBrain/HatchBLE/Device/DeviceConnector/ShadowIoTBLEDeviceConnector.swift:263:17: main actor-isolated instance method 'shadowAdaptorScannerMode' cannot be used to satisfy nonisolated requirement from protocol 'ShadowAdaptorScannerDatasource'; this is an error in the Swift 6 language mode
+...
+```
+
+````
+
+
+-0--
+
+
+
+Let's update AI instruction files underneath `instructions/**/*swift*` (affecting swift or xcode or iOS). 
+
+* please re-read AI instructions first `.github/instructions/**/*` (which are symlinks to `instructions/**/*`) in full so you know their content
+* Those instructions should mention using `xcodebuild` as the main tool for building, debugging, testing, etc... swift code (and to avoid `swift build`, `swift test`, etc... because most if my repos must support iOS, and that's only possible with xcodebuild on a mac). 
+
+
+
+
+## Always apply these idea/rules
+* `swift *` is almost always the WRONG tool to use. Why? I mainly build iOS and macOS specific swift code. So does my company, `hatch`
+* Instead always use `xcodebuild`, `xcrun`, etc.... 
+  * Reminder that for swift packages (dirs that contain a `Package.swift`), xcode/xcodebuild will create a scheme named `"\(package.name)-Package" which includes all targets in the package. 
+    * If the branch/pr changes a package, use `xcodebuild` with this scheme and --package-path to the dir where `Package.swift` resides
+  * A level up, look for the `*.xcworkspace` or `*.xcodeproj` then use the debug flavored scheme
+* Always assume the project is intended for iOS unless it's explicitly set for macOS only 
+
+### Now using Xcode26
+* The main update is that I've moved to the new xcode (16.x -> 26.x). Also new iOS, new iphonesimulators. etc...
+* Find all relevlant places to make these changes:
+  * Xcode 26 toolchain: Ensure that we are using the 26 toolchain before using. EX: `xcodebuild -version` should output  `Xcode 26.*`
+  * Xcode 26 ships with iPhone 17 sim, (which runs iOS 26). We need ot update instructions accordingly:
+    EX: `-destination "platform=iOS Simulator,name=iPhone 16"` to `-destination "platform=iOS Simulator,name=iPhone 17"`
+
+
+
+
+## Testing if the project is our main "hatch" iOS App
+If it is, let these tools and hints take preferences. Otherwise fall back to the defaults AI instructions for debug, build, test, etc...
+
+
+
+If the repo contains any of these files, then this is the our main hatch iOS app
+
+
+* `iOS/hatch-sleep-app/Nightlight.xcodeproj`
+* `iOS/hatch-sleep-app/Nightlight.xcworkspace`
+
+
+
+## Debugging
+
+When building for debugging I prefer to run the `iOS` apps on `macOS` using `Designed for iPhone` (not `Catalyst`)
+
+Prefer the scheme `Nightlight_Development_iPhone_Only`
+
+EX:
+```zsh
+xcodebuild -workspace "./Nightlight.xcworkspace" \
+  -scheme "Nightlight_Development_iPhone_Only" \
+  -destination 'platform=macOS,variant=Designed for iPhone' \
+  build
+```
+
+## Testing
+in most cases, Designed for iPHone can't be used for unit tests, so when testing use the iphonesimulators 
+
+```zsh
+xcodebuild -workspace "./Nightlight.xcworkspace" \
+  -scheme "Nightlight_Development_iPhone_Only" \
+  -destination "platform=iOS Simulator,name=iPhone 17" \
+  test
+```

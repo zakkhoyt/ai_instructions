@@ -11,6 +11,7 @@ applyTo: "**/*.swift"
 
 ## Table of Contents
 
+- [Repository Defaults & Tooling](#repository-defaults--tooling)
 - [Project Architecture](#project-architecture)
 - [File Organization](#file-organization)
 - [Naming Conventions](#naming-conventions)
@@ -22,6 +23,65 @@ applyTo: "**/*.swift"
 - [Formatting Rules](#formatting-rules)
 - [Code Quality Rules](#code-quality-rules)
 - [Common Patterns](#common-patterns)
+
+---
+
+## Repository Defaults & Tooling
+
+### Detecting the Hatch Nightlight App
+
+Assume you are working on the Hatch Nightlight iOS app when any of these files exist:
+
+- `iOS/hatch-sleep-app/Nightlight.xcworkspace`
+- `iOS/hatch-sleep-app/Nightlight.xcodeproj`
+- `iOS/hatch-sleep-app/HatchModules/Package.swift`
+
+Once detected, follow the build/test defaults below instead of inventing new schemes or destinations.
+
+### Toolchain and Command Requirements
+
+1. **Verify Xcode 26.x every time**
+
+     ```zsh
+     xcodebuild_path="$(xcrun --find xcodebuild 2>/dev/null)"
+     xcode_version="$("$xcodebuild_path" -version | head -n1)"
+     if [[ "$xcode_version" != "Xcode 26."* ]]; then
+         echo "ERROR: expected Xcode 26.x but found: $xcode_version" >&2
+         exit 1
+     fi
+     ```
+
+2. **Prefer `xcodebuild` over `swift *`** – most Hatch code targets iOS, so simulator and Designed for iPhone destinations are required. Only reach for `swift build/test/run` when a module is explicitly macOS-only.
+
+3. **Use the default Nightlight scheme/destinations**
+
+     - Debug builds on macOS (Designed for iPhone):
+
+         ```zsh
+         cd iOS/hatch-sleep-app && \
+         set -o pipefail && \
+         nocorrect "$(xcrun --find xcodebuild 2>/dev/null)" build \
+             -workspace ./Nightlight.xcworkspace \
+             -scheme Nightlight_Development_iPhone_Only \
+             -destination 'platform=macOS,variant=Designed for iPhone'
+         ```
+
+     - Tests on simulator (ships with Xcode 26):
+
+         ```zsh
+         cd iOS/hatch-sleep-app && \
+         set -o pipefail && \
+         nocorrect "$(xcrun --find xcodebuild 2>/dev/null)" test \
+             -workspace ./Nightlight.xcworkspace \
+             -scheme Nightlight_Development_iPhone_Only \
+             -destination "platform=iOS Simulator,name=iPhone 17"
+         ```
+
+     Designed for iPhone destinations almost never run XCTest successfully, so always switch back to the iPhone 17 simulator for unit/UI tests.
+
+4. **Leverage existing helper scripts** – `iOS/hatch-sleep-apple/Scripts/the-tool.zsh --help` prints validated command templates. Prefer those wrappers over handwritten pipelines whenever they already solve the task.
+
+These defaults keep the documentation, automated tooling, and human workflows aligned as Hatch migrates to Xcode 26/iOS 26.
 
 ---
 

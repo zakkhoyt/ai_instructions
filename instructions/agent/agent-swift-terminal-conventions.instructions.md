@@ -16,6 +16,7 @@ When executing Swift/Xcode commands as an AI agent, ensure:
 - ✅ **Change to project directory** - Use `cd` before build commands (see [Working Directory Navigation](#working-directory-navigation))
 - ✅ **Prevent autocorrect** - Use `nocorrect` prefix to prevent zsh from correcting `build` to `.build` (see [Prevent Zsh Autocorrect](#prevent-zsh-autocorrect-on-build-command))
 - ✅ **Choose correct tool** - Use `xcodebuild` for iOS, `swift` for macOS-only packages (see [Tool Selection Guide](#tool-selection-guide))
+- ✅ **Confirm Xcode 26 toolchain** - Run `"$(xcrun --find xcodebuild 2>/dev/null)" -version` and ensure the first line starts with `Xcode 26.` before executing build/test commands
 - ✅ **Validate changes** - Always test Swift code changes with tests or compilation (see [Validating Swift Code Changes](#validating-swift-code-changes))
 - ✅ **Output persisted** - Use `2>&1 | tee logfile.log` pattern from agent-terminal-conventions (see [Persist Command Output](#persist-command-output))
 
@@ -58,6 +59,23 @@ Choose between `xcodebuild` and `swift` based on platform and project type:
 - ✅ Project is a **simple Swift Package** with no Xcode dependencies
 
 **Rationale**: `swift` commands are simpler for pure Swift Packages, but `xcodebuild` also works for these.
+
+> **Important**: If a repository contains iOS code (the default assumption for Hatch projects), avoid `swift build`, `swift test`, and `swift run`. Stick with `xcodebuild` so simulator/device destinations stay available.
+
+### Verify Xcode 26 Toolchain (Required)
+
+Always prove that the active toolchain is Xcode 26 before running any build, test, or archive command. The safest pattern is to capture the first line of `xcodebuild -version` and halt if it is not `Xcode 26.*`:
+
+```zsh
+xcodebuild_path="$(xcrun --find xcodebuild 2>/dev/null)"
+xcode_version="$("$xcodebuild_path" -version | head -n1)"
+if [[ "$xcode_version" != "Xcode 26."* ]]; then
+  echo "ERROR: expected Xcode 26.x but found: $xcode_version" >&2
+  exit 1
+fi
+```
+
+Document the version check in your log so reviewers can verify the correct toolchain was used.
 
 ### Decision Flowchart
 
@@ -137,7 +155,7 @@ $ xcrun --find swift
 cd "$PACKAGE_DIR" && \
 "$(xcrun --find xcodebuild 2>/dev/null)" clean build \
   -scheme "Nightlight_Development" \
-  -destination "platform=iOS Simulator,name=iPhone 16"
+  -destination "platform=iOS Simulator,name=iPhone 17"
 
 # ✅ GOOD - navigate to workspace directory
 cd "$WORKSPACE_DIR" && \
@@ -205,7 +223,7 @@ xcodebuild clean "build" -scheme MyScheme
 cd "$PACKAGE_DIR" && \
 nocorrect "$(xcrun --find xcodebuild 2>/dev/null)" clean build \
   -scheme "Nightlight_Development" \
-  -destination "platform=iOS Simulator,name=iPhone 16" \
+  -destination "platform=iOS Simulator,name=iPhone 17" \
   2>&1 | tee ".gitignored/build/xcodebuild_$(date +%Y%m%d_%H%M%S).log"
 
 # Run tests
@@ -247,7 +265,7 @@ When working with Swift Packages, `xcodebuild` creates a scheme named `${PACKAGE
 cd "$PACKAGE_DIR" && \
 nocorrect "$(xcrun --find xcodebuild 2>/dev/null)" \
   -scheme HatchModules-Package \
-  -destination "platform=iOS Simulator,name=iPhone 16,OS=18.4" \
+  -destination "platform=iOS Simulator,name=iPhone 17,OS=26.0" \
   clean test \
   2>&1 | tee ".gitignored/test/package_test_$(date +%Y%m%d_%H%M%S).log"
 
@@ -348,19 +366,59 @@ Use generic simulator when possible to avoid device-specific issues:
 -destination 'platform=iOS Simulator,name=Any iOS Simulator Device'
 
 # ✅ GOOD - specific device model (uses any available matching simulator)
--destination 'platform=iOS Simulator,name=iPhone 16 Pro'
+-destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 
 # ✅ GOOD - specific device by UDID (guarantees exact simulator instance)
 -destination 'platform=iOS Simulator,id=56F1858F-84A3-43F6-9623-C254E22F540D'
 
 # ✅ GOOD - specific device, OS version, and architecture
--destination 'platform=iOS Simulator,arch=arm64,OS=18.5,name=iPhone 16 Pro'
+-destination 'platform=iOS Simulator,arch=arm64,OS=26.0,name=iPhone 17 Pro'
 
 # ✅ GOOD - fully qualified with UDID (most specific)
--destination 'platform=iOS Simulator,arch=arm64,id=56F1858F-84A3-43F6-9623-C254E22F540D,OS=18.5,name=iPhone 16 Pro'
+-destination 'platform=iOS Simulator,arch=arm64,id=56F1858F-84A3-43F6-9623-C254E22F540D,OS=26.0,name=iPhone 17 Pro'
 ```
 
 **Note**: Some tests cannot run on simulators (e.g., hardware-dependent features).
+
+## Hatch Nightlight Default Workflow
+
+Treat the Hatch Nightlight app as the default case any time the repository contains one of the following:
+
+- `iOS/hatch-sleep-app/Nightlight.xcworkspace`
+- `iOS/hatch-sleep-app/Nightlight.xcodeproj`
+- `iOS/hatch-sleep-app/HatchModules/Package.swift`
+
+### Debug builds (Designed for iPhone on macOS)
+
+When developing or reviewing pull requests, prefer running the iOS app directly on macOS using the Designed for iPhone destination and the `Nightlight_Development_iPhone_Only` scheme:
+
+```zsh
+cd iOS/hatch-sleep-app && \
+set -o pipefail && \
+nocorrect "$(xcrun --find xcodebuild 2>/dev/null)" build \
+  -workspace ./Nightlight.xcworkspace \
+  -scheme Nightlight_Development_iPhone_Only \
+  -destination 'platform=macOS,variant=Designed for iPhone' \
+  2>&1 | tee ".gitignored/xcodebuild/nightlight_debug_$(date +%Y%m%d_%H%M%S).log"
+```
+
+This destination gives the fastest turn-around for interactive debugging while matching how the app is typically run during reviews.
+
+### Tests (iPhone 17 simulator only)
+
+Designed for iPhone destinations rarely support XCTest, so switch to the default simulator that ships with Xcode 26 when running unit/UI tests:
+
+```zsh
+cd iOS/hatch-sleep-app && \
+set -o pipefail && \
+nocorrect "$(xcrun --find xcodebuild 2>/dev/null)" test \
+  -workspace ./Nightlight.xcworkspace \
+  -scheme Nightlight_Development_iPhone_Only \
+  -destination "platform=iOS Simulator,name=iPhone 17" \
+  2>&1 | tee ".gitignored/xcodebuild/nightlight_tests_$(date +%Y%m%d_%H%M%S).log"
+```
+
+Do **not** fall back to `swift build`/`swift test` in this repository; those commands will ignore the iOS-only targets and miss regressions.
 
 ### 4. iOS Device (Physical Hardware)
 
@@ -526,7 +584,7 @@ log_file=".gitignored/build/xcodebuild_$(date +%Y%m%d_%H%M%S).log"
 cd "$PACKAGE_DIR" && \
 nocorrect "$(xcrun --find xcodebuild 2>/dev/null)" clean build \
   -scheme MyScheme \
-  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
   2>&1 | tee "$log_file"
 
 # Now filter/analyze the log file (instant, no re-compilation)
