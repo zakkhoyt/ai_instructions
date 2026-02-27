@@ -1,6 +1,13 @@
+ When you are creating new markdown/*.md files, I expect that the content within will be backed by HARD FACTS, not "what you think". 
+ "Hard Facts" meaning it must originate from official documentation or user manuals, not other local *.md files. And not "What the AI agent assumes to be true".
+ 
+ Use only official documentation (Logic Pro documentation, Toneforge Disruptor documentation) as sources, not local *.md files.
 
 
 
+
+
+---
 
 
 

@@ -1,7 +1,105 @@
 
 
+# VSCode setttings files
+
+VSCode is highly configurable. 
+* Settings are persisted as `jsonc` format (with `.json` extension)
+* Settings have precedence depending on where they are defined
+  * `folder settings` files (`*/.vscode/*.json`). 
+    * EX: `*/.vscode/settings.json`
+    * EX: `*/.vscode/mcp.json`
+    * EX: `*/.vscode/task.json`
+    * [ ] List **all** of the possible filenames for folder settings
+  * `workspace settings`, file (`*/*.code-workspace`), 
+    * [ ] Can this file be broken down into more atomic files, like can be done for `folder settings` and `user settings`?
+      * EX: In the `folder settings` and `user settings` scopes, you can define your `mcp` server details in `mcp.json`
+        * I believe you can also just define it in the `settings.json` as an option as well. Please confirm or correct me if I'm wrong
+      * If yes (can be fragmented), how? Where should the files be stored, and what should they be named
+  * `user settings` file (`~/Library/Application Support/Code/User/*.json`)
+* Settings json files **can be** split into some broad categories
+
+First off, a choice for some of those prompts is `Allow All Commands in this Session`. I'd like to know where that data is persisted?
+
+# More Agent Prompt Suppression
 
 
+This repo and setup script (`scripts/configure_ai_instructions_tests.zsh`) contain a function which can configure `VSCode` settings (`user`, `workspace`, and (soon) `folders`).
+This is done by merging `json` files from this repos' `vscode` folder into the appropriate target file. 
+
+One of the thigns these settings files can modify is the behavior and permissions for AI agents (aka chat) and this is what we will be focusing on right now. 
+IMO VSCode AI Agents prompt the user WAY to much and too often. The settings files in this repo contain changes aimed at suppressing those prompts. 
+This has been successful to some degree, but it seems that VSCode has rolled out some additional new permission prompts. 
+* I **always** want to allow the agent action to procceed as far as this configuration is concerned. 
+
+
+## Prompts
+
+### External File Access
+* Title: `Allow reading external files?`
+* Allow actions: [`Allow this folder in this session`]
+* Screenshot: <img src="images/TODO_AI_AGENT/agent_prompt_allow_file_access.png" width="500">
+
+
+### Terminal Input
+* Title: `The terminal is awaiting input.`
+* Allow Actions: `y`
+* Problem Details: This agent was trying to open some file using terminal. 
+  * I'm not sure why it wasn't done in a non-interactive way. 
+  * The `AI instructions` (which this repo & script install, under `instructions/`, contains content about this very concept
+    * ie: Agents should NOT issue terminal commands that will require any sort of user interaction.  
+      * EX: Outputting to any `pager` such as `vim`, `less`, etc..
+      * EX: Prompting, stdin (piping exempt). If the script is going to ask the user to input data, that's a no-no. Agent should provide the data via other means
+
+
+### Allowed Commands struggle
+
+* Even though the `vscode workspace settings` contain `chat.tools.terminal.autoApprove`
+* 
+
+![agent_prompt_run_command](images/TODO_AI_AGENT/agent_prompt_run_command.png)
+
+
+
+* [ ] Please look into the instuctions to see how the instructions can be refined so that the agent 
+* [ ] maybe stronger langueage: Mandatory, not optional? Maybe better instructions?
+
+
+--- 
+
+
+
+I'd like to explore what the script can do to help greenlight these questions/responses silently. 
+* EX: Can we modify `vscode/workspace/ai_autoapprove__workspace.code-workspace`? Or create an additional version?, etc...
+
+Research and LMK
+
+---
+
+# Make vscode setting files more atomic
+Break URL stuff from `vscode/user/chat_urls_autoapprove__settings.json` out to it's own file
+
+
+--- 
+
+
+# TODO Checkoff Behavior 
+
+* I often work in a markdown file to oragnize my thoughts before feeding them into an AI prompt. 
+* TODO concepts use (are separated) by h1 headers (`#`)
+* Atomic TODO tasks generally use a combination of `unordered lists` and `checkbox lists` syntax. 
+
+
+As the work for those content is completed, I will mark them as done in real time. 
+* This helps me to organize my thoughts in the moment
+* This also helps me resume work when ever that may be. 
+
+
+AI agents usually tend to mark these things as done (in the markdown) on my behalf, which could be super helpful. The problem is that the agent is not using the same convention that I use
+Quite often the agent will 
+
+
+
+![todo_checkoff_behavior](images/TODO_AI_AGENT/todo_checkoff_behavior.png)
 
 
 

@@ -39,14 +39,150 @@ Status Legend:
 Default action (press Enter): skip (no changes)
 Enter selections by space-separated numbers (EX: '1 2'), or 'all': all
 ```
-Where `1 2 
+
+* where `1 2` would ??? I guess install files 1 and 2 via sym link?
+  * [ ] This is confusing for the user as it's not clear what will happen to those files (or `all`)
+    * perhaps the prompt systme should have multiple inputs and default values/answers
+    * We need a way to specify what to do for each individual file (if desired)
+    * We also need a way to apply the same action to all / any of the files (quick mode). 
+      * EX: `S`ymlink `all` of them
+      * EX: `C`opy files `1 4 7`
+    * I think having the user fill in the check boxes would be a clear way to do this, though maybe harder to implement and a bit busy for the user (having to navigate up and down a menu)
+    * prompting the user file by file would be slow goign in most cases
+      * Maybe an `apply to remaining instructions` as an option or similar?
+    * Oh, I guess we actually have CLI ars to control whether it's symlinke or copied?
+
+```zsh
+Status Legend:
+  [ ]       Not installed
+  [S] 🔗     Symlinked (current)
+  [C] 📄     Copied (current)
+  [O] ⏳     Copied (outdated)
+  [M] ✏️    Copied (modified)
+  [U] ❔     Copied (unknown)
+  [?] ⚠️    Wrong symlink target
+```
+```zsh
+Default action: skip / no changes
+Valid inputs:
+* 'skip' (default) - perform no actions on instruction files
+* ' S C O M U ?' - apply to all files
+Enter selections by space-separated numbers (EX: '1 2'), or 'all': all
+```
 
 
 
-* [ ] the numbered list of instruction files looks to be broken after entry 9 wraps back to `1.`, `2.` etc... This needs fixing
+
+
+* All script misbehaior is based on:
+ * EX: Runnign script from another repo with no instructions installed yet: `~/.ai/scripts/configure_ai_instructions.zsh --instructions --prompt`
+
+# ActionItems
+
+* [ ] re-read all AI instruction files 
+* [ ] When running the script (the numbered list of instruction files looks to be broken after entry 9 wraps back to `1.`, `2.` etc... This needs fixing
 * [ ] The menu is currently only seemingly displayed if no instructions are installed, If some are the menu is skipped which breaks the abilty for the user to modify the install details, add new files, update existing files, switch from linking to copies, etc...
   * recently some work was done on this script maybe around the `--instructions` or `--prompt`. This is when the behavior took a turn for the worse. 
     * Please summarize what both of those args are supposed to do, and how they interact. I'd like to understnad and provide feedback before changes are made
+
+
+
+Read everything I wrote above. I'm confused overall and need you to tell me how the script is/was designed to work and where I'm off track. 
+* provide an overview, where you think I think the problems are, and propose some solutions / ideas. let's discuss before making changes. 
+* Let's make a new doc to track the work that needs to be done to the installation script: `scripts/CONFIGURE_AI_INSTRUCTIONS_OVERHAULD.md`
+
+---
+
+
+
+
+
+Questions: 
+* `1. Menu skipping - The script checks has_instructions_to_install() which returns "all good" if files are installed, so menu never shows`
+What do you mean "if files are installed? ANY Files? like one? All instruction files? Why doesn't the output indicate this? I would expect it to say "instructions, x, y, z are all installed and up to date (followed by printing the status table) 
+
+However, if the user provides args `--instructions --prompt`, then it should defer to the user to make changes. IE: It shoudl still give the user the opportunity to make changes such as: uninstalling any/all files, switch from symlink to copy, etc....
+
+* 2. Number formatting  -
+I think we are fine at up to 100 instruction files, but maybe we should make the change to 3 digits now. 
+
+* 3. Flag confusion
+Again, I don't like the "already installed" logic. And again, let's defer to the user to skip (make no changes). 
+- I know this was probably my idea with the intent to streamline the script, but let's dismount that idea. Let's always defer to the user via prompt systm
+
+
+
+
+I think our args have become a mess, are inconsistent, hard to combine, and likely the --help is not up to date nor clear about how all of this works.
+
+Let's brainstorm a revamp of our arguments. Here are some ideas; 
+
+We could have an array of "promptable actions". Something like this
+
+```zsh
+zparseopt -D -E -- \
+  -prompt+:=opt_prompt_actions \
+  # ...
+# Remove all `--prompt` from the array
+local -a prompt_actions=(${opt_prompt_actions[@]:#--prompt})
+
+```
+Where valid values would be actions that we can realistically suppress prompting during. EX: 
+`--prompt instructions --prompt xcode-mcpserver` where `xcode-mcpserver` is the prefix to config file at `vscode/workspace/xcode-mcpserver__workspace.code-workspace`. This is NOT an all inclusive list, just giving a couple of examples. 
+
+* [ ] What do you think of this approach?
+  * [ ] what existing arguments would this deprecate/displace?
+  * [ ] Which args remain that we should discuss?
+
+
+
+Regarding:
+
+# What about auto-install (no prompting)?
+./script --instructions  # Keep this flag? Or default behavior?
+
+We wouldn't need to keep it. The way I see it, each "action" can either be in prompt mode (expressed by `--prompt <action>`) or no-prompt mode (default / absense of `--prompt <action>`. Perhaps we should also support `--no-prompt <action>`, but not right now.. Add that to phase 2 notes or something). 
+
+For now let's discuss which current args can/should be ported to `--prompt <action>`, and which of those `actions` shoudl be dynamic. 
+
+
+For exmple: All of the fiels under `vscode/**/*.json` (depending on the filename) are to be merged into some destination file. 
+* Do we want to treat each of these as an action based on thefiel prefix? This might be overly complicated.Think of what the user would need to do to express that they want to merge certain files, but not others
+* Or can we break this down by `user/workspace/folder`? Probabbly not because each of those further contiain settings files, mcp files, etc....
+* [ ] Please tell me how the script currently handles all of these files
+
+---
+
+
+
+Regarding:
+
+# What about auto-install (no prompting)?
+./script --instructions  # Keep this flag? Or default behavior?
+
+We wouldn't need to keep it. The way I see it, each "action" can either be in prompt mode (expressed by `--prompt <action>`) or no-prompt mode (default / absense of `--prompt <action>`. Perhaps we should also support `--no-prompt <action>`, but not right now.. Add that to phase 2 notes or something). 
+
+For now let's discuss which current args can/should be ported to `--prompt <action>`, and which of those `actions` shoudl be dynamic. 
+
+
+For exmple: All of the fiels under `vscode/**/*.json` (depending on the filename) are to be merged into some destination file. 
+* Do we want to treat each of these as an action based on thefiel prefix? This might be overly complicated.Think of what the user would need to do to express that they want to merge certain files, but not others
+* Or can we break this down by `user/workspace/folder`? Probabbly not because each of those further contiain settings files, mcp files, etc....
+* Please tell me how the script currently handles all of these files
+```
+
+
+
+
+* [ ] update `scripts/CONFIGURE_AI_INSTRUCTIONS_OVERHAUL.md` after every back and forth in this confo. 
+
+
+
+
+
+
+
+
 
 
 
@@ -705,3 +841,258 @@ ai_platforms/
 └── coderabbit/
     └── .coderabbit.template.yml
 ```
+
+
+
+
+As I read your previous post:
+
+* under: `Current Script: 2 Group Actions` you suggest that the **current** script supports `./script --prompt workspace-settings`? 
+  * I tried this and it doesn't seem to do anything related to workspace settings, but it behave just like running `configure_ai_instructions.zsh --prompt --instructions`
+    * that is it offered to merge xcode mcp and then prompted to install instructions
+    * I think this is probably not too relevant except to note that it's broken. Probaly `./script --prompt user-settings` is broken too. 
+
+
+
+
+
+First off, the config files under `vscode/**`, the filenames have a naming convention already built into the existing script. 
+* It looks liek the `__` is used as a delimiter to split the filename on. 
+  * the leading string is a note/comment about what the file contains
+  * The trailing string is the destination file
+  * [ ] Please confirm this to be true, and if so, create a README.md in each directory under `vscode/`
+    * [ ] in each README add a section about how the naming convention works. 
+      * IE: how the filename is parsed, how directory hierarchy plays a role in computing the destination file
+      * IE: how the destination file is inferred (from which data: dirs, filename tokens, etc...) give some examples
+* Since the content is JSON (JSONC technically) formatting it can be intelligently merged into the dest file (Which it currently is)
+  
+
+
+
+```zsh
+vscode/
+├── user/                                   # User profile settings
+│   ├── atlassian__mcp.json                    # Merges atlassian MCP configs into ~/Library/.../User/mcp.json
+│   ├── chat__settings.json                    # Merges chat related settings into ~/Library/.../User/settings.json
+│   ├── chat_urls_autoapprove__settings.json   # Merges chat autoapprove url settings into ~/Library/.../User/settings.json
+│   ├── github__settings.json                  # Merges github related settings into ~/Library/.../User/settings.json
+│   └── swift__settings.json                   # Merges swift related settings into ~/Library/.../User/settings.json
+│
+└── workspace/                              # Workspace-level settings
+    ├── *.code-workspace                   # Merges into active *.code-workspace
+    │   ├── ai_autoapprove__workspace.code-workspace
+    │   ├── swift__workspace.code-workspace
+    │   └── xcode-mcpserver__workspace.code-workspace
+    │
+    └── .vscode/*.json                     # Merges into $dest_dir/.vscode/
+        ├── atlassian-mcpserver__mcp.json  # → .vscode/mcp.json
+        ├── fileNesting__settings.json     # → .vscode/settings.json
+        └── xcode-mcpserver__mcp.json      # → .vscode/mcp.json
+```
+
+
+Putting this all together it seems like there are (and I'm going to define some new terms here, 
+* Naming is hard. Some of these I gave more than 1 name. 
+  * [ ] Help me narrow each down and/or suggest better names if you have them. 
+  * After we agree, please document those terms in 
+    * `scripts/CONFIGURE_AI_INSTRUCTIONS_OVERHAUL.md`
+    * [ ] the script itself (if needed) as a TODO
+    * [ ] update this document to use the agreed upon names (don't change anything other than that)
+    * [ ] any READMEs, eetc... if needed
+
+Here are the new defintions
+* `config scope`: 3+ different (currently 3, but 3+ in the future, more on this below)
+  * "user": `vscode/user/*`
+  * "workspace": `vscode/workspace`
+  * "folder" (as vscode calls them): `vscode/workspace/.vscode`
+    * [ ] Add a note to `scripts/CONFIGURE_AI_INSTRUCTIONS_OVERHAUL.md` about future script implmentation: 
+      * VSCode supports many folder configs for each workspace directory (that dir can contain it's own `.vscode/**` ). 
+      * We should support this too. Looks like currently we only support the root dir of a code-workspace?
+* `config category` - 2+ different target file types (currently 3, but 3+ in the future, more on this below)
+  * `settings` (from `swift__settings.json`)
+  * `mcp` (from `atlassian__mcp.json `)
+  * others like `task.json`
+    * [ ] add a note to `scripts/CONFIGURE_AI_INSTRUCTIONS_OVERHAUL.md`:
+      * I want this script to be able to support additional categories with ease. For example `task.json`. etc... 
+      * prioritize it after this argument overhaul business
+* `config theme` - parsed from the source config's filename (the first element after splitting the filename by `__`)  
+  * EX: `swift` (from `swift__workspace.code-workspace`)
+  * EX: `xcode-mcpserver` (from `xcode-mcpserver__mcp.json`)
+
+What ever solution we come up with needs to support:
+* user giving only a scope (the script would then permutate through all `config categories` and `config themes`)
+* user giving a scope, a category, and a theme (the script would then permutate through all `config categories` and `config themes`)
+* or do we actually need all 3 of these terms as it relates to CLI args?
+
+
+
+
+
+Proposed `Option 1`:
+
+Looking at the different scopes, categories (and future expansions for both) I don't think `option 1` is veratile enough, though it might work for cases when the user only defines a `scope`
+* I think that our new argument syntax should be articulate enough to indicate a category & scope combo
+* I also think it would be nice to be able to define only a scope, knowing that the script will apply all categories
+
+Proposed `Option 2`:
+* not versatile enough. Moving on
+
+Proposed `Option 3`:
+* not versatile enough. Moving on
+
+
+Proposed `Option 4`:
+As I am writing this section I've been brainstorming something similar to this
+* This sytnax also lets the user be sweeeping enough to only give a scope (all categories & themes applied)
+* Does this sytnax let the user be particular enought to define a scope/category/theme combo?
+* Does this sytnax let the user be particular enought to define a scope and argbitrary list of categories?
+  * across multiple key/value pairs or a single one?
+* [ ] I generally like it, but let's consider making some small adjustments to it 
+
+Modified from example for the sake of discusssion
+
+Maybe we could support something like this: `./script --prompt <scope[:<category>][:<theme>]>`
+```zsh
+# ---- scope only
+# All user configs (settings, mcp, task (when implemented), etc...)
+./script --prompt user
+# All workspace configs (settings, mcp, task (when implemented), etc...)
+./script --prompt workspace
+
+# ---- scope & category
+# */all (theme) setting configs (category) in workspace (scope)
+./script --prompt workspace:settings
+# */all (theme) mcp configs (category) in user (scope)
+./script --prompt user:mcp
+
+# ---- scope & category & theme
+# swift (theme) setting configs (category) in user (scope)
+./script --prompt user:settings:swift
+# xcode-mcpserver (theme) mcp configs (category) in workspace (scope)
+./script --prompt workspace:mcp:xcode-mcpserver
+```
+
+# Uncertainties:
+
+## defining multiple categories & themes
+It would be easiest just to require separate key/value args I suppose
+```zsh
+# swift (theme) setting configs (category) in workspace (scope)
+./script --prompt workspace:settings:swift
+# markdown (theme) setting configs (category) in workspace (scope)
+./script --prompt workspace:settings:markdown
+```
+
+Though it would be nice to do things like this, this should probably be considered "future" (unless you, ai agent sees a way to support this with no effort)
+```zsh
+# markdown & markup (theme) setting configs (category) in workspace (scope)
+./script --prompt workspace:settings:markdown|markup
+# markdown, markup, etc... (theme) setting configs (category) in workspace (scope)
+./script --prompt workspace:settings:mark*
+```
+
+
+
+
+## workspace folder(s) syntax
+* Future: once we support multiple workspace folder configs, how will we define that with this arg syntax?
+* [ ] Add a section to `scripts/CONFIGURE_AI_INSTRUCTIONS_OVERHAUL.md` about this (should have a section for this already from above)
+  * perhaps: `--prompt folder[[folder_name]]` (where the outer brackets indicate SYNOPSIS type syntax (meaning this term is optional) and the inner brackets are part of the syntax
+```zsh
+# all setting configs for all workspace folders scope (because no names were specified)
+./script --prompt folder[]:settings
+# ./script --prompt folder[]:settings
+
+# all setting configs for the "scripts" workspace folder scope
+./script --prompt folder[scripts]:settings
+```
+
+
+* [ ] what do you think about my amendments to option 4?
+  * [ ] is there anything that wont' work like I've described it?
+  * [ ] Is there anything that we can change to make implementation easier? EX: different split/join tokens or characters? 
+* [ ] Let's arrive at a plan for how to handle all of these config files situations with our new arg overhaul, document everything in `scripts/CONFIGURE_AI_INSTRUCTIONS_OVERHAUL.md`, then we can "pop that off the stack" and finish other unknowns/questions from eariler in this convo. 
+
+  
+
+
+
+
+
+
+
+---
+
+<!-- 
+You said: `✅ Easy to parse (IFS=':' read -r)`
+
+* Clarification on zsh scripting style: We prioritize modern zsh features (parameter expansion, zsh builtins, etc.) as the first approach. `IFS` with `read` is acceptable as a fallback when zsh-native approaches aren't suitable (e.g., line-by-line file reading), but should not be the default choice for parsing when zsh parameter expansion can handle it elegantly.
+  * [x] re-read all AI instructions now. Apply those instructions always and by default, with preference for modern zsh idioms.
+
+You said: 
+
+```ai
+✅ Finalized terminology: scope/category/theme
+✅ Filename convention: <theme>__<category>.ext
+```
+
+if we decided on the terms: `scope`, `category`, `theme` then let's be VERY CONSISTENT and use those terms EVERYWHERE
+* [ ] IE: Shouldn't `✅ Filename convention: <theme>__<destination>.ext` be `✅ Filename convention: <theme>__<category>.<ext>`?
+  * [ ] If so, fix it and fix it everywhere. 
+
+* [ ] I asked you to create README.mds and you havent' done that. Do it now
+  * [ ] What else did fail to do from ^ ? 
+    * I see that you also didn't update this document to use those new terms. For example I see `subcategory` all over the place. If we agreed on `theme` then let's be consistent. I'm speaking in specifics, but I expect you to extrapolate this to all the `terms`/`definitions` from above in the chat
+    * [ ] Please review, find all work that you decided to skip (frustrating) and do that work now. 
+
+* Come back to me after completing the above list, then we will continue talking about the new args syntax. -->
+
+---
+
+
+* [ ] I feel like there are still many args that we haven't evaluated as far as our args overhaul. 
+* Print up a new "--help" output with the new arg convention, including all supported input variants. 
+* in a different section of that same output list all of the other args that we haven't discussed yet
+* I also feel like the script is currently doing some things that might not be represented by arguments. For example it seems to alwasy offere to install the xcode mcp server into workspace regardless of args. Evaluate and include in the output
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+
+
+RE: `ICON/ASSET MANAGEMENT:` 
+
+You said there are TODOs about this? I had prepared the following to refine then add to `scripts/CONFIGURE_AI_INSTRUCTIONS_OVERHAUL.md` as a future feature. Please do that now
+
+# Markdown App Icons
+I've been swing agents across workspaces that use this repo's AI instructions creatin/adding application icons as defined in `markdown-conventions.instructions.md`
+* EX: in the `notes` workspace, icons are added to 
+  * absolute: `/Users/zakkhoyt/Documents/notes/docs/images/icons/accessibility_inspector.png`
+  * relative: `docs/images/icons/accessibility_inspector.png`
+* This does make sense to archive the app icons in a consistent folder across all workspaces. 
+  * any markdown doc in the workspace can include that icon
+  
+
+## ActionItems
+* [ ] In order to avoid duplicating (or having different variants of an app icon across workspaces), I think we should probably keep a main archive (in this repository) then create symbolic links to them in each workspace
+  * [ ] This repo's script `scripts/configure_ai_instructions.zsh` does similar linking for other asset types like AI instructions. I think it should probably support app icons as well. 
+  * [ ] Evaluate if the script has any relationship at all with those images, that directory, etc... 
+  * [ ] Let's explore what it would look like to have the scripts support app icons as another actions & menu driven interface
+### Questions
+* what happens when AI agent finds that it needs a new icon?
+  * I suppose we should update `markdown-conventions.instructions.md` in some capacity depending on the following:
+    * Supppose the agent needs a new app icon. It should first check the "source of truth" for that app icon.
+      * if found, create a symbolic link to it in the relevant repo's icons dir
+      * NOTE: I believe that if you symlink to a directory (not the files with in that dir_) that any files added to the source after the symlink is made will be available. Should the script simply create a symlink to the containing dir?
+    * I dont' think the default location icons dir should be hard coded to `docs/images/icons/`
+      * Maybe `docs/images/icons/` is a good default value, but should be customizable

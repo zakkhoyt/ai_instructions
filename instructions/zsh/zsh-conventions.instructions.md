@@ -1734,7 +1734,7 @@ if [[ $flag_debug_level -gt 0 ]]; then
 fi
 
 # Extract dry-run flag immediately
-is_dry_run=${flag_dry_run:+true}
+flag_dry_run=${flag_dry_run:+true}
 
 # Stage 2: Parse trap control flags - RECOMMENDED
 # Note: -D removes parsed opts, no -E to allow unrecognized opts to pass through
@@ -1764,7 +1764,7 @@ other_arg="${opt_other_arg[-1]:-default_value}"
 
 **Stage Summary:**
 - **Stage 1 (Required)**: Core flags (`--help`, `-d/--debug`, `--dry-run`) - uses `-D` only
-  - Extract values immediately after parsing (e.g., `is_dry_run`, `flag_debug_level`)
+  - Extract values immediately after parsing (e.g., `flag_dry_run`, `flag_debug_level`)
 - **Stage 2 (Recommended)**: Trap debugging control - uses `-D` only
   - Set up trap handlers immediately after parsing
 - **Stage 3 (As Needed)**: Script-specific arguments - uses `-D` only

@@ -2,6 +2,70 @@
 
 
 
+# zsh_boilerplate
+
+We need to update AI instructions regarding some ZSH conventions. 
+To be clear Im talking about the files under `instructions`. Please read them now. 
+
+
+The main focus of this change to instructions is based around a new scripting utilities library: `.zsh_boilerplate`
+In order to best apply the changes described below, it is important that you are VERY familiar with everthing this library does. 
+I've symlinked it into this workspace here: `docs/todo/zsh/references/utilities/.zsh_boilerplate`. 
+
+* [ ] Please read .zsh_boilerplate. Read it **fully** and **recursively** (recursive `source $file` calls) so that you FULLY understand everything this script brings to the table. 
+
+
+
+
+
+
+I want to update our AI instructions so that this boilerplate / template is used in all zsh scripts:
+```zsh
+#!/usr/bin/env -S zsh -euo pipefail
+# shellcheck shell=bash # trick shellcheck into working with zsh
+# shellcheck disable=SC2296 # Falsely identifies zsh expansions
+#
+# ---- ---- ----  About this Script  ---- ---- ----
+#
+# TODO - <about this script>
+#
+# # Usage
+#
+# ```zsh
+# # Print help information
+# ${0:A:t} --help
+# ```
+#
+# ---- ---- ---- ----  Imports  ---- ---- ---- ----
+
+source "$HOME/.zsh_home/utilities/.zsh_boilerplate" "$0" "$@"
+
+# ---- ---- ----   Argument Parsing   ---- ---- ----
+
+# ---- ---- ----     Script Work     ---- ---- ----
+```
+
+This will supersceded several sections of the current zsh instructions
+* shebang
+* 
+* header comment
+* `source .zsh_scripting_utils`
+* source_dirs, looping through arrays of config files and source dirs, etc...
+* There should be a section talking about using zparseopts to extract flag_debug, flag_help, flag_dry_run, and such. These common flag args are now handled by `.zsh_boilerplate` via `.zsh_zparseopts`
+
+
+
+# print_usage
+* Decorate (not possible with blocks)
+  * header sections / indents
+  * url
+* use slog_se
+* use arrays, minimal calls to slog_se
+
+
+
+
+
 # zsh expansion
 
 * header expansion statements: (already done)
