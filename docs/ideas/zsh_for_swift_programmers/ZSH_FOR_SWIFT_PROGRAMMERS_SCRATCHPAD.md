@@ -1,0 +1,1 @@
+/Users/zakkhoyt/.ai/docs/ideas/zsh_for_swift_programmers/references/shell/zsh/zsh_for_swift_developers/ZSH_FOR_SWIFT_PROGRAMMERS_SCRATCHPAD.md
