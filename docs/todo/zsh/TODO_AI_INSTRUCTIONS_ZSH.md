@@ -1,6 +1,9 @@
-
+Let's add more changes to those zsh AI instruction files
 
 # Scripting Conventions
+
+<details >
+<summary>*see more...*</summary>
 
 * [ ] always declare zsh variables!
   * One exception are the variables that zparseopts provides. 
@@ -13,6 +16,18 @@ zparseopts -D -E -- \
 # We do need to declare this "wrapper var" though
 typeset -r some_value="${opt_some_value[-1]:default}"
 ```
+
+Declared vars should be declared readonly where possible (either with `typeset -r <var>`, `local -r <var>`, or `readonly <var>`
+
+Declared vars should use specific flags according to var type:
+```zsh
+typeset -r -a my_array=(a b 'cd')
+typeset -r -A my_dict=([a]='A' [b]='B')
+```
+
+Reminder that `local` is reserved to be used inside of `functions`, not in the script root level (use `typeset`). 
+
+</details>
   
 
 

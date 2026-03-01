@@ -26,6 +26,8 @@ When writing or modifying **ANY** Zsh script in this repository, ensure:
 - ✅ **Function syntax correct** - Use `function name { }` (not `name() { }`)
 - ✅ **Functions use named arguments** - Prefer `zparseopts` over positional parameters (see the "Function Arguments" guidance)
 - ✅ **Variable naming follows conventions** - `lower_snake` for local/file-scoped, `UPPER_SNAKE` for cross-file/exported
+- ✅ **Variables explicitly declared** - Declare variables before use; prefer readonly declarations where possible (see "Variable Declaration and `local` Qualifier")
+- ✅ **Type-specific declarations used** - Use declaration flags for arrays/maps (e.g., `-a`, `-A`) and readonly (`-r`) when appropriate
 - ✅ **No reserved keywords** - Avoid `path`, `command`, `status`, `functions`, etc. (see the reserved keyword list below)
 
 **→ If unsure about any item, refer to the detailed sections below.**
@@ -303,13 +305,81 @@ command_name     # Instead of: command
 
 **CRITICAL**: The `local` qualifier must ONLY be used within functions. Using `local` in a script's root scope causes bugs and unexpected behavior.
 
+#### Always Declare Variables
+
+**REQUIRED**: Variables must be explicitly declared before use.
+
+- In **function scope**, use `local` declarations.
+- In **script root scope**, use `typeset` (not `local`).
+- Prefer **readonly declarations** where values should not change.
+
+✅ **Good:**
+```zsh
+# root scope
+typeset script_dir="${0:A:h}"
+typeset -r script_name="${0:t}"
+
+function run_task {
+  local -r task_name="build"
+  local task_rval=0
+}
+```
+
+❌ **Bad:**
+```zsh
+# root scope with local is invalid
+local script_dir="${0:A:h}"
+
+# undeclared then assigned
+some_value="abc"
+```
+
+#### zparseopts Exception
+
+`zparseopts` creates and initializes its target variables. You do not need to predeclare those parse target variables.
+
+```zsh
+zparseopts -D -E -- \
+  -done=flag_done \
+  -some-key:=opt_some_value
+
+# zparseopts allocates flag_done / opt_some_value.
+# Declare wrapper variables that your code owns.
+typeset -r some_value="${opt_some_value[-1]:-default}"
+```
+
+Use this exception only for parse-target variables; declare all wrapper/derived variables explicitly.
+
+#### Readonly-By-Default Rule
+
+When a variable should not change after initialization, declare it readonly at declaration time.
+
+✅ **Good:**
+```zsh
+typeset -r config_path="$HOME/.config/myapp/config.yml"
+local -r mode="safe"
+```
+
+Use mutable variables only when mutation is intentional and required by control flow.
+
+#### Type-Specific Declarations
+
+Use declaration flags to match variable type:
+
+```zsh
+typeset -r -a my_array=(a b 'cd')
+typeset -r -A my_dict=([a]='A' [b]='B')
+```
+
+When mutability is required, omit `-r` but keep type flags (`-a`, `-A`).
+
 #### Scope Rules
 
 ✅ **Good (correct `local` usage):**
 ```zsh
 # In script root scope - no local qualifier
-script_dir="${0:A:h}"
-temp_file="/tmp/output.txt"
+typeset script_dir="${0:A:h}"
+typeset temp_file="/tmp/output.txt"
 
 # Within function - use local qualifier
 function process_file {
@@ -2171,7 +2241,12 @@ When writing or reviewing Zsh scripts, verify:
 -   [ ] Variables follow naming conventions (lower_snake vs UPPER_SNAKE)
 -   [ ] No reserved keywords used as variable/function names (`path`, `command`, `status`, etc.)
 -   [ ] `local` qualifier only used within functions (never in root scope)
+-   [ ] Root-scope variables declared with `typeset` (not implicit assignment)
 -   [ ] Variables declared and initialized in compound statements
+-   [ ] `zparseopts` target variables treated as parser-managed exception only
+-   [ ] Wrapper/derived variables explicitly declared (prefer readonly)
+-   [ ] Readonly (`-r`) used where mutation is not required
+-   [ ] Type flags used for structured vars (`-a` arrays, `-A` associative arrays)
 -   [ ] Functions use `function name { }` syntax
 -   [ ] Functions prefer named arguments (zparseopts) over positional parameters
 -   [ ] Indentation uses spaces (2 spaces per level), not tabs
