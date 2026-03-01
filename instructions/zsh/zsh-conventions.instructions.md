@@ -18,11 +18,10 @@ When writing or modifying **ANY** Zsh script in this repository, ensure:
   - Avoid external commands when Zsh builtins suffice (`dirname`, `basename`, `wc`, etc.)
 - ✅ **Shellcheck directives present** - Standard 3 directives after shebang
 - ✅ **Header comments complete** - "About this Script" section with description
-- ✅ **Source utilities correctly** - Use `source_dirs` array pattern (see the "Source Scripting Utilities" section)
-- ✅ **zparseopts used in 3 stages** - Standard pattern: help/debug/dry-run, trap control, script-specific (see the "Script Argument Parsing" section)
-  - Stage 1: `--help`, `-d/--debug`, `--dry-run` (required)
-  - Stage 2: `--trap-err`, `--trap-exit` (recommended)
-  - Stage 3: Script-specific arguments (as needed)
+- ✅ **Source boilerplate correctly** - Source `.zsh_boilerplate` at script start (see the "Source Zsh Boilerplate" section)
+- ✅ **Do not re-parse common flags** - `.zsh_boilerplate` already handles common/dev flags (see the "Script Argument Parsing" section)
+  - Common flags handled by boilerplate include `--help`, `-d/--debug`, `--dry-run`, `--verbose`, `--trap-err`, `--trap-exit`
+  - Script code should parse only script-specific arguments unless extending shared parser behavior
 - ✅ **Logging functions used** - `slog_*` functions (or `log_*` for setup scripts)
 - ✅ **Function syntax correct** - Use `function name { }` (not `name() { }`)
 - ✅ **Functions use named arguments** - Prefer `zparseopts` over positional parameters (see the "Function Arguments" guidance)
@@ -57,7 +56,7 @@ autoload -Uz z2k_dbg
 <!-- markdown-link-check-disable -->
 1. [Shellcheck Directives](#shellcheck-directives)
 2. [Header Comments](#header-comments)
-3. [Source Scripting Utilities](#source-scripting-utilities)
+3. [Source Zsh Boilerplate](#source-zsh-boilerplate)
 4. [Script Argument Parsing](#script-argument-parsing)
 5. [Help and Usage Functions](#help-and-usage-functions)
 6. [Variable Naming Conventions](#variable-naming-conventions)
@@ -138,13 +137,16 @@ Some script locations require more detailed header comments:
 
 ---
 
-## Source Scripting Utilities
+## Source Zsh Boilerplate
 
-**CRITICAL**: All Zsh scripts must source `.zsh_scripting_utilities` to access shared logging functions (`slog_*`) and utility functions.
+**CRITICAL**: All Zsh scripts must source `.zsh_boilerplate` near the top of the file. The boilerplate is the canonical bootstrap for:
+- common argument parsing (`--help`, `-d/--debug`, `--dry-run`, `--verbose`, trap/debug flags)
+- loading shared utility libraries (`slog_*`, scripting/ui/git/jira/homebrew/swift/xcode/file helpers)
+- establishing common environment variables used by utility functions
 
 ### Required Pattern
 
-Immediately after the shebang and shellcheck directives, source `.zsh_scripting_utilities` with fallback paths:
+Immediately after header comments, source `.zsh_boilerplate`:
 
 ```zsh
 #!/usr/bin/env -S zsh -euo pipefail
@@ -157,69 +159,35 @@ Immediately after the shebang and shellcheck directives, source `.zsh_scripting_
 
 # ---- ---- ----     Source Utilities     ---- ---- ----
 
-# Determine script directory for relative path fallback
-script_dir="${0:A:h}"
-
-# Define standard source file directories (used for utilities and trap handlers)
-source_dirs=(
-  "${HATCH_SOURCE_DIR:-}"
-  "$HOME/.hatch/source"
-  "$HOME/.zsh_home/utilities"
-  "$script_dir/../../assets/hatch_home/source"
-)
-
-# Source .zsh_scripting_utilities
-unset -v scripting_utilities_found
-for source_dir in "${source_dirs[@]}"; do
-  if [[ -n "$source_dir" && -f "$source_dir/.zsh_scripting_utilities" ]]; then
-    source "$source_dir/.zsh_scripting_utilities" "$0" "$@" > /dev/null
-    scripting_utilities_found=true
-    break
-  fi
-done
-
-# Error if all paths failed
-if [[ -z "$scripting_utilities_found" ]]; then
-  # echo "ERROR: Cannot find .zsh_scripting_utilities in any expected location:" >&2
-  # for source_dir in "${source_dirs[@]}"; do
-  #   [[ -n "$source_dir" ]] && echo "  - $source_dir/.zsh_scripting_utilities" >&2
-  # done
-  echo "ERROR: Cannot find .zsh_scripting_utilities in any expected location:\n${(F)source_dirs[@]}" >&2 && exit 1
-fi
+source "$HOME/.zsh_home/utilities/.zsh_boilerplate" "$0" "$@"
 ```
 
-### Shared Directory Pattern
+### What You Get From Boilerplate
 
-The `source_dirs` array can be reused for sourcing multiple files (e.g., `.zsh_debug_err`, `.zsh_debug_exit`):
+After sourcing `.zsh_boilerplate`, scripts can assume these are already available:
 
-```zsh
-# Example: Source trap handler using same directory list
-for source_dir in "${source_dirs[@]}"; do
-  if [[ -n "$source_dir" && -f "$source_dir/.zsh_debug_err" ]]; then source "$source_dir/.zsh_debug_err"; break; fi
-done
+- **Common/dev flags parsed** via `.zsh_zparseopts`
+  - supports categories such as `meta`, `dev`, and optional parser modes
+  - sets or refines variables such as `flag_help`, `flag_debug`, `flag_dry_run`, debug-level behavior
+  - enables trap utilities via `--trap-err` / `--trap-exit` and debug levels
+- **Logging functions** via `.zsh_logging_utilities`
+  - `slog_*`, `slog_step_*`, `slog_var*`, `slog_array*`, callstack/source-location helpers
+- **Utility library families** via `.zsh_scripting_utilities` and transitively sourced libs
+  - jira/git/github/homebrew/scripting core/scripting functions/ui/swift/xcode/file utilities
 
+### Common Environment/State Available
 
-```
+Boilerplate and its sourced libraries establish commonly used state such as:
+- debug/test/verbosity flags (`IS_DEBUG`, `IS_VERBOSE`, `IS_DRY_RUN`, related `FLAG_*` values)
+- script metadata and formatting helpers used by logging utilities
+- loaded utility functions expected by instruction examples (`slog_se`, `slog_step_se`, etc.)
 
-### Fallback Path Priority
+### Rules for Script Authors
 
-The array tries paths in this order:
-
-1. **`$HATCH_SOURCE_DIR/.zsh_scripting_utilities`** - When sourced in setup environment (preferred)
-2. **`$HOME/.hatch/source/.zsh_scripting_utilities`** - When executed standalone after installation
-3. **`"$HOME/.zsh_home/utilities/.zsh_scripting_utilities"`** - Legacy path for backward compatibility
-4. **`$script_dir/../../assets/hatch_home/source/.zsh_scripting_utilities`** - During development/testing from repository
-
-### Why This Pattern?
-
--   **Flexibility**: Works in multiple contexts (setup, standalone, development)
--   **Resilience**: Falls back through paths until one succeeds
--   **Clear errors**: Reports all attempted paths if all fail
--   **Zsh expansion**: Uses `${0:A:h}` instead of `dirname "$(realpath "$0")"`
-
-### Path-Specific Overrides
-
-Some script locations may have simpler sourcing requirements (e.g., scripts that only run in setup environment). Path-specific instruction files may override this pattern with location-appropriate alternatives.
+- **Do not duplicate** the old `source_dirs` loop in new scripts.
+- **Do not re-implement** common/dev parsing blocks already handled by `.zsh_boilerplate`.
+- Parse only script-specific options in the script body (or in dedicated parser functions).
+- If a script requires custom bootstrap behavior, document the exception in its header.
 
 ---
 
@@ -1208,11 +1176,11 @@ opt_labels_count=${#${(M)opt_labels_array:#--label}}
 
 ## Output and Logging
 
-**CRITICAL**: All output in Zsh scripts must use the standardized logging and formatting functions provided by `.zsh_scripting_utilities`. These are available after sourcing via the `source_dirs` array pattern.
+**CRITICAL**: All output in Zsh scripts must use the standardized logging and formatting functions provided by the `.zsh_boilerplate` bootstrap chain.
 
 ### Core Logging Functions
 
-After sourcing utilities (see the "Source Scripting Utilities" section), scripts have access to two primary output function families:
+After sourcing boilerplate (see the "Source Zsh Boilerplate" section), scripts have access to two primary output function families:
 
 | Function          | Destination  | When                                     |
 | ----------------- | ------------ | ---------------------------------------- |
@@ -1709,72 +1677,31 @@ Some directories use different logging functions:
 
 ## Script Argument Parsing
 
-### Three-Stage zparseopts Pattern (Standard)
+### Boilerplate + Script-Specific Parsing Pattern (Standard)
 
-**ALL scripts must use this three-stage zparseopts pattern** for consistency and proper trap handling:
+**ALL scripts must treat `.zsh_boilerplate` as stages 1-2** (common flags + trap/debug behavior), then parse only script-specific options locally.
 
 ```zsh
-# Stage 1: Parse standard arguments (help, debug, dry-run) - REQUIRED
-# Note: -D removes parsed opts, no -E to allow unrecognized opts to pass through
-zparseopts -D -E -- \
-  -help=flag_help \
-  {d,-debug}+=flag_debug \
-  -dry-run=flag_dry_run
+# Stage 0 (required): bootstrap common behavior
+source "$HOME/.zsh_home/utilities/.zsh_boilerplate" "$0" "$@"
 
-# Display help if requested (early exit)
-if [[ -n "${flag_help:-}" ]]; then
-  print_usage
-  exit 0
-fi
+# Stage 1-2 already handled by boilerplate:
+# - common flags like --help, -d/--debug, --dry-run, --verbose
+# - trap/debug flags like --trap-err, --trap-exit
 
-# Set up debug mode if requested
-flag_debug_level=${#flag_debug:-0}
-if [[ $flag_debug_level -gt 0 ]]; then
-  export IS_DEBUG=true
-fi
-
-# Extract dry-run flag immediately
-flag_dry_run=${flag_dry_run:+true}
-
-# Stage 2: Parse trap control flags - RECOMMENDED
-# Note: -D removes parsed opts, no -E to allow unrecognized opts to pass through
-zparseopts -D -E -- \
-  {-trap-err,-debug-err}=flag_debug_err \
-  {-trap-exit,-debug-exit}=flag_debug_exit
-
-# Set up error handling traps
-if [[ -n "${flag_debug_err:-}" ]]; then
-  trap 'slog_error_se "Script failed at line $LINENO with exit code $?"' ERR
-fi
-
-if [[ -n "${flag_debug_exit:-}" ]]; then
-  trap 'slog_se_d "Script exiting with status $?"' EXIT
-fi
-
-# Stage 3: Parse script-specific arguments - AS NEEDED
-# Note: -D removes parsed options, no -E to stop at first unrecognized
+# Stage 3: parse script-specific arguments only
 zparseopts -D -- \
   -mode:=opt_mode \
   -other-arg:=opt_other_arg
 
-# Extract option values with defaults (use [-1] to get last/value element)
 mode="${opt_mode[-1]:-default_value}"
 other_arg="${opt_other_arg[-1]:-default_value}"
 ```
 
-**Stage Summary:**
-- **Stage 1 (Required)**: Core flags (`--help`, `-d/--debug`, `--dry-run`) - uses `-D` only
-  - Extract values immediately after parsing (e.g., `flag_dry_run`, `flag_debug_level`)
-- **Stage 2 (Recommended)**: Trap debugging control - uses `-D` only
-  - Set up trap handlers immediately after parsing
-- **Stage 3 (As Needed)**: Script-specific arguments - uses `-D` only
-  - Extract values immediately after parsing using `${var[-1]:-default}` pattern
-  - After all stages, check if `$@` is non-empty to detect unrecognized options
-
 **Key Points:**
-- Use `${array[-1]:-default}` to extract values from zparseopts arrays (gets last element)
-- Extract and process variables immediately after each zparseopts stage
-- None of the stages use `-E` or `-F` flags in this sequential pattern
+- Do not duplicate boilerplate-managed stages in each script.
+- Use `${array[-1]:-default}` to extract zparseopts values.
+- Keep script parsing focused on script-specific options and arguments.
 
 ### Use zparseopts
 
@@ -1827,63 +1754,18 @@ fi
 -   **Multi-line format**: Define arguments one per line using the trailing `\` syntax
 -   **Long-form names**: Always include a long-form name (e.g., `--help`) for arguments
     -   **Exception**: `{d,-debug}+` uses short-form `-d` to enable quick debug level changes (`-d`, `-dd`, `-ddd`)
--   **Standard arguments**: **All scripts must include `-help=flag_help` and `{d,-debug}+=flag_debug` in the main zparseopts block** (additional arguments are script-specific)
+-   **Standard arguments**: handled by `.zsh_boilerplate`; script-local zparseopts should focus on script-specific options
 -   **Variable naming**:
     -   Flag-style arguments (e.g., `--help`): Prefix with `flag_` or `FLAG_` based on scope
     -   Key/value arguments (e.g., `--mode create` or `--mode=create`): Prefix with `opt_` or `OPT_`
 -   **Associative arrays**: Consider using the `-A <kv_array>` syntax if it does not conflict with other argument styles
 -   **Avoid flag arrays**: Avoid using the `-a <flag_array>` syntax as it is mutually exclusive with the flag variable approach
 
-### Stage 2: Trap Debugging Support (Recommended)
+### Trap Debugging Support
 
-**Recommended for most scripts.** Only omit for trivial scripts with no error handling needs.
+Trap-debug setup is handled by `.zsh_boilerplate` and `.zsh_zparseopts` (including debug level behavior and explicit trap flags).
 
-**Purpose**: Enables advanced debugging with ERR and EXIT trap handlers.
-
-**Implementation Pattern:**
-
-```zsh
-# Stage 1: Main script arguments (required)
-zparseopts -D -E -- \
-  -help=flag_help \
-  {d,-debug}+=flag_debug \
-  # ... other script relevant arguments
-
-if [[ -n "${flag_help:-}" ]]; then
-  print_usage
-  exit 0
-fi
-
-# Stage 2: Trap debugging arguments (optional - omit this entire block if not needed)
-zparseopts -D -E -- \
-  {-trap-err,-debug-err}=flag_debug_err \
-  {-trap-exit,-debug-exit}=flag_debug_exit
-
-flag_debug_level=${#flag_debug:-0}
-
-if [[ -n "${flag_debug_err:-}" || $flag_debug_level -ge 2 ]]; then 
-  for source_dir in "${source_dirs[@]}"; do
-    if [[ -n "$source_dir" && -f "$source_dir/.zsh_debug_err" ]]; then source "$source_dir/.zsh_debug_err"; break; fi
-  done
-fi
-
-if [[ -n "${flag_debug_exit:-}" || $flag_debug_level -ge 3 ]]; then 
-  for source_dir in "${source_dirs[@]}"; do
-    if [[ -n "$source_dir" && -f "$source_dir/.zsh_debug_exit" ]]; then source "$source_dir/.zsh_debug_exit"; break; fi
-  done
-fi
-```
-
-**Key Points:**
--   **Stage 1**: Always include main script arguments with `{d,-debug}+=flag_debug`
--   **Stage 2**: Only include if trap debugging is needed (completely optional)
--   **Flags**: `-D --` removes processed args, no `-E` or `-F` (allows flexible parsing)
--   **Debug Levels**:
-    -   Level 1: Basic debug (single `-d` or `--debug`)
-    -   Level 2: ERR trap enabled (`-dd` or `--trap-err`)
-    -   Level 3: EXIT trap enabled (`-ddd` or `--trap-exit`)
--   **Shared Directories**: Uses `source_dirs` array defined in "Source Scripting Utilities" section
--   **No Error Handling**: Trap files are sourced silently; the trap handlers themselves verify proper setup
+For normal scripts, do not add custom trap sourcing blocks unless the script has a specialized trap policy that must differ from shared behavior.
 
 ### Long-Form Arguments
 
@@ -2297,9 +2179,9 @@ When writing or reviewing Zsh scripts, verify:
 -   [ ] Array/string conversions use `(f)` and `(F)` flags (not loops or external tools)
 -   [ ] Loops avoided when Zsh expansion suffices; C-style loops with indices when needed
 -   [ ] Safe variable checking with `:-` expansion
--   [ ] Shared `source_dirs` array defined for sourcing utilities and trap handlers
--   [ ] zparseopts used for argument parsing with `-D --` flags
--   [ ] Trap debugging arguments added if needed (optional)
+-   [ ] `.zsh_boilerplate` sourced near top of script
+-   [ ] No duplicate common flag parsing block added in script body
+-   [ ] `zparseopts` used for script-specific argument parsing with `-D --` flags
 -   [ ] `print_usage` function present and bound to `--help`
 -   [ ] Help formatting follows SYNOPSIS/OPTIONS/ENVIRONMENT structure
 -   [ ] Context logging minimizes write commands (use multiline strings)

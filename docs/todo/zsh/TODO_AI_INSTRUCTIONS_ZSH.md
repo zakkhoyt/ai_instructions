@@ -1,23 +1,81 @@
 
 
+# Scripting Conventions
+
+* [ ] always declare zsh variables!
+  * One exception are the variables that zparseopts provides. 
+```zsh
+zparseopts -D -E -- \
+  -done=flag_done \
+  -some-key:=opt_some_value
+
+# zparseopts allocates and initializes flag_done and opt_some_value, so we don't need to.
+# We do need to declare this "wrapper var" though
+typeset -r some_value="${opt_some_value[-1]:default}"
+```
+  
+
+
 
 
 # zsh_boilerplate
 
+<details>
+<summary>*see more...*</summary>
+
 We need to update AI instructions regarding some ZSH conventions. 
 To be clear Im talking about the files under `instructions`. Please read them now. 
-
 
 The main focus of this change to instructions is based around a new scripting utilities library: `.zsh_boilerplate`
 In order to best apply the changes described below, it is important that you are VERY familiar with everthing this library does. 
 I've symlinked it into this workspace here: `docs/todo/zsh/references/utilities/.zsh_boilerplate`. 
 
-* [ ] Please read .zsh_boilerplate. Read it **fully** and **recursively** (recursive `source $file` calls) so that you FULLY understand everything this script brings to the table. 
+* [x] Please read .zsh_boilerplate. Read it **fully** and **recursively** (recursive `source $file` calls) so that you FULLY understand everything this script brings to the table. 
 
+## Recursive source audit (2026-02-28)
 
+Root file reviewed:
+- `docs/todo/zsh/references/utilities/.zsh_boilerplate`
 
+Resolved source graph:
+- `.zsh_boilerplate`
+  - sources `.zsh_zparseopts`
+    - sources `.zsh_logging_utilities`
+    - conditionally sources `.zsh_debug_err` (debug level >=2 or `--trap-err` / `--debug-err`)
+    - conditionally sources `.zsh_debug_exit` (debug level >=3 or `--trap-exit` / `--debug-exit`)
+  - sources `.zsh_scripting_utilities` (via `source_once` / `source_dirs` lookup)
+    - sources `.zsh_jira_utilities`
+    - sources `.zsh_git_utilities`
+    - sources `.zsh_github_utilities`
+    - sources `.zsh_homebrew_utilities`
+    - sources `.zsh_logging_utilities`
+    - sources `.zsh_scripting_core`
+    - sources `.zsh_scripting_functions`
+    - sources `.zsh_ui_utilities`
+    - sources `.zsh_swift_utilities`
+    - sources `.zsh_xcode_utilities`
+    - sources `.zsh_file_utilities`
 
+What this brings to scripts immediately:
+- Argument parsing / common flags:
+  - `.zsh_zparseopts` and `.zsh_scripting_utilities` parse common options and set flags like `IS_DEBUG`, `IS_VERBOSE`, `IS_DRY_RUN`, plus `FLAG_*` variants.
+- Logging stack:
+  - `.zsh_logging_utilities` provides `_slog`, `slog_*`, `slog_step_*`, `slog_var*`, `slog_array*`, callstack/location helpers, command logging helpers.
+- Trap debugging:
+  - `.zsh_debug_err` + `.zsh_debug_exit` provide `trap_err` / `trap_exit` with source-target enable/disable handling.
+- Domain helpers:
+  - Jira: ticket extraction/validation/open URL helpers.
+  - Git/GitHub: branch/PR title formatting and validation helpers.
+  - Homebrew: package find/install/download helpers.
+  - Swift/Xcode: scheme/target discovery and Xcode tool helpers.
+  - UI/file/scripting core: menu/prompt helpers, file append-if-missing, numeric/array/path/mount helpers.
 
+Notable utility entrypoints (non-exhaustive):
+- `.zsh_logging_utilities`: `slog`, `slog_se`, `slog_step_se`, `slog_var_se`, `slog_array_se`, `slog_callstack_se`, `slog_source_location_se`, `slog_cmd_se`.
+- `.zsh_scripting_utilities`: `zparse_common_flags`, `parse_flag_argument`, `parse_key_value_argument`, `validate_arg`, `init_scripting_vars`, `relative_path`.
+- `.zsh_scripting_core`: `debug_command`, `is_int` / `is_num`, `calc`, `arrayFromFile`, `pickFromMenu`, mount/unmount helpers.
+- `.zsh_ui_utilities`: `present_picker`, `prompt_yes_no_question`, `prompt_to_continue*`.
+- `.zsh_file_utilities`: `append_lines_to_file_if_not_present`.
 
 I want to update our AI instructions so that this boilerplate / template is used in all zsh scripts:
 ```zsh
@@ -54,6 +112,9 @@ This will supersceded several sections of the current zsh instructions
 * There should be a section talking about using zparseopts to extract flag_debug, flag_help, flag_dry_run, and such. These common flag args are now handled by `.zsh_boilerplate` via `.zsh_zparseopts`. 
   * in other words, things like flag_debug, flag_help
 
+
+
+</details>
 
 
 # print_usage
