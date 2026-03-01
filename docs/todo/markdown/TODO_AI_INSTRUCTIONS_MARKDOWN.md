@@ -5,6 +5,15 @@
 
 
 
+The *.md files that you have generated so far have some problems:
+* EX: `audio/plugins/toneforge_disruptor/TONEFORGE_DISRUPTOR_MIDI_CHEATSHEET.md` does list documentation references as footnotes, but just the document. No page number, no line number, no chapter or title or section, etc...
+* The syntax used to make thosse github footnotes could be a lot better. 
+  * The source renders the footnote links using numbers such as `[1]` `[1:1]` `[4:3]`. Then at the end of the document is a single (flat) list `1.`, `2.`, etc... 
+    * I have no idea what `[1:1]` is supposed to refer to, nor `[4:3]`
+  * I would much rather descriptive names were used, not numbers
+  * Footnote link URL: What the footnote LINK points to should ideally contain page#, line#, chapter title etc.... and the link should index into the file where possible. 
+    * Even if some software doesn't support those parameters, some will and I'd like them included. This will help the user find the relevant info much faster
+  * Footnote link title; I'd also like the link *title* (part of the footnote) to display page#, line#, chapter title, etc...  for the reader. This will help the user find the relevant content much more quickly
 
 
 ---

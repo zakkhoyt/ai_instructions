@@ -1168,6 +1168,167 @@ Should we:
 
 ---
 
+## Argument Overhaul Contract (Pre-Refactor Lock)
+
+This section is the **implementation contract** for the new argument scheme.
+Refactoring should not start until this contract is accepted as complete coverage of existing behavior.
+
+### 1) Target Types (Final)
+
+The new scheme has two target types:
+
+1. **Settings selectors** (JSON merge targets)
+  - Syntax: `<scope>[:<category>][:<theme>]`
+  - Scope: `user` | `workspace` | `folder`
+  - Category (initial): `settings` | `mcp`
+  - Theme: parsed from `<theme>__<category>.json` prefix
+
+2. **Action targets** (non-selector operations)
+  - `instructions`
+  - `mcp-xcode`
+  - `dev-link`
+  - `dev-vscode`
+  - `regenerate-main`
+
+### 2) New Flag Semantics (Final)
+
+```zsh
+--prompt <target>       # run target in interactive mode
+--no-prompt <target>    # run target in automatic mode
+```
+
+Rules:
+- `--prompt` and `--no-prompt` are repeatable.
+- Mentioning a target under either flag **enables** that target.
+- Bare `--prompt` (no value) means: prompt all currently enabled targets.
+- Unknown/invalid target is a hard error with suggestion.
+- Conflict (`--prompt X` and `--no-prompt X`) is a hard error.
+
+### 3) Selector Rules (Final)
+
+- Only `user|workspace|folder` support `:category` and `:theme` selectors.
+- `instructions`, `mcp-xcode`, `dev-link`, `dev-vscode`, `regenerate-main` do **not** accept hierarchy.
+- `instructions:*` is invalid.
+- If category is omitted, all categories in scope match.
+- If theme is omitted, all themes in matched category match.
+
+### 4) Backward Compatibility Rules (Final)
+
+Legacy flags remain temporarily, mapped to new targets:
+
+| Legacy Flag | Normalized Target | Mode if no `--prompt` target override |
+|------------|-------------------|----------------------------------------|
+| `--instructions` | `instructions` | auto |
+| `--workspace-settings` | `workspace` | prompt (menu) for legacy parity |
+| `--user-settings` | `user` | prompt (menu) for legacy parity |
+| `--mcp-xcode` | `mcp-xcode` | auto |
+| `--dev-link` | `dev-link` | auto |
+| `--dev-vscode` | `dev-vscode` | auto |
+| `--regenerate-main` | `regenerate-main` | auto |
+
+`--vscode-settings` continues as alias to `--workspace-settings` during migration.
+
+### 5) Behavior Contract Matrix (Action × prompt/no-prompt)
+
+| Target | `--prompt <target>` | `--no-prompt <target>` |
+|-------|----------------------|------------------------|
+| `instructions` | Show instruction status/menu always; user selects files; Enter = skip | Auto-install by configured method for eligible files |
+| `user[:cat[:theme]]` | Show filtered user-template menu, then merge selections | Auto-merge all filtered user templates |
+| `workspace[:cat[:theme]]` | Show filtered workspace/.vscode template menu, then merge selections | Auto-merge all filtered workspace templates |
+| `folder[:cat[:theme]]` | Show filtered `.vscode` template menu for folder scope | Auto-merge all filtered folder templates |
+| `mcp-xcode` | Y/N confirm prompt then apply MCP+swift templates | Apply MCP+swift templates directly |
+| `dev-link` | Y/N confirm then create symlink + `.gitignore` update | Create symlink + `.gitignore` update |
+| `dev-vscode` | Y/N confirm then add folder to workspace | Add folder to workspace |
+| `regenerate-main` | Y/N confirm then regenerate/sync main file | Regenerate/sync main file |
+
+### 6) Existing Functionality Coverage Checklist
+
+| Existing Capability | Covered by New Scheme? | Target Syntax |
+|---------------------|------------------------|---------------|
+| Instruction installation menu | ✅ | `--prompt instructions` |
+| Instruction auto-install | ✅ | `--no-prompt instructions` |
+| Workspace settings menu merge | ✅ | `--prompt workspace` (or filtered selector) |
+| Workspace settings auto-merge | ✅ | `--no-prompt workspace[:category[:theme]]` |
+| User settings menu merge | ✅ | `--prompt user` (or filtered selector) |
+| User settings auto-merge | ✅ | `--no-prompt user[:category[:theme]]` |
+| Xcode MCP apply | ✅ | `--no-prompt mcp-xcode` |
+| Xcode MCP prompt/confirm | ✅ | `--prompt mcp-xcode` |
+| Dev symlink (`--dev-link`) | ✅ | `--no-prompt dev-link` / `--prompt dev-link` |
+| Add dev folder to workspace (`--dev-vscode`) | ✅ | `--no-prompt dev-vscode` / `--prompt dev-vscode` |
+| Regenerate main instruction file | ✅ | `--no-prompt regenerate-main` / `--prompt regenerate-main` |
+| Source/dest/platform/configure-type options | ✅ (unchanged) | Keep existing option flags |
+| Deprecated alias `--vscode-settings` | ✅ (temporary) | Alias to `workspace` target |
+
+### 7) Gaps To Close Before Refactor Starts
+
+These are implementation gaps, not design gaps:
+
+1. `--no-prompt` does not exist in parser yet.
+2. `--prompt <value>` is not parsed as value list yet (currently boolean only).
+3. Target normalization/validation/conflict detection is not implemented yet.
+4. Action dispatcher is still hardcoded legacy flow order.
+5. `mcp-xcode` still piggybacks global prompt behavior; must become target-scoped.
+6. Help/docs currently mix future and current behavior and need contract-aligned wording.
+
+### 8) Readiness Decision
+
+**Are we ready to refactor?**
+
+- **Yes, with this contract locked.**
+- No additional behavior-design work is required to begin.
+- Remaining work is implementation against this contract.
+
+---
+
+## Implementation Plan (Argument Overhaul)
+
+### Phase A — Parser + Normalization
+
+1. Add repeatable value parsing:
+  - `-prompt+:=opt_prompt_targets`
+  - `-no-prompt+:=opt_no_prompt_targets`
+2. Parse targets into normalized structures:
+  - `enabled_targets`
+  - `prompt_targets`
+  - `auto_targets`
+3. Add validation:
+  - unknown targets
+  - invalid selector hierarchy
+  - prompt/auto conflicts
+
+### Phase B — Dispatcher Refactor
+
+4. Replace monolithic tail logic with dispatcher by normalized targets.
+5. Add per-target `run_prompt_<target>` and `run_auto_<target>` wrappers.
+6. Keep legacy flags as adapters that feed normalized targets.
+
+### Phase C — Settings Selector Engine
+
+7. Implement selector resolution for `user|workspace|folder` by `scope/category/theme`.
+8. Reuse existing menu render/merge code with filtered template sets.
+9. Support both interactive and auto application for same selector engine.
+
+### Phase D — Non-Selector Actions
+
+10. Move `instructions`, `mcp-xcode`, `dev-link`, `dev-vscode`, `regenerate-main` into target-scoped handlers.
+11. Remove global prompt coupling from `mcp-xcode` path.
+12. Ensure instruction menu always appears under `--prompt instructions`.
+
+### Phase E — UX + Docs + Tests
+
+13. Update `print_usage` and `scripts/HELP_OUTPUT_PROPOSED.md` to match this contract.
+14. Add behavior tests (or scripted probes) for each matrix row.
+15. Verify migration behavior for legacy flags and alias.
+
+### Exit Criteria (Start Coding Gate)
+
+Refactor branch can start once:
+- Contract section above is accepted.
+- No unresolved target/syntax decisions remain.
+- Matrix rows are represented in test checklist.
+
+---
+
 ## Next Steps
 
 1. **Review this document** - User and AI discuss argument revamp proposal

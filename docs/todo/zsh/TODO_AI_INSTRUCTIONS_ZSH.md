@@ -51,7 +51,8 @@ This will supersceded several sections of the current zsh instructions
 * header comment
 * `source .zsh_scripting_utils`
 * source_dirs, looping through arrays of config files and source dirs, etc...
-* There should be a section talking about using zparseopts to extract flag_debug, flag_help, flag_dry_run, and such. These common flag args are now handled by `.zsh_boilerplate` via `.zsh_zparseopts`
+* There should be a section talking about using zparseopts to extract flag_debug, flag_help, flag_dry_run, and such. These common flag args are now handled by `.zsh_boilerplate` via `.zsh_zparseopts`. 
+  * in other words, things like flag_debug, flag_help
 
 
 
