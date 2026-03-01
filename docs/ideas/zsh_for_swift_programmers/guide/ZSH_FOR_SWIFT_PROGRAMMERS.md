@@ -110,6 +110,171 @@
        - `zsh -o sourcetrace` to visualize source order
        - combining sourcetrace with callstack logs when sourced libs mask origin
 
+## Chapter Draft — Error Handling: Swift vs Zsh
+
+Swift and Zsh represent failure differently, but the practical workflow maps cleanly.
+
+- Swift uses `throw`, `try`, `Result`, and `do/catch`.
+- Zsh uses command exit status (`0` success, non-zero failure), tested directly or via `$?`.
+
+Treat each shell command like a potentially-throwing call.
+
+### Command status and `$?`
+
+```zsh
+mkdir -p "$tmp_dir"
+local rval="$?"
+if [[ "$rval" -ne 0 ]]; then
+   slog_step_se --context error --rval "$rval" "mkdir failed"
+   return "$rval"
+fi
+```
+
+Prefer `if <cmd>` when possible; use `$?` when you need to capture and propagate status.
+
+### `setopt` safety defaults
+
+```zsh
+setopt errexit nounset pipefail
+```
+
+- `errexit`: fail fast for unhandled command failures.
+- `nounset`: fail on unset variable expansion.
+- `pipefail`: fail pipelines if any stage fails.
+
+`errexit` can behave differently inside conditionals, compound lists, and some pipelines, so explicit guard blocks are still important.
+
+### Control-flow patterns (Swift equivalents)
+
+#### `if <cmd>` and `if ! <cmd>`
+
+```zsh
+if fetch_remote_config; then
+   slog_step_se --context did "Fetched config"
+else
+   local rval="$?"
+   slog_step_se --context error --rval "$rval" "Failed to fetch config"
+   return "$rval"
+fi
+
+if ! command -v echo_pretty >/dev/null 2>&1; then
+   slog_step_se --context warning "echo_pretty missing; using plain output"
+fi
+```
+
+#### Chaining with `&&` / `||` and guard blocks
+
+```zsh
+validate_input "$@" && run_workflow "$@" && publish_result
+
+run_workflow "$@" || {
+   local rval="$?"
+   cleanup_partial_state
+   return "$rval"
+}
+```
+
+### `step` / `slog_step_se` as error narrative
+
+Use a consistent “will → did/error” sequence:
+
+```zsh
+slog_step_se --context will "Fetch artifact metadata"
+fetch_metadata || {
+   local rval="$?"
+   slog_step_se --context error --rval "$rval" "Failed to fetch metadata" ---callstack
+   return "$rval"
+}
+slog_step_se --context did "Fetched artifact metadata"
+```
+
+### `trap` for cleanup and centralized failures
+
+```zsh
+cleanup() {
+   rm -f "$tmp_file"
+}
+
+on_err() {
+   local rval="$?"
+   slog_step_se --context error --rval "$rval" "Unhandled error in ${0:t}" ---callstack
+}
+
+trap cleanup EXIT
+trap on_err ERR
+trap 'slog_step_se --context warning "Interrupted"; exit 130' INT TERM
+```
+
+### `---callstack` and internals used under the hood
+
+`---callstack` flows through wrapper logs into `_slog`, then to `slog_callstack_se`.
+
+Core internals used for stack/source rendering:
+
+- `funcstack`
+- `funcfiletrace`
+- `funcsourcetrace`
+- `functrace`
+
+For focused source diagnostics, use `slog_source_location_se`.
+
+### `zsh -o sourcetrace` for source-order debugging
+
+```zsh
+zsh -o sourcetrace your_script.zsh --your --args
+```
+
+Pair sourcetrace with `---callstack` when sourced libraries hide the real fault origin.
+
+### Reusable team template
+
+```zsh
+#!/usr/bin/env -S zsh
+# shellcheck shell=bash
+
+setopt errexit nounset pipefail
+source "$HOME/.zsh_home/utilities/.zsh_boilerplate" "$0" "$@"
+
+cleanup() {
+   [[ -n "${tmp_file:-}" && -f "$tmp_file" ]] && rm -f "$tmp_file"
+}
+
+on_err() {
+   local rval="$?"
+   slog_step_se --context error --rval "$rval" "Unhandled error in ${0:t}" ---callstack
+}
+
+trap cleanup EXIT
+trap on_err ERR
+trap 'slog_step_se --context warning "Interrupted"; exit 130' INT TERM
+
+main() {
+   slog_step_se --context will "Run main workflow"
+
+   validate_input "$@" || {
+      local rval="$?"
+      slog_step_se --context error --rval "$rval" "Invalid input" ---callstack
+      return "$rval"
+   }
+
+   run_workflow "$@" || {
+      local rval="$?"
+      slog_step_se --context error --rval "$rval" "Workflow failed" ---callstack
+      return "$rval"
+   }
+
+   slog_step_se --context did "Completed main workflow"
+}
+
+main "$@"
+```
+
+### References
+
+- [Zsh Options (`setopt`)](https://zsh.sourceforge.io/Doc/Release/Options.html)
+- [Zsh Parameters (`$?`, `funcstack`, `funcfiletrace`, etc.)](https://zsh.sourceforge.io/Doc/Release/Parameters.html)
+- [Zsh Builtins (`trap`, conditionals, control flow)](https://zsh.sourceforge.io/Doc/Release/Shell-Builtin-Commands.html)
+
 10. **Zsh Expansion Essentials (Swift dev cheat sheet)**
    - path ops (`:h`, `:t`, `:r`, `:e`, `:A`)
    - `(f)` / `(F)` and array transformations
