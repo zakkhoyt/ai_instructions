@@ -27,7 +27,7 @@ When writing or modifying **ANY** Zsh script in this repository, ensure:
 - ✅ **Functions use named arguments** - Prefer `zparseopts` over positional parameters (see the "Function Arguments" guidance)
 - ✅ **Variable naming follows conventions** - `lower_snake` for local/file-scoped, `UPPER_SNAKE` for cross-file/exported
 - ✅ **Variables explicitly declared** - Declare variables before use; prefer readonly declarations where possible (see "Variable Declaration and `local` Qualifier")
-- ✅ **Type-specific declarations used** - Use declaration flags for arrays/maps (e.g., `-a`, `-A`) and readonly (`-r`) when appropriate
+- ✅ **Type-specific declarations used** - Use `typeset` flags according to context (not only `-r`, `-a`, `-A`)
 - ✅ **No reserved keywords** - Avoid `path`, `command`, `status`, `functions`, etc. (see the reserved keyword list below)
 
 **→ If unsure about any item, refer to the detailed sections below.**
@@ -364,7 +364,20 @@ Use mutable variables only when mutation is intentional and required by control 
 
 #### Type-Specific Declarations
 
-Use declaration flags to match variable type:
+Use `typeset` flags to match variable semantics and storage needs. `-r`, `-a`, and `-A` are common examples, not an exhaustive list.
+
+Examples of commonly used flags:
+
+- `-r`: readonly
+- `-a`: indexed array
+- `-A`: associative array
+- `-i`: integer semantics
+- `-F`: floating-point semantics
+- `-x`: export to environment
+
+Choose flags based on runtime intent (immutability, type behavior, environment export, etc.).
+
+Use declaration flags to match variable type and mutability:
 
 ```zsh
 typeset -r -a my_array=(a b 'cd')
@@ -372,6 +385,31 @@ typeset -r -A my_dict=([a]='A' [b]='B')
 ```
 
 When mutability is required, omit `-r` but keep type flags (`-a`, `-A`).
+
+#### Readonly Re-Declaration Pitfall (Critical)
+
+Do not redeclare a variable as readonly if that variable may already be defined/populated by bootstrap code, shared libraries, or prior parsing passes.
+
+This is especially important for reused CLI parse variables such as `flag_debug`, `flag_help`, `flag_dry_run`, etc. If those already hold a value, attempting readonly redeclaration can fail.
+
+❌ **Bad:**
+```zsh
+# May fail if flag_debug already exists with a value from boilerplate/parser code
+typeset -r flag_debug="${flag_debug:-}"
+```
+
+✅ **Good:**
+```zsh
+# Keep parser/shared vars mutable if they are reused across parse phases
+typeset flag_debug="${flag_debug:-}"
+
+# Create a readonly wrapper variable owned by current scope
+typeset -r effective_flag_debug="${flag_debug:-}"
+```
+
+Rule of thumb:
+- Parser/shared variables (`flag_*`, `opt_*`, other cross-phase state) should usually remain non-readonly.
+- Derived wrapper variables that represent final decisions can be readonly.
 
 #### Scope Rules
 
@@ -2246,7 +2284,8 @@ When writing or reviewing Zsh scripts, verify:
 -   [ ] `zparseopts` target variables treated as parser-managed exception only
 -   [ ] Wrapper/derived variables explicitly declared (prefer readonly)
 -   [ ] Readonly (`-r`) used where mutation is not required
--   [ ] Type flags used for structured vars (`-a` arrays, `-A` associative arrays)
+-   [ ] Type flags selected according to situation (`-r`, `-a`, `-A`, `-i`, `-F`, `-x`, etc.)
+-   [ ] Shared/parser vars are not redeclared readonly when reused across parsing/bootstrap phases
 -   [ ] Functions use `function name { }` syntax
 -   [ ] Functions prefer named arguments (zparseopts) over positional parameters
 -   [ ] Indentation uses spaces (2 spaces per level), not tabs
