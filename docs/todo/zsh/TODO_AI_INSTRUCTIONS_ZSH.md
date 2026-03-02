@@ -1,6 +1,83 @@
 Let's add more changes to those zsh AI instruction files
 
 
+# print_usage
+
+Let's overhaul the way that print_usage is implemented in each script. 
+
+* I want the print_usage to embrace text decorations/formatting
+  * Reminder: All `slog_*` use `echo_pretty` under the hood (if available), and `echo_pretty` makes this easy. 
+* All of print_usage should be printed on stderr
+* print_usage should take advantage of env vars that are configured in `$HOME/.zsh_home/utilities/.zsh_main` (part of `.zsh_boilerplate)
+```zsh
+# a few examples from $HOME/.zsh_home/utilities/.zsh_main
+# Don't copy from here, instead read $HOME/.zsh_home/utilities/.zsh_main
+export INDENT_2='  '
+export INDENT_4='    '
+export INDENT="$INDENT_2"
+export SYMBOL_BULLET='•'
+export SYMBOL_BULLET_SMALL='∙'
+export SYMBOL_BULLET_TARGET_1='◦'
+export SYMBOL_BULLET_TARGET_2='⦿'
+export SYMBOL_BULLET_TARGET_3='⦾'
+export SYMBOL_BULLET_TARGET=$SYMBOL_BULLET_TARGET_3
+export SYMBOL_BULLET_HEART='❥'
+export SYMBOL_BULLET_ENCLOSED='‣'
+export NIL_STRING='<nil>'
+
+# Also these arrays
+export -a EMOJI_BASE10=('🄋' '①' '②' '③' '④' '⑤' '⑥' '⑦' '⑧' '⑨')
+export -a EMOJI_BASE16=("${EMOJI_BASE10[@]}" 'Ⓐ' 'Ⓑ' 'Ⓒ' 'Ⓓ' 'Ⓔ' 'Ⓕ')
+export -a EMOJI_CIRCLE=('🔴' '⚫️' '🔵' '⚪️' '🟢' '🟤' '🟡' '🟣' '🟠')
+# Also these dictionaries
+export -A EMOJI_COLOR_CIRCLES=([red]='🔴' [black]='⚫️' [blue]='🔵' [white]='⚪️' [green]='🟢' [brown]='🟤' [yellow]='🟡' [purple]='🟣' [orange]='🟠')
+export -A EMOJI_BASE16_CIRCLES=([0]='🄋' [1]='①' [2]='②' [3]='③' [4]='④' [5]='⑤' [6]='⑥' [7]='⑦' [8]='⑧' [9]='⑨' [A]='Ⓐ' [B]='Ⓑ' [C]='Ⓒ' [D]='Ⓓ' [E]='Ⓔ' [F]='Ⓕ')
+```
+  
+* Section headers decorations:
+* level 1 headers should be decorated with `--bold`. EX: SYNOPSIS, DESCRIPTION, USAGE, ARGUMENTS, EXIT STATUS, STDOUT, STDERR, etc...
+EX: 
+```zsh
+slog_se --bold "USAGE" --default
+slog_se
+slog_se "${INDENT_2}" --code "$script_name [OPTIONS] [META-OPTIONS]"
+```
+
+* level 2 headers should be decorated with `--bold --italic`. EX: (argument) OPTIONS, etc...
+EX: 
+```zsh
+slog_se "${INDENT_2}" --bold "META-OPTIONS" --default
+slog_se
+slog_se "${INDENT_2}${INDENT_2}" --code '--help' --default
+slog_se "${INDENT_2}${INDENT_2}${INDENT_2} Print this message"
+slog_se
+slog_se "${INDENT_2}${INDENT_2}" --code '--debug' --default
+slog_se "${INDENT_2}${INDENT_2}${INDENT_2} Print additional debug info to stderr"
+```
+
+* Anything that could be a terminal command should use: `--code` / `--default`
+* Anything begining with http://, https://, ftp://, file://, etc... should use: `--url` / `--default`
+* Any absolute filepaths should use: `--url` / `--default`
+* Have a look at these `echo_pretty` help/demo outputs, then infer additional decorations. Each command shows how to decorate in different ways
+```zsh
+echo_pretty --help             # Print the help/usage message (this message)
+echo_pretty --demo             # A demonstration comparing echo_pretty syntax vs ANSI codes using echo
+echo_pretty --demo-basics      # Prints common ANSI escape code (litearls) for use in shell scripts
+echo_pretty --demo-8-bit       # A demonstration of 8-bit color flags
+echo_pretty --demo-24-bit      # A demonstration of 24-bit color flags
+echo_pretty --demo-web-colors  # Prints escape codes for (litearls) for use in shell scripts
+```
+
+
+## heredoc? Maybe not
+the current instructions tend to use heredoc to encapsulate the whole output in a single string. 
+* I like the idea here, but I dont' think there's a way to use these env vars and the echo_pretty arguments with a heredoc? 
+  * [ ] If there is, please let me know and let's discuss this
+* If a print_usage is composed of say 50-75 `slog_se` commands, each using echo_pretty args, the output can take a while to print/render. 
+  * I've found that what can help is to print multiple lines with a single `slog_se` command
+  * Since we are embracing zsh expansion, perhaps we can use a single array to hold all args to a single slog_se (or fewer than 50-75 of them)
+    * Then levarge the `(F)`? I'm not sure how feasible this is, or if the code will be very legible. 
+* Please let's discuss this. Present a few print_usage functions that explore these throughts and let's see how they work out
 
 
 # Scripting Conventions
@@ -31,18 +108,29 @@ typeset -r -A my_dict=([a]='A' [b]='B')
 Reminder that `local` is reserved to be used inside of `functions`, not in the script root level (use `typeset`). 
 
 </details>
-  
+
+
 
 # debug logging of variables after declaration
+  
+<details>
+<summary>*see more...*</summary>
+
 * Re-read ai instructions about zsh. 
+* `slog_var_se_d` is deprecated and replaced by `slog_var1_se_d`
   * There should be a section about calling `slog_var_se_d` after each variable initialization or value change. 
     * EX: `slog_var_se_d "platforms" "$platforms"`
-  * Let's replace that with `slog_var1_se_d`. There are a couple of differences:
-    * `slog_var1_se_d` only requires that you pass the variable *name* (a single positional argument).
+  * Let's replace that with `slog_var1_se_d`. 
+    * There are a couple of differences:
+    * The `var1` in `slog_var1_se_d` means "one argument". IE. it has only 1 mandatory argument and that is the variable *name* (a single positional argument, string format).
       * Depending on the variable type, the value will be formatted and printed accordingly. 
         * EX: arrays are logged over manu lines with one index/element per line
         * EX: associative arrays (dicts) are logged over manu lines with one key/value pair per line. Lines are sorted by key in lex ordering
     * `slog_var_se_d` is deprecated and should not be used anymore
+* Please update any files under `instrutions` accordingly
+
+</details>
+
 
 
 

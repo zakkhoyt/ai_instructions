@@ -133,9 +133,9 @@ Use these standard section headers to organize script structure:
 
 Some script locations require more detailed header comments:
 
--   **Setup scripts** (`scripts/**/setup*.zsh`): Must include comprehensive headers documenting all operations, requirements, and warnings. See `setup-scripts.instructions.md` for detailed requirements.
--   **Utility scripts** (`scripts/utilities/**/*.zsh`): Should document whether the script can be executed standalone or must be sourced.
--   **Executable scripts** (`assets/hatch_home/scripts/**/*.zsh`): Should include usage examples and any environment dependencies.
+- **Setup scripts** (`scripts/**/setup*.zsh`): Must include comprehensive headers documenting all operations, requirements, and warnings. See `setup-scripts.instructions.md` for detailed requirements.
+- **Utility scripts** (`scripts/utilities/**/*.zsh`): Should document whether the script can be executed standalone or must be sourced.
+- **Executable scripts** (`assets/hatch_home/scripts/**/*.zsh`): Should include usage examples and any environment dependencies.
 
 ---
 
@@ -199,38 +199,40 @@ All Zsh files must follow these naming and casing rules:
 
 ### Naming and Casing Rules
 
--   **Local variables** (including function-scoped and loop variables): Use `lower_snake` case
+- **Local variables** (including function-scoped and loop variables): Use `lower_snake` case
     ```zsh
-    local file_path="/tmp/example"
-    local current_user="admin"
-    
-    # Loop variables
-    for item_name in "${items[@]}"; do
-      local processed_count=0
-    done
+    function process_items {
+      local -r file_path="/tmp/example"
+      local -r current_user="admin"
+
+      # Loop variables
+      for item_name in "${items[@]}"; do
+        local processed_count=0
+      done
+    }
     ```
 
--   **Variables used only in same file**: Use `lower_snake` case
+- **Variables used only in same file**: Use `lower_snake` case
     ```zsh
-    temp_dir="/tmp/workspace"
-    processing_status="pending"
+    typeset -r temp_dir="/tmp/workspace"
+    typeset -r processing_status="pending"
     ```
 
--   **Variables used across files**: Use `UPPER_SNAKE` case
+- **Variables used across files**: Use `UPPER_SNAKE` case
     ```zsh
-    HATCH_HOME_DIR="$HOME/.hatch"
-    SCRIPT_BASENAME="$(basename "$0")"
-    SOURCE_FILEPATH="$(realpath "$0")"
+    typeset -r HATCH_HOME_DIR="$HOME/.hatch"
+    typeset -r SCRIPT_BASENAME="${0:t}"
+    typeset -r SOURCE_FILEPATH="${0:A}"
     ```
 
--   **Exported variables**: Always use `UPPER_SNAKE` case
+- **Exported variables**: Always use `UPPER_SNAKE` case
     ```zsh
     export DATABASE_URL="postgres://..."
     export HATCH_LOG_LEVEL_MASK=info
     export SETUP_LOG_FILE="${logs_dir}/setup.log"
     ```
 
--   **zparseopts variables**: Follow prefix conventions with appropriate casing based on scope
+- **zparseopts variables**: Follow prefix conventions with appropriate casing based on scope
     ```zsh
     # Function-local zparseopts variables (lower_snake with prefix)
     zparseopts -D -F -- \
@@ -239,13 +241,14 @@ All Zsh files must follow these naming and casing rules:
       -debug=flag_debug
     
     # Variables used across files (UPPER_SNAKE with prefix)
-    FLAG_DEBUG=""
-    OPT_OUTPUT_FILE=""
+    # Mutable on purpose: parser/shared state may be reassigned across parse phases.
+    typeset FLAG_DEBUG=""
+    typeset OPT_OUTPUT_FILE=""
     ```
     - Flag-style arguments: Prefix with `flag_` or `FLAG_`
     - Key/value arguments: Prefix with `opt_` or `OPT_`
 
--   **Environment variables from external systems**: Preserve original casing
+- **Environment variables from external systems**: Preserve original casing
     ```zsh
     # System environment variables - keep as-is
     echo "$HOME"
@@ -290,16 +293,16 @@ command_name     # Instead of: command
 ```
 
 **Why this matters:**
--   `path` is a special Zsh variable tied to the `PATH` environment variable - using it causes PATH corruption
--   `command` is a Zsh built-in that affects command resolution - using it breaks command execution
--   These bugs cause significant wasted debugging time
--   AI agents frequently make these mistakes
+- `path` is a special Zsh variable tied to the `PATH` environment variable - using it causes PATH corruption
+- `command` is a Zsh built-in that affects command resolution - using it breaks command execution
+- These bugs cause significant wasted debugging time
+- AI agents frequently make these mistakes
 
 **Reference documentation:**
--   Consult `man zshbuiltins` for built-in commands and functions
--   Consult `man zshparam` for special parameters and variables
--   Consult `man zshoptions` for reserved option names
--   When in doubt, choose a more specific descriptive name
+- Consult `man zshbuiltins` for built-in commands and functions
+- Consult `man zshparam` for special parameters and variables
+- Consult `man zshoptions` for reserved option names
+- When in doubt, choose a more specific descriptive name
 
 ### Variable Declaration and `local` Qualifier
 
@@ -316,7 +319,7 @@ command_name     # Instead of: command
 ✅ **Good:**
 ```zsh
 # root scope
-typeset script_dir="${0:A:h}"
+typeset -r script_dir="${0:A:h}"
 typeset -r script_name="${0:t}"
 
 function run_task {
@@ -416,8 +419,8 @@ Rule of thumb:
 ✅ **Good (correct `local` usage):**
 ```zsh
 # In script root scope - no local qualifier
-typeset script_dir="${0:A:h}"
-typeset temp_file="/tmp/output.txt"
+typeset -r script_dir="${0:A:h}"
+typeset -r temp_file="/tmp/output.txt"
 
 # Within function - use local qualifier
 function process_file {
@@ -435,9 +438,9 @@ local temp_file="/tmp/output.txt"  # local in root scope
 ```
 
 **Why this matters:**
--   `local` restricts variable scope to functions only
--   Using `local` outside functions causes undefined behavior
--   AI agents frequently make this mistake, leading to wasted debugging time
+- `local` restricts variable scope to functions only
+- Using `local` outside functions causes undefined behavior
+- AI agents frequently make this mistake, leading to wasted debugging time
 
 #### Declaration and Initialization
 
@@ -468,11 +471,11 @@ file_path="/tmp/file.txt"  # Can leak to stdout
 ```
 
 **Why this matters:**
--   Separate initialization (`my_var=0`) can write to stdout unexpectedly
--   Causes bugs where variable assignments appear in command output
--   Breaks pipes and variable captures
--   Single compound statements are atomic and predictable
--   The problem occurs whether initialization is immediate or delayed
+- Separate initialization (`my_var=0`) can write to stdout unexpectedly
+- Causes bugs where variable assignments appear in command output
+- Breaks pipes and variable captures
+- Single compound statements are atomic and predictable
+- The problem occurs whether initialization is immediate or delayed
 
 #### Multiple Variable Declarations
 
@@ -497,17 +500,22 @@ var3="value3"
 
 ✅ **Good:**
 ```zsh
-# Local variable
-local file_path="/tmp/example"
+# Script root scope variable
+typeset -r file_path="/tmp/example"
+
+# Function-local variable
+function process_example {
+  local -r file_path="/tmp/example"
+}
 
 # Variable used only in same file
-current_user="admin"
+typeset -r current_user="admin"
 
 # Exported variable
 export DATABASE_URL="postgres://..."
 
 # Variable used across files (sourced/exported)
-CONFIG_DIR="/etc/myapp"
+typeset -r CONFIG_DIR="/etc/myapp"
 export HATCH_HOME_DIR="$HOME/.hatch"
 ```
 
@@ -544,6 +552,7 @@ typeset -r -A my_dict=([name]="zakk" [role]="maintainer")
 slog_var1_se_d "my_dict"
 
 # For result variables (script root scope)
+# Mutable on purpose: value and rval are populated at runtime.
 typeset result="$(some_command)"
 typeset -i result_rval=$?
 slog_var1_se_d "result"
@@ -588,10 +597,10 @@ function my_function {
 ```
 
 **Why this syntax:**
--   Clearly distinguishes functions from commands
--   Easier to search for function definitions: `grep -r "^function "`
--   More readable and explicit
--   Consistent with Zsh best practices
+- Clearly distinguishes functions from commands
+- Easier to search for function definitions: `grep -r "^function "`
+- More readable and explicit
+- Consistent with Zsh best practices
 
 ❌ **Don't use:**
 ```zsh
@@ -747,13 +756,13 @@ function append_unique {
 
 #### Why Markdown-Style Documentation
 
--   **Machine-extractable**: Remove `# ` prefix to get valid markdown documentation
--   **Human-readable**: Familiar markdown syntax is easy to read in source
--   **IDE support**: Many editors parse comment blocks for inline help
--   **Syntax highlighting**: Better Comments extension highlights structure elements
--   **Consistency**: Uniform documentation style across entire codebase
--   **AI-friendly**: Clear structure helps AI agents understand function behavior
--   **Documentation tools**: Compatible with tools like `shdoc` that extract markdown from comments
+- **Machine-extractable**: Remove `# ` prefix to get valid markdown documentation
+- **Human-readable**: Familiar markdown syntax is easy to read in source
+- **IDE support**: Many editors parse comment blocks for inline help
+- **Syntax highlighting**: Better Comments extension highlights structure elements
+- **Consistency**: Uniform documentation style across entire codebase
+- **AI-friendly**: Clear structure helps AI agents understand function behavior
+- **Documentation tools**: Compatible with tools like `shdoc` that extract markdown from comments
 
 #### Documentation vs print_usage
 
@@ -798,9 +807,9 @@ function get_backup_path {
 ```
 
 **Critical differences from script-level fatal handling:**
--   Use `return <code>` instead of `exit <code>`
--   Use `return` to signal failure to the calling code
--   Calling code decides whether to `exit` the entire script or recover
+- Use `return <code>` instead of `exit <code>`
+- Use `return` to signal failure to the calling code
+- Calling code decides whether to `exit` the entire script or recover
 
 #### Calling Functions with Fatal Error Handling
 
@@ -811,8 +820,9 @@ When calling functions that can fail, use `|| { }` pattern with exit code captur
 # [step] Get backup directory
 slog_step_se --context will "determine backup directory"
 
+typeset backup_path=""
 backup_path=$(get_backup_path --source-dir "$source_dir") || {
-  exit_code=$?
+  typeset -i exit_code=$?
   slog_step_se --context fatal --exit-code "$exit_code" "determine backup directory"
   exit $exit_code
 }
@@ -1092,16 +1102,16 @@ process_file "/path/to/file" "/output" "true"
 ```
 
 **Why prefer named arguments:**
--   **Self-documenting**: Argument names make code intent clear
--   **Order-independent**: Arguments can be passed in any order
--   **Maintainable**: Adding new arguments doesn't break existing calls
--   **Type-safe**: Flags vs values are explicit
--   **Consistent**: Matches script-level argument parsing patterns
+- **Self-documenting**: Argument names make code intent clear
+- **Order-independent**: Arguments can be passed in any order
+- **Maintainable**: Adding new arguments doesn't break existing calls
+- **Type-safe**: Flags vs values are explicit
+- **Consistent**: Matches script-level argument parsing patterns
 
 **When positional arguments are acceptable:**
--   Very simple functions with 1-2 obvious parameters
--   Internal helper functions with clear, single-purpose parameters
--   When function signature is stable and unlikely to change
+- Very simple functions with 1-2 obvious parameters
+- Internal helper functions with clear, single-purpose parameters
+- When function signature is stable and unlikely to change
 
 **Example of acceptable positional use:**
 ```zsh
@@ -1270,10 +1280,10 @@ multiline_string="$(printf '%s\n' "${array[@]}")"
 ```
 
 **Why (f) and (F) matter:**
--   **Performance**: No external processes, no loops
--   **Reliability**: Built into Zsh, always available
--   **Clarity**: Intent is immediately obvious
--   **Consistency**: Matches other Zsh expansion patterns
+- **Performance**: No external processes, no loops
+- **Reliability**: Built into Zsh, always available
+- **Clarity**: Intent is immediately obvious
+- **Consistency**: Matches other Zsh expansion patterns
 
 **Advanced: Combining with other operations:**
 
@@ -1515,9 +1525,9 @@ This pattern provides complete visibility into script execution and makes debugg
 ### Error Handling Context
 
 All scripts in this repository run with error handling enabled (via shebang or parent shell):
--   `set -e` / `-e`: Exit immediately if a command exits with a non-zero status
--   `set -u` / `-u`: Treat unset variables as an error
--   `set -o pipefail` / `-o pipefail`: Pipeline exits with status of last failing command
+- `set -e` / `-e`: Exit immediately if a command exits with a non-zero status
+- `set -u` / `-u`: Treat unset variables as an error
+- `set -o pipefail` / `-o pipefail`: Pipeline exits with status of last failing command
 
 **Therefore**: Always add error handling around commands that can fail using the Step Pattern.
 
@@ -1577,8 +1587,10 @@ slog_step_se [--context <context>] [--exit-code <code>] [message ...]
 # [step] Comment marker for searchability
 slog_step_se --context will "operation description" --code "$variable" --default
 
+# Mutable on purpose: assigned by command substitution in the next statement.
+typeset result=""
 result=$(command_with_args) || {
-  exit_code=$?
+  typeset -i exit_code=$?
   slog_step_se --context fatal --exit-code "$exit_code" "operation description"
   exit $exit_code  # Use 'exit' in script root scope, 'return' in functions
 }
@@ -1600,26 +1612,26 @@ slog_step_se --context success "operation completed" --code "$result" --default
 
 ### Step Logging Levels and Command Messages
 
--   **Intent logs (`will`) must use debug level**: Call `slog_step_se_d --context will ...` for "will" statements so routine intent chatter stays hidden unless `--debug` is enabled.
--   **Success logs must use debug level**: Use `slog_step_se_d --context success ...` to keep success spam out of normal stderr while still available for debugging.
--   **Warning logs must use debug level**: When treating a failure as non-fatal, report it with `slog_step_se_d --context warning ...`; only true errors stay at non-debug level.
--   **Error/fatal logs remain at normal severity**: Continue using `slog_step_se --context fatal|error ...` so failures are always visible.
+- **Intent logs (`will`) must use debug level**: Call `slog_step_se_d --context will ...` for "will" statements so routine intent chatter stays hidden unless `--debug` is enabled.
+- **Success logs must use debug level**: Use `slog_step_se_d --context success ...` to keep success spam out of normal stderr while still available for debugging.
+- **Warning logs must use debug level**: When treating a failure as non-fatal, report it with `slog_step_se_d --context warning ...`; only true errors stay at non-debug level.
+- **Error/fatal logs remain at normal severity**: Continue using `slog_step_se --context fatal|error ...` so failures are always visible.
 
 Every step that executes an external command/script must follow this pattern:
 
-1. **Compose the command first** in a string variable (e.g., `local cmd="rsync ..."`). Never inline the command directly inside the `if`/`||` statements without capturing it in a variable.
-2. **Build reusable message arguments** (commonly via an array like `local -a message_args=("sync files with " --code "$cmd" --default)`).
+1. **Compose the command first** in a string variable (e.g., `typeset -r cmd="rsync ..."` at script root, or `local cmd="rsync ..."` in functions). Never inline the command directly inside the `if`/`||` statements without capturing it in a variable.
+2. **Build reusable message arguments** (commonly via an array like `typeset -r -a message_args=("sync files with " --code "$cmd" --default)` at script root, or `local -a ...` in functions).
 3. **Use those arguments in every log message** (`will`, `success`, `warning`, `error`) so the exact command (decorated with `--code`/`--default`) is always shown.
 
 Example fatal step with the required logging levels and command handling:
 
 ```zsh
-local cmd="swift ${(qqq)SP_SUBCOMMAND} --sdk ${(qqq)SDK_PATH} --arch ${(qqq)ARCHITECTURE} -Xswiftc -target -Xswiftc ${(qqq)TARGET} ${(qqq)@}"
-local -a message_args=("compile code using command: " --code "$cmd" --default)
+typeset -r cmd="swift ${(qqq)SP_SUBCOMMAND} --sdk ${(qqq)SDK_PATH} --arch ${(qqq)ARCHITECTURE} -Xswiftc -target -Xswiftc ${(qqq)TARGET} ${(qqq)@}"
+typeset -r -a message_args=("compile code using command: " --code "$cmd" --default)
 
 slog_step_se_d --context will "Will " "${(j| |)message_args[@]}"
 if ! gh_validate "$IS_DEBUG" > /dev/null 2>&1; then
-  local rval=$?
+  typeset -i rval=$?
   slog_step_se --context fatal --exit-code "$rval" "Failed to " "${(j| |)message_args[@]}"
   exit "$rval"
 fi
@@ -1634,8 +1646,10 @@ Use `--context fatal` when failure should stop script execution:
 # [step] Read repository's default branch
 slog_step_se --context will "read repository's default branch"
 
+# Mutable on purpose: populated by command substitution in the next statement.
+typeset git_default_branch=""
 git_default_branch="$(git rev-parse --abbrev-ref "$(git remote)"/HEAD | sed 's|origin/||g')" || {
-  exit_code=$?
+  typeset -i exit_code=$?
   slog_step_se --context fatal --exit-code "$exit_code" "read repository's default branch"
   exit $exit_code
 }
@@ -1645,12 +1659,12 @@ slog_step_se --context success "Read repository's default branch: " --code "$git
 ```
 
 **Use for:**
--   Installing required packages
--   Reading critical configuration
--   Creating essential directories
--   Validating prerequisites
--   Git operations in automated workflows
--   API calls that must succeed
+- Installing required packages
+- Reading critical configuration
+- Creating essential directories
+- Validating prerequisites
+- Git operations in automated workflows
+- API calls that must succeed
 
 **Scope-Aware Exit Handling:**
 ```zsh
@@ -1689,17 +1703,17 @@ fi
 ```
 
 **Use for:**
--   User preferences (Dock size, Finder settings)
--   Optional configurations (Safari debug menu)
--   Cosmetic settings (desktop wallpaper, dark mode)
--   Creating convenience symlinks
--   Non-essential Git operations
+- User preferences (Dock size, Finder settings)
+- Optional configurations (Safari debug menu)
+- Cosmetic settings (desktop wallpaper, dark mode)
+- Creating convenience symlinks
+- Non-essential Git operations
 
 **Key Differences from Fatal Pattern:**
--   Uses `if/then/else/fi` instead of `|| { }`
--   Uses `--context warning` instead of `--context fatal`
--   No `exit` or `return` - script continues after `fi`
--   Success log in `if` branch, warning in `else` branch
+- Uses `if/then/else/fi` instead of `|| { }`
+- Uses `--context warning` instead of `--context fatal`
+- No `exit` or `return` - script continues after `fi`
+- Success log in `if` branch, warning in `else` branch
 
 ### Pattern 3: Validation Steps
 
@@ -1718,10 +1732,10 @@ slog_step_se --context success "Validated current branch (" --code "$git_current
 ```
 
 **Use for:**
--   Validating environment variables
--   Checking file/directory existence
--   Comparing values
--   Verifying prerequisites
+- Validating environment variables
+- Checking file/directory existence
+- Comparing values
+- Verifying prerequisites
 
 ### Exit Code Formatting
 
@@ -1740,10 +1754,10 @@ slog_step_se --context fatal "Failed to install package (exit code: $exit_code)"
 ```
 
 **Why automatic formatting:**
--   Consistent across all error messages
--   Exit code is immediately visible
--   Easy to grep/search: `grep '\[42\]' logs/*.log`
--   Prevents formatting inconsistencies
+- Consistent across all error messages
+- Exit code is immediately visible
+- Easy to grep/search: `grep '\[42\]' logs/*.log`
+- Prevents formatting inconsistencies
 
 ### Deprecated Functions
 
@@ -1777,13 +1791,13 @@ slog_step_se --context success "Fetched JSON for jira ticket " --code "$jira_tic
 ```
 
 **This example demonstrates:**
--   `# [step]` comment marker for searchability
--   Intent logging with decorated output (`--code` for variable, `--default` for reset)
--   Error handling with exit code capture
--   Fatal error logging with automatic `[$exit_code]` formatting
--   Scope-aware exit (script root scope uses `exit`)
--   Debug variable logging
--   Success logging with decorated output
+- `# [step]` comment marker for searchability
+- Intent logging with decorated output (`--code` for variable, `--default` for reset)
+- Error handling with exit code capture
+- Fatal error logging with automatic `[$exit_code]` formatting
+- Scope-aware exit (script root scope uses `exit`)
+- Debug variable logging
+- Success logging with decorated output
 
 ### Quick Decision Guide
 
@@ -1798,8 +1812,8 @@ slog_step_se --context success "Fetched JSON for jira ticket " --code "$jira_tic
 ### Path-Specific Overrides
 
 Some directories use different logging functions:
--   Setup scripts (`scripts/**/*.zsh`): May use `log_*` functions instead of `slog_*`
--   Path-specific instruction files document these overrides
+- Setup scripts (`scripts/**/*.zsh`): May use `log_*` functions instead of `slog_*`
+- Path-specific instruction files document these overrides
 
 ---
 
@@ -1836,10 +1850,10 @@ other_arg="${opt_other_arg[-1]:-default_value}"
 Script arguments should be handled using `zparseopts` where possible, or where conversion is easy. If converting requires a significant refactor, retain the current approach.
 
 **zparseopts Flag Reference:**
--   **`-D`**: Remove recognized options from `$@` (like `shift`) - **always use this**
--   **`-E`**: Continue parsing even when encountering unrecognized options (skip over them) - **use for parallel multi-stage parsing**
--   **`-F`**: Fail immediately with error on first unrecognized option - **rarely needed, prefer checking `$@` after parsing**
--   **Neither `-E` nor `-F`**: Stop parsing at first unrecognized option (leaves it in `$@`) - **use for sequential multi-stage parsing**
+- **`-D`**: Remove recognized options from `$@` (like `shift`) - **always use this**
+- **`-E`**: Continue parsing even when encountering unrecognized options (skip over them) - **use for parallel multi-stage parsing**
+- **`-F`**: Fail immediately with error on first unrecognized option - **rarely needed, prefer checking `$@` after parsing**
+- **Neither `-E` nor `-F`**: Stop parsing at first unrecognized option (leaves it in `$@`) - **use for sequential multi-stage parsing**
 
 **Multi-Stage Parsing Patterns:**
 
@@ -1877,17 +1891,17 @@ fi
 ```
 
 **Key Conventions:**
--   **For new code**: Always use `-D`, choose `-E` based on parsing pattern
--   **Argument definition order**: Capital letter arguments should be listed first and separated from others using `--`
--   **Multi-line format**: Define arguments one per line using the trailing `\` syntax
--   **Long-form names**: Always include a long-form name (e.g., `--help`) for arguments
-    -   **Exception**: `{d,-debug}+` uses short-form `-d` to enable quick debug level changes (`-d`, `-dd`, `-ddd`)
--   **Standard arguments**: handled by `.zsh_boilerplate`; script-local zparseopts should focus on script-specific options
--   **Variable naming**:
-    -   Flag-style arguments (e.g., `--help`): Prefix with `flag_` or `FLAG_` based on scope
-    -   Key/value arguments (e.g., `--mode create` or `--mode=create`): Prefix with `opt_` or `OPT_`
--   **Associative arrays**: Consider using the `-A <kv_array>` syntax if it does not conflict with other argument styles
--   **Avoid flag arrays**: Avoid using the `-a <flag_array>` syntax as it is mutually exclusive with the flag variable approach
+- **For new code**: Always use `-D`, choose `-E` based on parsing pattern
+- **Argument definition order**: Capital letter arguments should be listed first and separated from others using `--`
+- **Multi-line format**: Define arguments one per line using the trailing `\` syntax
+- **Long-form names**: Always include a long-form name (e.g., `--help`) for arguments
+  - **Exception**: `{d,-debug}+` uses short-form `-d` to enable quick debug level changes (`-d`, `-dd`, `-ddd`)
+- **Standard arguments**: handled by `.zsh_boilerplate`; script-local zparseopts should focus on script-specific options
+- **Variable naming**:
+  - Flag-style arguments (e.g., `--help`): Prefix with `flag_` or `FLAG_` based on scope
+  - Key/value arguments (e.g., `--mode create` or `--mode=create`): Prefix with `opt_` or `OPT_`
+- **Associative arrays**: Consider using the `-A <kv_array>` syntax if it does not conflict with other argument styles
+- **Avoid flag arrays**: Avoid using the `-a <flag_array>` syntax as it is mutually exclusive with the flag variable approach
 
 ### Trap Debugging Support
 
@@ -2070,9 +2084,9 @@ slog_info_se "Next step..."
 **CRITICAL**: Use minimal write commands (`slog_*`, `echo_pretty`, `echo`, `printf`) within the same context block. Leverage multiline strings instead.
 
 **Benefits**:
--   Fewer function calls = better performance
--   Single atomic write = better output consistency
--   Easier to read and maintain
+- Fewer function calls = better performance
+- Single atomic write = better output consistency
+- Easier to read and maintain
 
 ✅ **Good (multiline string):**
 ```zsh
@@ -2098,9 +2112,9 @@ fi
 ```
 
 **Multiline Syntax Options**:
--   Heredoc: `cat << 'EOF'`
--   Trailing backslash: `"line1 \␤line2"`
--   Direct newlines in quotes: `"line1␤line2"`
+- Heredoc: `cat << 'EOF'`
+- Trailing backslash: `"line1 \␤line2"`
+- Direct newlines in quotes: `"line1␤line2"`
 
 ### Decorator Requirements
 
@@ -2126,10 +2140,10 @@ fi
     ```
 
 **Why decorators matter**:
--   Improves readability in terminal output
--   Provides visual distinction between message and data
--   Consistent formatting across all scripts
--   Makes logs easier to parse and search
+- Improves readability in terminal output
+- Provides visual distinction between message and data
+- Consistent formatting across all scripts
+- Makes logs easier to parse and search
 
 ---
 
@@ -2198,11 +2212,11 @@ done
 ```
 
 **Why prefer C-style loops with indices:**
--   **Debugging**: Index shows exact position in array
--   **Logging**: Can display "processing item 5 of 10"
--   **Error handling**: Can report which element failed
--   **Conditional logic**: Easy to skip/process based on position
--   **Progress tracking**: Can calculate percentage complete
+- **Debugging**: Index shows exact position in array
+- **Logging**: Can display "processing item 5 of 10"
+- **Error handling**: Can report which element failed
+- **Conditional logic**: Easy to skip/process based on position
+- **Progress tracking**: Can calculate percentage complete
 
 **Example with progress logging:**
 ```zsh
@@ -2221,9 +2235,9 @@ slog_success_se "Completed processing $total files"
 ```
 
 **When `for item in array` is acceptable:**
--   Very simple loops with no logging/debugging needs
--   No need to track position or progress
--   Working with command output directly: `for file in *.txt; do ...`
+- Very simple loops with no logging/debugging needs
+- No need to track position or progress
+- Working with command output directly: `for file in *.txt; do ...`
 
 ### Indentation and Whitespace
 
@@ -2258,10 +2272,10 @@ function process_data {
 ```
 
 **Why avoid tabs:**
--   Tab rendering varies across editors and contexts
--   Mixing tabs and spaces causes alignment issues
--   Spaces provide consistent visual appearance
--   Better compatibility with linters and formatters
+- Tab rendering varies across editors and contexts
+- Mixing tabs and spaces causes alignment issues
+- Spaces provide consistent visual appearance
+- Better compatibility with linters and formatters
 
 **Rare exception**: Heredocs may require tabs for specific formatting, but even these can usually be done with spaces:
 
@@ -2295,31 +2309,31 @@ When using `echo` and `jq` together:
 
 When writing or reviewing Zsh scripts, verify:
 
--   [ ] Shellcheck directives present after shebang
--   [ ] Variables follow naming conventions (lower_snake vs UPPER_SNAKE)
--   [ ] No reserved keywords used as variable/function names (`path`, `command`, `status`, etc.)
--   [ ] `local` qualifier only used within functions (never in root scope)
--   [ ] Root-scope variables declared with `typeset` (not implicit assignment)
--   [ ] Variables declared and initialized in compound statements
--   [ ] `zparseopts` target variables treated as parser-managed exception only
--   [ ] Wrapper/derived variables explicitly declared (prefer readonly)
--   [ ] Readonly (`-r`) used where mutation is not required
--   [ ] Type flags selected according to situation (`-r`, `-a`, `-A`, `-i`, `-F`, `-x`, etc.)
--   [ ] Shared/parser vars are not redeclared readonly when reused across parsing/bootstrap phases
--   [ ] Functions use `function name { }` syntax
--   [ ] Functions prefer named arguments (zparseopts) over positional parameters
--   [ ] Indentation uses spaces (2 spaces per level), not tabs
--   [ ] Zsh expansions preferred over external commands (`${var:h}` not `dirname`)
--   [ ] Array/string conversions use `(f)` and `(F)` flags (not loops or external tools)
--   [ ] Loops avoided when Zsh expansion suffices; C-style loops with indices when needed
--   [ ] Safe variable checking with `:-` expansion
--   [ ] `.zsh_boilerplate` sourced near top of script
--   [ ] No duplicate common flag parsing block added in script body
--   [ ] `zparseopts` used for script-specific argument parsing with `-D --` flags
--   [ ] `print_usage` function present and bound to `--help`
--   [ ] Help formatting follows SYNOPSIS/OPTIONS/ENVIRONMENT structure
--   [ ] Context logging minimizes write commands (use multiline strings)
--   [ ] Output destination consistency (stderr with stderr, stdout with stdout)
--   [ ] Decorators used correctly (--code for commands/vars, --url for paths/URLs)
--   [ ] Commands that use pagers are piped to `cat` or use `--no-pager`
--   [ ] `echo -n` used with `jq` pipelines
+- [ ] Shellcheck directives present after shebang
+- [ ] Variables follow naming conventions (lower_snake vs UPPER_SNAKE)
+- [ ] No reserved keywords used as variable/function names (`path`, `command`, `status`, etc.)
+- [ ] `local` qualifier only used within functions (never in root scope)
+- [ ] Root-scope variables declared with `typeset` (not implicit assignment)
+- [ ] Variables declared and initialized in compound statements
+- [ ] `zparseopts` target variables treated as parser-managed exception only
+- [ ] Wrapper/derived variables explicitly declared (prefer readonly)
+- [ ] Readonly (`-r`) used where mutation is not required
+- [ ] Type flags selected according to situation (`-r`, `-a`, `-A`, `-i`, `-F`, `-x`, etc.)
+- [ ] Shared/parser vars are not redeclared readonly when reused across parsing/bootstrap phases
+- [ ] Functions use `function name { }` syntax
+- [ ] Functions prefer named arguments (zparseopts) over positional parameters
+- [ ] Indentation uses spaces (2 spaces per level), not tabs
+- [ ] Zsh expansions preferred over external commands (`${var:h}` not `dirname`)
+- [ ] Array/string conversions use `(f)` and `(F)` flags (not loops or external tools)
+- [ ] Loops avoided when Zsh expansion suffices; C-style loops with indices when needed
+- [ ] Safe variable checking with `:-` expansion
+- [ ] `.zsh_boilerplate` sourced near top of script
+- [ ] No duplicate common flag parsing block added in script body
+- [ ] `zparseopts` used for script-specific argument parsing with `-D --` flags
+- [ ] `print_usage` function present and bound to `--help`
+- [ ] Help formatting follows SYNOPSIS/OPTIONS/ENVIRONMENT structure
+- [ ] Context logging minimizes write commands (use multiline strings)
+- [ ] Output destination consistency (stderr with stderr, stdout with stdout)
+- [ ] Decorators used correctly (--code for commands/vars, --url for paths/URLs)
+- [ ] Commands that use pagers are piped to `cat` or use `--no-pager`
+- [ ] `echo -n` used with `jq` pipelines
