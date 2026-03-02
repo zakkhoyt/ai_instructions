@@ -1177,18 +1177,20 @@ Refactoring should not start until this contract is accepted as complete coverag
 
 The new scheme has two target types:
 
-1. **Settings selectors** (JSON merge targets)
-  - Syntax: `<scope>[:<category>][:<theme>]`
+1. **Config selectors** (JSON merge targets with hierarchical selection)
+  - Syntax: `config-<scope>[:<category>][:<theme>]`
   - Scope: `user` | `workspace` | `folder`
   - Category (initial): `settings` | `mcp`
   - Theme: parsed from `<theme>__<category>.json` prefix
+  - Examples: `config-user:settings:swift`, `config-workspace:mcp`
 
-2. **Action targets** (non-selector operations)
-  - `instructions`
-  - `mcp-xcode`
-  - `dev-link`
-  - `dev-vscode`
-  - `regenerate-main`
+2. **Simple action targets** (non-selector operations)
+  - `instructions` - Manage AI instruction files
+  - `dev-link` - Create development symlink
+  - `dev-vscode` - Add to VSCode workspace
+  - `regenerate-main` - Regenerate main instruction file
+  - `mcp-xcode` - Install Xcode MCP configuration (special case)
+  - No hierarchical selection (just action name)
 
 ### 2) New Flag Semantics (Final)
 
@@ -1206,9 +1208,10 @@ Rules:
 
 ### 3) Selector Rules (Final)
 
-- Only `user|workspace|folder` support `:category` and `:theme` selectors.
-- `instructions`, `mcp-xcode`, `dev-link`, `dev-vscode`, `regenerate-main` do **not** accept hierarchy.
+- Only `config-user`, `config-workspace`, `config-folder` support `:category` and `:theme` selectors.
+- Simple actions (`instructions`, `dev-link`, `dev-vscode`, `regenerate-main`, `mcp-xcode`) do **not** accept hierarchy.
 - `instructions:*` is invalid.
+- `config-user` without category/theme matches all user configs.
 - If category is omitted, all categories in scope match.
 - If theme is omitted, all themes in matched category match.
 
@@ -1219,8 +1222,8 @@ Legacy flags remain temporarily, mapped to new targets:
 | Legacy Flag | Normalized Target | Mode if no `--prompt` target override |
 |------------|-------------------|----------------------------------------|
 | `--instructions` | `instructions` | auto |
-| `--workspace-settings` | `workspace` | prompt (menu) for legacy parity |
-| `--user-settings` | `user` | prompt (menu) for legacy parity |
+| `--workspace-settings` | `config-workspace` | prompt (menu) for legacy parity |
+| `--user-settings` | `config-user` | prompt (menu) for legacy parity |
 | `--mcp-xcode` | `mcp-xcode` | auto |
 | `--dev-link` | `dev-link` | auto |
 | `--dev-vscode` | `dev-vscode` | auto |
@@ -1233,13 +1236,13 @@ Legacy flags remain temporarily, mapped to new targets:
 | Target | `--prompt <target>` | `--no-prompt <target>` |
 |-------|----------------------|------------------------|
 | `instructions` | Show instruction status/menu always; user selects files; Enter = skip | Auto-install by configured method for eligible files |
-| `user[:cat[:theme]]` | Show filtered user-template menu, then merge selections | Auto-merge all filtered user templates |
-| `workspace[:cat[:theme]]` | Show filtered workspace/.vscode template menu, then merge selections | Auto-merge all filtered workspace templates |
-| `folder[:cat[:theme]]` | Show filtered `.vscode` template menu for folder scope | Auto-merge all filtered folder templates |
+| `config-user[:cat[:theme]]` | Show filtered user-template menu, then merge selections | Auto-merge all filtered user templates |
+| `config-workspace[:cat[:theme]]` | Show filtered workspace/.vscode template menu, then merge selections | Auto-merge all filtered workspace templates |
+| `config-folder[:cat[:theme]]` | Show filtered `.vscode` template menu for folder scope | Auto-merge all filtered folder templates |
+| `dev-link` | Y/N confirm prompt then create symlink + `.gitignore` update | Create symlink + `.gitignore` update |
+| `dev-vscode` | Y/N confirm prompt then add folder to workspace | Add folder to workspace |
+| `regenerate-main` | Y/N confirm prompt then regenerate/sync main file | Regenerate/sync main file |
 | `mcp-xcode` | Y/N confirm prompt then apply MCP+swift templates | Apply MCP+swift templates directly |
-| `dev-link` | Y/N confirm then create symlink + `.gitignore` update | Create symlink + `.gitignore` update |
-| `dev-vscode` | Y/N confirm then add folder to workspace | Add folder to workspace |
-| `regenerate-main` | Y/N confirm then regenerate/sync main file | Regenerate/sync main file |
 
 ### 6) Existing Functionality Coverage Checklist
 
@@ -1247,17 +1250,19 @@ Legacy flags remain temporarily, mapped to new targets:
 |---------------------|------------------------|---------------|
 | Instruction installation menu | ✅ | `--prompt instructions` |
 | Instruction auto-install | ✅ | `--no-prompt instructions` |
-| Workspace settings menu merge | ✅ | `--prompt workspace` (or filtered selector) |
-| Workspace settings auto-merge | ✅ | `--no-prompt workspace[:category[:theme]]` |
-| User settings menu merge | ✅ | `--prompt user` (or filtered selector) |
-| User settings auto-merge | ✅ | `--no-prompt user[:category[:theme]]` |
+| Workspace settings menu merge | ✅ | `--prompt config-workspace` (or filtered selector) |
+| Workspace settings auto-merge | ✅ | `--no-prompt config-workspace[:category[:theme]]` |
+| User settings menu merge | ✅ | `--prompt config-user` (or filtered selector) |
+| User settings auto-merge | ✅ | `--no-prompt config-user[:category[:theme]]` |
+| Folder (.vscode) settings menu | ✅ | `--prompt config-folder` (or filtered selector) |
+| Folder (.vscode) settings auto-merge | ✅ | `--no-prompt config-folder[:category[:theme]]` |
 | Xcode MCP apply | ✅ | `--no-prompt mcp-xcode` |
 | Xcode MCP prompt/confirm | ✅ | `--prompt mcp-xcode` |
 | Dev symlink (`--dev-link`) | ✅ | `--no-prompt dev-link` / `--prompt dev-link` |
 | Add dev folder to workspace (`--dev-vscode`) | ✅ | `--no-prompt dev-vscode` / `--prompt dev-vscode` |
 | Regenerate main instruction file | ✅ | `--no-prompt regenerate-main` / `--prompt regenerate-main` |
 | Source/dest/platform/configure-type options | ✅ (unchanged) | Keep existing option flags |
-| Deprecated alias `--vscode-settings` | ✅ (temporary) | Alias to `workspace` target |
+| Deprecated alias `--vscode-settings` | ✅ (temporary) | Alias to `config-workspace` target |
 
 ### 7) Gaps To Close Before Refactor Starts
 
@@ -1590,131 +1595,209 @@ workspace/.vscode/atlassian-mcpserver__mcp.json
 
 ## New Argument Syntax: Colon-Delimited Hierarchy
 
+### Action Types
+
+The script supports two types of actions:
+
+1. **Config Actions** (with hierarchical selectors):
+   - Syntax: `config-<scope>[:<category>][:<theme>]`
+   - These manage VSCode configuration files
+   - Support filtering by scope, category, and theme
+
+2. **Simple Actions** (no hierarchy):
+   - Syntax: `<action-name>`
+   - These perform specific operations
+   - No hierarchical selection needed
+
 ### Syntax Specification
 
 ```
---prompt <scope>[:<category>][:<theme>]
---no-prompt <scope>[:<category>][:<theme>]
+# Config actions (with selectors)
+--prompt config-<scope>[:<category>][:<theme>]]
+--no-prompt config-<scope>[:<category>][:<theme>]]
+
+# Simple actions
+--prompt <action-name>
+--no-prompt <action-name>
 ```
 
-Where:
-- `<scope>` - Required: `user` | `workspace` | `folder` | `instructions`
+**Config selector components:**
+- `<scope>` - Required: `user` | `workspace` | `folder`
 - `:<category>` - Optional: `settings` | `mcp` | `tasks` | `launch` | etc.
 - `:<theme>` - Optional: `swift` | `xcode-mcpserver` | `chat` | etc.
 
-### Specificity Levels
+**Simple actions:**
+- `instructions` - Manage AI instruction files
+- `dev-link` - Create development symlink
+- `dev-vscode` - Add to VSCode workspace
+- `regenerate-main` - Regenerate main instruction file
+- `mcp-xcode` - Install Xcode MCP configuration
+
+### Specificity Levels (Config Actions)
 
 | Specificity | Pattern | Example | What It Matches |
 |-------------|---------|---------|-----------------|
-| **Broad** | `<scope>` | `--prompt user` | All categories & themes in user scope |
-| **Medium** | `<scope>:<category>` | `--prompt workspace:mcp` | All MCP configs in workspace scope |
-| **Narrow** | `<scope>:<category>:<theme>` | `--prompt user:settings:swift` | Only swift settings in user scope |
+| **Broad** | `config-<scope>` | `--prompt config-user` | All categories & themes in user scope |
+| **Medium** | `config-<scope>:<category>` | `--prompt config-workspace:mcp` | All MCP configs in workspace scope |
+| **Narrow** | `config-<scope>:<category>:<theme>` | `--prompt config-user:settings:swift` | Only swift settings in user scope |
 
 ### Example Usage
 
 ```zsh
 # ════════════════════════════════════════════════════════════
-# SCOPE ONLY (broadest - all categories & themes)
+# CONFIG ACTIONS - SCOPE ONLY (broadest - all categories & themes)
 # ════════════════════════════════════════════════════════════
 
 # All user configs (settings, mcp, tasks, etc.)
-./script --prompt user
+./script --prompt config-user
 
 # All workspace configs (workspace files + .vscode folder)
-./script --prompt workspace
+./script --prompt config-workspace
 
 # All folder configs (.vscode/ only)
-./script --prompt folder
+./script --prompt config-folder
 
 # ════════════════════════════════════════════════════════════
-# SCOPE + CATEGORY (medium specificity)
+# CONFIG ACTIONS - SCOPE + CATEGORY (medium specificity)
 # ════════════════════════════════════════════════════════════
 
 # All settings in workspace (any theme)
-./script --prompt workspace:settings
+./script --prompt config-workspace:settings
 
 # All MCP configs in user (any theme)
-./script --prompt user:mcp
+./script --prompt config-user:mcp
 
 # All MCP configs in folder scope
-./script --prompt folder:mcp
+./script --prompt config-folder:mcp
 
 # ════════════════════════════════════════════════════════════
-# SCOPE + CATEGORY + THEME (narrowest - most specific)
+# CONFIG ACTIONS - SCOPE + CATEGORY + THEME (narrowest - most specific)
 # ════════════════════════════════════════════════════════════
 
 # Only swift settings in user
-./script --prompt user:settings:swift
+./script --prompt config-user:settings:swift
 
 # Only xcode-mcpserver MCP in workspace
-./script --prompt workspace:mcp:xcode-mcpserver
+./script --prompt config-workspace:mcp:xcode-mcpserver
 
 # Only fileNesting settings in folder
-./script --prompt folder:settings:fileNesting
+./script --prompt config-folder:settings:fileNesting
+
+# ════════════════════════════════════════════════════════════
+# SIMPLE ACTIONS (no hierarchy)
+# ════════════════════════════════════════════════════════════
+
+# Manage instruction files
+./script --prompt instructions
+./script --no-prompt instructions
+
+# Create development symlink
+./script --prompt dev-link
+./script --no-prompt dev-link
+
+# Add to VSCode workspace
+./script --prompt dev-vscode
+./script --no-prompt dev-vscode
+
+# Regenerate main instruction file
+./script --prompt regenerate-main
+./script --no-prompt regenerate-main
+
+# Install Xcode MCP configuration
+./script --prompt mcp-xcode
+./script --no-prompt mcp-xcode
 
 # ════════════════════════════════════════════════════════════
 # MULTIPLE ACTIONS
 # ════════════════════════════════════════════════════════════
 
 # Merge workspace MCP AND user settings
-./script --prompt workspace:mcp --prompt user:settings
+./script --prompt config-workspace:mcp --prompt config-user:settings
 
 # Auto-merge workspace MCP, prompt for user settings
-./script --no-prompt workspace:mcp --prompt user:settings
+./script --no-prompt config-workspace:mcp --prompt config-user:settings
 
 # ════════════════════════════════════════════════════════════
-# COMBINED WITH INSTRUCTIONS
+# COMBINED CONFIG + SIMPLE ACTIONS
 # ════════════════════════════════════════════════════════════
 
 # Instructions + workspace MCP
-./script --prompt instructions --prompt workspace:mcp
+./script --prompt instructions --prompt config-workspace:mcp
 
 # Auto-install instructions, prompt for workspace configs
-./script --no-prompt instructions --prompt workspace
+./script --no-prompt instructions --prompt config-workspace
+
+# Full project setup
+./script --no-prompt instructions \\
+         --no-prompt config-user:settings:swift \\
+         --no-prompt config-workspace \\
+         --no-prompt dev-link \\
+         --no-prompt dev-vscode
 ```
 
-### Special Cases
+### Action Validation Rules
 
-#### Instructions Action
+**Config actions:**
+- MUST start with `config-` prefix
+- MUST have scope: `user`, `workspace`, or `folder`
+- MAY have category: `settings`, `mcp`, etc.
+- MAY have theme: `swift`, `xcode-mcpserver`, etc.
+- Examples: `config-user`, `config-workspace:mcp:xcode-mcpserver`
+
+**Simple actions:**
+- MUST NOT have `:` (no hierarchy)
+- MUST be one of: `instructions`, `dev-link`, `dev-vscode`, `regenerate-main`, `mcp-xcode`
+- Examples: `instructions`, `dev-link`
+
+**Invalid examples:**
 ```zsh
-# Instructions is a special scope (not VSCode configs)
-./script --prompt instructions
-./script --no-prompt instructions
-
-# No hierarchy for instructions (it's just files)
-# These are INVALID:
-./script --prompt instructions:something  # ❌ NO
-```
-
-#### Other Actions (dev-link, dev-vscode, etc.)
-```zsh
-# These remain simple actions (no hierarchy)
-./script --prompt dev-link
-./script --prompt dev-vscode
-./script --prompt mcp-xcode       # Special shortcut, may deprecate
-./script --prompt regenerate-main
+./script --prompt instructions:something  # ❌ instructions doesn't support hierarchy
+./script --prompt user:settings            # ❌ missing config- prefix
+./script --prompt config-invalid:mcp       # ❌ invalid scope (not user/workspace/folder)
+./script --prompt dev-link:something       # ❌ dev-link doesn't support hierarchy
 ```
 
 ### Implementation Notes
 
 **Parsing logic (Zsh):**
 ```zsh
-# Split on colon using zsh parameter expansion
-local -a parts=(${(s.:.)action_spec})
-local scope="${parts[1]}"
-local category="${parts[2]:-}"
-local theme="${parts[3]:-}"
+# Determine action type
+if [[ "$action_spec" =~ ^config- ]]; then
+  # Config action with selectors
+  local config_suffix="${action_spec#config-}"
+  local -a parts=(${(s.:.)config_suffix})
+  local scope="${parts[1]}"
+  local category="${parts[2]:-}"
+  local theme="${parts[3]:-}"
+  
+  # Validate scope
+  if [[ ! "$scope" =~ ^(user|workspace|folder)$ ]]; then
+    error "Invalid config scope: $scope"
+    return 1
+  fi
+  
+  # Match files based on specificity
+  if [[ -n "$theme" && -n "$category" ]]; then
+    # Narrow: scope + category + theme
+    # Match: vscode/<scope>/<theme>__<category>.json
+  elif [[ -n "$category" ]]; then
+    # Medium: scope + category
+    # Match: vscode/<scope>/*__<category>.json
+  else
+    # Broad: scope only
+    # Match: vscode/<scope>/*__*.json (all files)
+  ficonfig-workspace:settings:swift|python
 
-# Match files based on specificity
-if [[ -n "$theme" && -n "$category" ]]; then
-  # Narrow: scope + category + theme
-  # Match: vscode/<scope>/<theme>__<category>.json
-elif [[ -n "$category" ]]; then
-  # Medium: scope + category
-  # Match: vscode/<scope>/*__<category>.json
-else
-  # Broad: scope only
-  # Match: vscode/<scope>/*__*.json (all files)
+# Wildcard matching
+./script --prompt config-workspace:mcp:xcode*
+
+# Multiple categories
+./script --prompt config-
+    *)
+      error "Unknown action: $action_spec"
+      return 1
+      ;;
+  esac
 fi
 ```
 
@@ -1724,13 +1807,13 @@ Not implementing initially, but syntax could support:
 
 ```zsh
 # Multiple themes (OR)
-./script --prompt workspace:settings:swift|python
+./script --prompt config-workspace:settings:swift|python
 
 # Wildcard matching
-./script --prompt workspace:mcp:xcode*
+./script --prompt config-workspace:mcp:xcode*
 
 # Multiple categories
-./script --prompt user:settings|mcp:swift
+./script --prompt config-user:settings|mcp:swift
 ```
 
 **Decision:** Phase 2 feature - requires more complex parsing.
@@ -1761,16 +1844,16 @@ $dest_dir/
 ### Proposed Future Syntax
 
 ```zsh
-# Syntax: folder[folder_name]:<category>:<theme>
+# Syntax: config-folder[folder_name]:<category>:<theme>
 
 # All folders (root + subfolders)
-./script --prompt folder:settings
+./script --prompt config-folder:settings
 
 # Specific folder by name
-./script --prompt folder[scripts]:settings
+./script --prompt config-folder[scripts]:settings
 
 # Root folder explicitly
-./script --prompt folder[]:settings
+./script --prompt config-folder[]:settings
 ```
 
 **Priority:** After argument overhaul complete.
@@ -2058,10 +2141,10 @@ The script automatically detects Xcode projects and prompts for MCP server insta
 **Approach:**
 ```zsh
 # Explicit request (new syntax)
-./script --prompt workspace:mcp:xcode-mcpserver
+./script --prompt config-workspace:mcp:xcode-mcpserver
 
 # Auto-detection with opt-in
-./script --detect-project-type --prompt workspace:mcp
+./script --detect-project-type --prompt config-workspace:mcp
 
 # Or as a new flag
 ./script --auto-configure-mcp

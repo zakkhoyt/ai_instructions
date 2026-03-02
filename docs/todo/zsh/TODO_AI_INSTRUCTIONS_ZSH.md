@@ -1,5 +1,8 @@
 Let's add more changes to those zsh AI instruction files
 
+
+
+
 # Scripting Conventions
 
 <details >
@@ -29,6 +32,17 @@ Reminder that `local` is reserved to be used inside of `functions`, not in the s
 
 </details>
   
+
+# debug logging of variables after declaration
+* Re-read ai instructions about zsh. 
+  * There should be a section about calling `slog_var_se_d` after each variable initialization or value change. 
+    * EX: `slog_var_se_d "platforms" "$platforms"`
+  * Let's replace that with `slog_var1_se_d`. There are a couple of differences:
+    * `slog_var1_se_d` only requires that you pass the variable *name* (a single positional argument).
+      * Depending on the variable type, the value will be formatted and printed accordingly. 
+        * EX: arrays are logged over manu lines with one index/element per line
+        * EX: associative arrays (dicts) are logged over manu lines with one key/value pair per line. Lines are sorted by key in lex ordering
+    * `slog_var_se_d` is deprecated and should not be used anymore
 
 
 

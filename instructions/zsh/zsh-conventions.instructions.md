@@ -528,23 +528,43 @@ status="complete"  # DON'T DO THIS
 
 ### Variable Debugging Pattern (Required)
 
-**For every variable or array defined in a script, immediately log its value using debug functions:**
+**For every variable assignment (initialization or value change), immediately log the variable using `slog_var1_se_d`:**
 
 ```zsh
-# For scalar variables
-my_var="some_value"
-slog_var_se_d "my_var" "$my_var"
+# For scalar variables (script root scope)
+typeset -r my_var="some_value"
+slog_var1_se_d "my_var"
 
-# For arrays
-my_array=("item1" "item2" "item3")
-slog_array_se_d "my_array" "${my_array[@]}"
+# For arrays (script root scope)
+typeset -r -a my_array=("item1" "item2" "item3")
+slog_var1_se_d "my_array"
 
-# For result variables
-result=$(some_command)
-result_rval=$?
-slog_var_se_d "result" "$result"
-slog_var_se_d "result_rval" "$result_rval"
+# For associative arrays (script root scope)
+typeset -r -A my_dict=([name]="zakk" [role]="maintainer")
+slog_var1_se_d "my_dict"
+
+# For result variables (script root scope)
+typeset result="$(some_command)"
+typeset -i result_rval=$?
+slog_var1_se_d "result"
+slog_var1_se_d "result_rval"
+
+# For result variables (function scope)
+function example_step {
+  local result="$(some_command)"
+  local -i result_rval=$?
+
+  slog_var1_se_d "result"
+  slog_var1_se_d "result_rval"
+}
 ```
+
+**`slog_var1_se_d` semantics:**
+- `var1` means one required argument: the variable name as a string (for example, `"platforms"`)
+- Do not pass the variable value as a second argument
+- Arrays are formatted across multiple lines with one index/element per line
+- Associative arrays are formatted across multiple lines with key/value pairs sorted by key (lexicographic order)
+- `slog_var_se_d` is deprecated and should not be used
 
 **Why this pattern:**
 - Provides complete variable visibility when `--debug` flag is used
@@ -552,7 +572,7 @@ slog_var_se_d "result_rval" "$result_rval"
 - No performance cost when debug mode is off (functions no-op)
 - Creates a self-documenting record of variable flow
 
-**Rule:** Every variable assignment should be followed by its corresponding `slog_var_se_d` or `slog_array_se_d` call.
+**Rule:** Every variable assignment should be followed by `slog_var1_se_d "<variable_name>"`.
 
 ---
 
@@ -797,7 +817,7 @@ backup_path=$(get_backup_path --source-dir "$source_dir") || {
   exit $exit_code
 }
 
-slog_var_se_d "backup_path" "$backup_path"
+slog_var1_se_d "backup_path"
 slog_step_se --context success "determined backup directory: " --url "$backup_path" --default
 ```
 
@@ -1563,7 +1583,7 @@ result=$(command_with_args) || {
   exit $exit_code  # Use 'exit' in script root scope, 'return' in functions
 }
 
-slog_var_se_d "result" "$result"
+slog_var1_se_d "result"
 slog_step_se --context success "operation completed" --code "$result" --default
 ```
 
@@ -1575,7 +1595,7 @@ slog_step_se --context success "operation completed" --code "$result" --default
 4. **Exit code capture**: `exit_code=$?` - Preserve exact exit status
 5. **Error log**: `--context fatal` with `--exit-code` - Reports failure
 6. **Scope-aware exit**: `exit` for script root, `return` for functions
-7. **Debug log**: `slog_var_se_d` - Log result variable for debugging
+7. **Debug log**: `slog_var1_se_d` - Log result variable for debugging by variable name
 8. **Success log**: `--context success` - Reports successful completion
 
 ### Step Logging Levels and Command Messages
@@ -1620,7 +1640,7 @@ git_default_branch="$(git rev-parse --abbrev-ref "$(git remote)"/HEAD | sed 's|o
   exit $exit_code
 }
 
-slog_var_se_d "git_default_branch" "$git_default_branch"
+slog_var1_se_d "git_default_branch"
 slog_step_se --context success "Read repository's default branch: " --code "$git_default_branch" --default
 ```
 
@@ -1752,7 +1772,7 @@ jira_json=$(get_jira_ticket "$jira_ticket" "$IS_DEBUG") || {
   exit $exit_code
 }
 
-slog_var_se_d "jira_json" "$jira_json"
+slog_var1_se_d "jira_json"
 slog_step_se --context success "Fetched JSON for jira ticket " --code "$jira_ticket" --default
 ```
 
