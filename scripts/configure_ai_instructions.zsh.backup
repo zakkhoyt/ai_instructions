@@ -3,7 +3,9 @@
 # shellcheck disable=SC2296
 # shellcheck disable=SC1091
 
-source "$HOME/.zsh_home/utilities/.zsh_boilerplate"
+source "$HOME/.zsh_home/utilities/.zsh_scripting_utilities" "$0" "$@" > /dev/null
+
+# TODO: zakkhoyt - source boilerplate 
 
 #
 # Debug trap for hanging issues - set DEBUG_HANG=1 to enable

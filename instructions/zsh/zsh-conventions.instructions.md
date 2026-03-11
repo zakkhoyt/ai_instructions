@@ -148,7 +148,7 @@ Some script locations require more detailed header comments:
 
 ### Required Pattern
 
-Immediately after header comments, source `.zsh_boilerplate`:
+Immediately after header comments, initialize required variables then source `.zsh_boilerplate`:
 
 ```zsh
 #!/usr/bin/env -S zsh -euo pipefail
@@ -161,8 +161,20 @@ Immediately after header comments, source `.zsh_boilerplate`:
 
 # ---- ---- ----     Source Utilities     ---- ---- ----
 
-source "$HOME/.zsh_home/utilities/.zsh_boilerplate" "$0" "$@"
+# Initialize variables required by boilerplate (must be done before sourcing)
+export IS_DEBUG=""
+export IS_VERBOSE=""
+export IS_DRY_RUN=""
+export IS_UTILS_DEBUG=""
+
+source "$HOME/.zsh_home/utilities/.zsh_boilerplate"
 ```
+
+**CRITICAL**: The IS_* variables MUST be initialized before sourcing boilerplate. This is because:
+1. Boilerplate sources `.zsh_zparseopts` which uses `slog_var_se_d` calls
+2. Those logging functions check `IS_DEBUG` and `IS_VERBOSE` WITHOUT the `:-` guard
+3. With `-euo pipefail`, accessing unset variables causes script exit
+4. Initializing to empty strings prevents this while still allowing boilerplate to set proper values
 
 ### What You Get From Boilerplate
 
@@ -1875,8 +1887,14 @@ Some directories use different logging functions:
 **ALL scripts must treat `.zsh_boilerplate` as stages 1-2** (common flags + trap/debug behavior), then parse only script-specific options locally.
 
 ```zsh
+# Initialize variables required by boilerplate
+export IS_DEBUG=""
+export IS_VERBOSE=""
+export IS_DRY_RUN=""
+export IS_UTILS_DEBUG=""
+
 # Stage 0 (required): bootstrap common behavior
-source "$HOME/.zsh_home/utilities/.zsh_boilerplate" "$0" "$@"
+source "$HOME/.zsh_home/utilities/.zsh_boilerplate"
 
 # Stage 1-2 already handled by boilerplate:
 # - common flags like --help, -d/--debug, --dry-run, --verbose
