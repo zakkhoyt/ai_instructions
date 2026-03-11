@@ -1,5 +1,10 @@
 
 
+
+* [ ] add cli support for installing the AI instruciton files to: `~/Library/Application Support/Code/User/prompts/`, without the intermediate `.github/instructions/` directory. Create the folder if needed
+
+---
+
 The script `scripts/configure_ai_instructions.zsh` used to do a much better  job than it currently does.
 I'm specificaly talking about the `[INFO] ℹ️ === Instruction File Installation ===` section
 * The script used to always display a menu allowing the user to do everything in the `Status Legend` by specifying a letter for each entry in the list of instructions

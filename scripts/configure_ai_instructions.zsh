@@ -3,9 +3,7 @@
 # shellcheck disable=SC2296
 # shellcheck disable=SC1091
 
-source "$HOME/.zsh_home/utilities/.zsh_scripting_utilities" "$0" "$@" > /dev/null
-
-# TODO: zakkhoyt - source boilerplate 
+source "$HOME/.zsh_home/utilities/.zsh_boilerplate" "$0" "$@" > /dev/null
 
 #
 # Debug trap for hanging issues - set DEBUG_HANG=1 to enable
@@ -176,7 +174,38 @@ function execute_or_dry_run {
 
 # ---- ---- ----   Argument Parsing   ---- ---- ----
 
-zparseopts -D -F -- \
+typeset -a raw_args=("$@")
+typeset -a normalized_args=()
+typeset flag_prompt_all=""
+typeset arg_value=""
+typeset next_arg_value=""
+typeset -i arg_index=1
+
+if [[ ${#raw_args[@]} -eq 0 ]]; then
+  slog_step_se --context info "No arguments provided. See --help"
+  exit 2
+fi
+
+while (( arg_index <= ${#raw_args[@]} )); do
+  arg_value="${raw_args[$arg_index]}"
+  if [[ "$arg_value" == "--prompt" ]]; then
+    next_arg_value="${raw_args[$((arg_index + 1))]:-}"
+    if [[ -z "$next_arg_value" || "$next_arg_value" == --* ]]; then
+      flag_prompt_all="1"
+      ((arg_index++))
+      continue
+    fi
+  fi
+  normalized_args+=("$arg_value")
+  ((arg_index++))
+done
+
+set -- "${normalized_args[@]}"
+
+typeset -a opt_prompt_actions=()
+typeset -a opt_no_prompt_actions=()
+
+zparseopts -D -E -- \
   -help=flag_help \
   {d,-debug}+=flag_debug \
   -dry-run=flag_dry_run \
@@ -187,12 +216,27 @@ zparseopts -D -F -- \
   -user-settings=flag_user_settings \
   -mcp-xcode=flag_mcp_xcode \
   -instructions=flag_instructions \
-  -prompt=flag_prompt \
   -regenerate-main=flag_regenerate_main \
+  -prompt:=opt_prompt_actions \
+  -no-prompt:=opt_no_prompt_actions \
   -source-dir:=opt_source_dir \
   -dest-dir:=opt_dest_dir \
   -ai-platform:=opt_ai_platform \
   -configure-type:=opt_configure_type
+
+if [[ ${#@} -gt 0 ]]; then
+  log_error "Unrecognized arguments: $*"
+  log_error "See --help"
+  exit 2
+fi
+
+typeset -a prompt_actions=(${opt_prompt_actions:#--prompt})
+typeset -a no_prompt_actions=(${opt_no_prompt_actions:#--no-prompt})
+
+if [[ ${#opt_no_prompt_actions[@]} -gt 0 && ${#no_prompt_actions[@]} -eq 0 ]]; then
+  log_error "--no-prompt requires an action name"
+  exit 2
+fi
 
 # ---- ---- ----     Help Function     ---- ---- ----
 
@@ -250,9 +294,17 @@ META OPTIONS
                            - Skips instructions that are already installed
                            - Use with --prompt to show interactive menu for file selection
                            - Without --prompt, installs all uninstalled files automatically
-    --prompt                Enable interactive prompts for installations
-                           - When set: shows interactive menus for confirmation/selection
-                           - When not set: shows info about what's available but doesn't prompt
+    --prompt <action>       Run the action in prompt mode (repeatable)
+    --no-prompt <action>    Run the action in non-interactive mode (repeatable)
+                           Valid actions:
+                           - instructions
+                           - mcp-xcode
+                           - workspace-settings
+                           - user-settings
+                           - dev-link
+                           - dev-vscode
+                           - regenerate-main
+                           Legacy: --prompt (without action) prompts all enabled legacy actions
 
 ENVIRONMENT
     Z2K_AI_DIR             Override default source directory location
@@ -265,31 +317,88 @@ EXIT VALUES
     4                      File operation failed
 
 EXAMPLES
-    # Configure copilot instructions for current directory
-    ./${script_basename}
+    # Install instruction files non-interactively
+    ./${script_basename} --no-prompt instructions
 
-    # Configure claude instructions with copy mode
-    ./${script_basename} --ai-platform claude --configure-type copy
+    # Prompt for instruction file selection
+    ./${script_basename} --prompt instructions
 
-    # Configure specific target directory
-    ./${script_basename} --dest-dir /path/to/project
+    # Prompt for instructions, auto-run MCP setup
+    ./${script_basename} --prompt instructions --no-prompt mcp-xcode
 
     # Merge VS Code workspace templates (chat auto-approvals, AI preferences)
-    ./${script_basename} --workspace-settings
+    ./${script_basename} --no-prompt workspace-settings
 
     # Merge VS Code user settings templates into your macOS profile
-    ./${script_basename} --user-settings
+    ./${script_basename} --prompt user-settings
 
     # Development workflow: link dev directory and add to VS Code workspace
-    ./${script_basename} --dev-link --dev-vscode
+    ./${script_basename} --no-prompt dev-link --no-prompt dev-vscode
 
     # Preview changes without modifying files
-    ./${script_basename} --dry-run
-
-    # Configure a VSCode workspace for as prompt free of an AI Agent experience as possible
-    ~/.ai/scripts/configure_ai_instructions.zsh --dev-vscode --workspace-settings --debug
-    ./${script_basename} --dev-vscode --workspace-settings --debug
+    ./${script_basename} --dry-run --no-prompt instructions
 EOF
+}
+
+typeset -a VALID_ACTIONS=(
+  instructions
+  mcp-xcode
+  workspace-settings
+  user-settings
+  dev-link
+  dev-vscode
+  regenerate-main
+)
+
+function normalize_action_name {
+  typeset action_name="$1"
+  case "$action_name" in
+    vscode-settings)
+      echo "workspace-settings"
+      ;;
+    *)
+      echo "$action_name"
+      ;;
+  esac
+}
+
+function is_valid_action {
+  typeset action_name="$1"
+  if [[ "${VALID_ACTIONS[(I)$action_name]}" -gt 0 ]]; then
+    return 0
+  fi
+  return 1
+}
+
+function append_action_unique {
+  zparseopts -D -F -- \
+    -array:=opt_array_name \
+    -action:=opt_action_name
+  local array_name="${opt_array_name[2]}"
+  local action_name="${opt_action_name[2]}"
+
+  if [[ -z "$array_name" || -z "$action_name" ]]; then
+    return 1
+  fi
+
+  eval "if [[ \${${array_name}[(I)$action_name]} -eq 0 ]]; then ${array_name}+=(\"$action_name\"); fi"
+}
+
+function action_mode_for {
+  typeset action_name="$1"
+  if [[ "${prompt_actions[(I)$action_name]}" -gt 0 ]]; then
+    echo "prompt"
+    return 0
+  fi
+  if [[ "${no_prompt_actions[(I)$action_name]}" -gt 0 ]]; then
+    echo "no-prompt"
+    return 0
+  fi
+  if [[ -n "${flag_prompt_all:-}" ]]; then
+    echo "prompt"
+    return 0
+  fi
+  echo "no-prompt"
 }
 
 # Display help if requested
@@ -298,28 +407,94 @@ if [[ -n "${flag_help:-}" ]]; then
   exit 0
 fi
 
+typeset -a enabled_actions=()
+typeset raw_action=""
+typeset normalized_action=""
+
+for raw_action in "${prompt_actions[@]}"; do
+  normalized_action="$(normalize_action_name "$raw_action")"
+  if ! is_valid_action "$normalized_action"; then
+    log_error "Invalid action for --prompt: $raw_action"
+    log_error "Valid actions: ${(j:, :)VALID_ACTIONS[@]}"
+    exit 2
+  fi
+  append_action_unique --array enabled_actions --action "$normalized_action"
+  append_action_unique --array prompt_actions --action "$normalized_action"
+done
+
+for raw_action in "${no_prompt_actions[@]}"; do
+  normalized_action="$(normalize_action_name "$raw_action")"
+  if ! is_valid_action "$normalized_action"; then
+    log_error "Invalid action for --no-prompt: $raw_action"
+    log_error "Valid actions: ${(j:, :)VALID_ACTIONS[@]}"
+    exit 2
+  fi
+  append_action_unique --array enabled_actions --action "$normalized_action"
+  append_action_unique --array no_prompt_actions --action "$normalized_action"
+done
+
 if [[ -n "${flag_vscode_settings:-}" && -z "${flag_workspace_settings:-}" ]]; then
   log_warning "--vscode-settings is deprecated; please use --workspace-settings"
   flag_workspace_settings="1"
 fi
 
+if [[ -n "${flag_instructions:-}" ]]; then
+  append_action_unique --array enabled_actions --action "instructions"
+fi
+if [[ -n "${flag_mcp_xcode:-}" ]]; then
+  append_action_unique --array enabled_actions --action "mcp-xcode"
+fi
+if [[ -n "${flag_workspace_settings:-}" ]]; then
+  append_action_unique --array enabled_actions --action "workspace-settings"
+fi
+if [[ -n "${flag_user_settings:-}" ]]; then
+  append_action_unique --array enabled_actions --action "user-settings"
+fi
+if [[ -n "${flag_dev_link:-}" ]]; then
+  append_action_unique --array enabled_actions --action "dev-link"
+fi
+if [[ -n "${flag_dev_vscode:-}" ]]; then
+  append_action_unique --array enabled_actions --action "dev-vscode"
+fi
+if [[ -n "${flag_regenerate_main:-}" ]]; then
+  append_action_unique --array enabled_actions --action "regenerate-main"
+fi
+
+for normalized_action in "${prompt_actions[@]}"; do
+  if [[ "${no_prompt_actions[(I)$normalized_action]}" -gt 0 ]]; then
+    log_error "Action specified in both modes: $normalized_action"
+    exit 2
+  fi
+done
+
+if [[ -n "${flag_prompt_all:-}" ]]; then
+  if [[ ${#enabled_actions[@]} -eq 0 ]]; then
+    append_action_unique --array enabled_actions --action "instructions"
+  fi
+  for normalized_action in "${enabled_actions[@]}"; do
+    append_action_unique --array prompt_actions --action "$normalized_action"
+  done
+fi
+
 # ---- ---- ----     Variable Initialization     ---- ---- ----
 
 # Extract argument values
-user_ai_dir="${opt_source_dir[2]:-${Z2K_AI_DIR:-$HOME/.ai}}"
-dest_dir="${opt_dest_dir[2]:-$PWD}"
-configure_type="${opt_configure_type[2]:-symlink}"
-ai_platform="${opt_ai_platform[2]:-copilot}"
+typeset -r user_ai_dir="${opt_source_dir[2]:-${Z2K_AI_DIR:-$HOME/.ai}}"
+typeset -r dest_dir="${opt_dest_dir[2]:-$PWD}"
+typeset -r configure_type="${opt_configure_type[2]:-symlink}"
+typeset ai_platform="${opt_ai_platform[2]:-copilot}"
 
 # Detect repository directory (where this script is located)
-script_dir="${0:A:h}"
-repo_dir="${script_dir:h}"  # Parent of scripts/ directory
+typeset -r script_dir="${0:A:h}"
+typeset -r repo_dir="${script_dir:h}"  # Parent of scripts/ directory
 
-common_repo_instructions_dir="$repo_dir/instructions"
-platform_repo_instructions_dir="$repo_dir/ai_platforms/$ai_platform/.github/instructions"
+typeset -r common_repo_instructions_dir="$repo_dir/instructions"
+typeset -r platform_repo_instructions_dir="$repo_dir/ai_platforms/$ai_platform/.github/instructions"
 
-common_user_instructions_dir="$user_ai_dir/instructions"
-platform_user_instructions_dir="$user_ai_dir/ai_platforms/$ai_platform/.github/instructions"
+typeset -r common_user_instructions_dir="$user_ai_dir/instructions"
+typeset -r platform_user_instructions_dir="$user_ai_dir/ai_platforms/$ai_platform/.github/instructions"
+typeset repo_instructions_dir=""
+typeset user_ai_instructions_dir=""
 
 if [[ -d "$common_repo_instructions_dir" ]]; then
   repo_instructions_dir="$common_repo_instructions_dir"
@@ -335,6 +510,9 @@ log_debug "script_dir: $script_dir"
 log_debug "repo_dir: $repo_dir"
 log_debug "user_ai_dir: $user_ai_dir"
 log_debug "dest_dir: $dest_dir"
+slog_var1_se_d "enabled_actions"
+slog_var1_se_d "prompt_actions"
+slog_var1_se_d "no_prompt_actions"
 
 # ---- ---- ----     Input Validation     ---- ---- ----
 
@@ -689,9 +867,11 @@ function create_dev_symlink {
 # Usage: update_vscode_workspace --user-ai-dir "/Users/user/.ai"
 function update_vscode_workspace {
   zparseopts -D -F -- \
-    -user-ai-dir:=opt_user_ai_dir
+    -user-ai-dir:=opt_user_ai_dir \
+    -mode:=opt_mode
   
   local user_ai_dir_path="${opt_user_ai_dir[2]}"
+  local mode="${opt_mode[2]:-prompt}"
   
   log_info "Updating VS Code workspace configuration..."
   
@@ -710,7 +890,7 @@ function update_vscode_workspace {
     return 0
   fi
   
-  local workspace_file
+  local workspace_file=""
   
   if [[ ${#workspace_files[@]} -eq 1 ]]; then
     workspace_file="${workspace_files[1]}"
@@ -740,20 +920,22 @@ function update_vscode_workspace {
       local file="${entry#*:}"
       local file_basename="${file:t}"
       display_files+=("$file")
-      printf "%2d. %s\n" "$file_index" "$file_basename"
+      printf "%3d. %s\n" "$file_index" "$file_basename"
       ((file_index++))
     done
     
 
-    echo "Enter selection (default: 1 - most recently modified): "
-    echo -n "1"
-    
-    read -r user_selection
-    
-    # Use pre-filled "1" if user just pressed Enter
-    if [[ -z "$user_selection" ]]; then
-      user_selection="1"
-      log_debug "Using pre-selected workspace file: 1"
+    local user_selection="1"
+    if [[ "$mode" == "prompt" ]]; then
+      echo "Enter selection (default: 1 - most recently modified): "
+      echo -n "1"
+      read -r user_selection
+      if [[ -z "$user_selection" ]]; then
+        user_selection="1"
+        log_debug "Using pre-selected workspace file: 1"
+      fi
+    else
+      log_info "Selecting most recent workspace file (--no-prompt mode): 1"
     fi
     
     # Validate selection
@@ -1037,6 +1219,9 @@ function get_workspace_destination_file {
 
 # Interactive menu for workspace (.code-workspace) and .vscode JSON templates
 function run_workspace_settings_menu {
+  zparseopts -D -F -- \
+    -mode:=opt_mode
+  local mode="${opt_mode[2]:-prompt}"
   local workspace_dir="$user_ai_dir/vscode/workspace"
   local dot_vscode_dir="$workspace_dir/.vscode"
 
@@ -1091,20 +1276,23 @@ function run_workspace_settings_menu {
     return 0
   fi
 
-  log_info "Workspace templates available:"
   local idx=1
-  while [[ $idx -le ${#template_paths[@]} ]]; do
-    printf "%2d. %s\n" "$idx" "${template_labels[$idx]}"
-    ((idx++))
-  done
-
-  printf "Enter selections (e.g., '1 3' or 'all'). Press Enter to skip: "
   local user_selection=""
-  read -r user_selection
-
-  if [[ -z "$user_selection" ]]; then
-    log_info "Skipping workspace template merge"
-    return 0
+  if [[ "$mode" == "prompt" ]]; then
+    log_info "Workspace templates available:"
+    while [[ $idx -le ${#template_paths[@]} ]]; do
+      printf "%3d. %s\n" "$idx" "${template_labels[$idx]}"
+      ((idx++))
+    done
+    printf "Enter selections (e.g., '1 3' or 'all'). Press Enter to skip: "
+    read -r user_selection
+    if [[ -z "$user_selection" ]]; then
+      log_info "Skipping workspace template merge"
+      return 0
+    fi
+  else
+    user_selection="all"
+    log_info "Applying all workspace templates (--no-prompt mode)"
   fi
 
   local -a selected_indices=()
@@ -1149,6 +1337,9 @@ function run_workspace_settings_menu {
 
 # Interactive menu for VS Code user profile templates
 function run_user_settings_menu {
+  zparseopts -D -F -- \
+    -mode:=opt_mode
+  local mode="${opt_mode[2]:-prompt}"
   local user_templates_dir="$user_ai_dir/vscode/user"
   local code_user_dir="$HOME/Library/Application Support/Code/User"
 
@@ -1191,20 +1382,23 @@ function run_user_settings_menu {
     template_labels+=("$label")
   done
 
-  log_info "User settings templates available:"
   local idx=1
-  while [[ $idx -le ${#template_paths[@]} ]]; do
-    printf "%2d. %s\n" "$idx" "${template_labels[$idx]}"
-    ((idx++))
-  done
-
-  printf "Enter selections (e.g., '2 4' or 'all'). Press Enter to skip: "
   local user_selection=""
-  read -r user_selection
-
-  if [[ -z "$user_selection" ]]; then
-    log_info "Skipping user settings merge"
-    return 0
+  if [[ "$mode" == "prompt" ]]; then
+    log_info "User settings templates available:"
+    while [[ $idx -le ${#template_paths[@]} ]]; do
+      printf "%3d. %s\n" "$idx" "${template_labels[$idx]}"
+      ((idx++))
+    done
+    printf "Enter selections (e.g., '2 4' or 'all'). Press Enter to skip: "
+    read -r user_selection
+    if [[ -z "$user_selection" ]]; then
+      log_info "Skipping user settings merge"
+      return 0
+    fi
+  else
+    user_selection="all"
+    log_info "Applying all user settings templates (--no-prompt mode)"
   fi
 
   local -a selected_indices=()
@@ -1296,6 +1490,9 @@ function is_xcode_mcp_installed {
 
 # Prompt (if needed) and merge Xcode MCP configuration and Swift workspace settings when appropriate
 function maybe_merge_xcode_mcp_settings {
+  zparseopts -D -F -- \
+    -mode:=opt_mode
+  local mode="${opt_mode[2]:-no-prompt}"
   local should_merge=false
   
   # Check if MCP is already installed
@@ -1304,10 +1501,7 @@ function maybe_merge_xcode_mcp_settings {
     return 0
   fi
   
-  # If --mcp-xcode flag is set, auto-install without prompting
-  if [[ -n "${flag_mcp_xcode:-}" ]]; then
-    should_merge=true
-  elif [[ ${#xcode_project_artifacts[@]} -gt 0 ]]; then
+  if [[ ${#xcode_project_artifacts[@]} -gt 0 ]]; then
     # MCP not installed, but we detected Xcode artifacts
     log_info "Detected ${#xcode_project_artifacts[@]} Xcode-related artifact(s) that support the MCP server:"
     local preview_limit=5
@@ -1327,9 +1521,7 @@ function maybe_merge_xcode_mcp_settings {
     log_info "=== Xcode MCP Server Integration ==="
     log_info "This installs .vscode/mcp.json (servers) plus Swift workspace settings."
     
-    # Check if --prompt flag is set
-    if [[ -n "${flag_prompt:-}" ]]; then
-      log_info "Tip: re-run with --mcp-xcode to auto-apply without prompting."
+    if [[ "$mode" == "prompt" ]]; then
       printf "Proceed with installing the Xcode MCP server integration now? [y/N]: "
       local user_choice=""
       read -r user_choice
@@ -1339,11 +1531,12 @@ function maybe_merge_xcode_mcp_settings {
         log_info "Skipping Xcode MCP server configuration"
       fi
     else
-      log_info "To install MCP server, re-run with one of these flags:"
-      log_info "  - Use --mcp-xcode to auto-install without prompting"
-      log_info "  - Use --prompt --mcp-xcode to be prompted for confirmation"
-      log_info "Skipping Xcode MCP server configuration"
+      should_merge=true
+      log_info "Applying Xcode MCP server configuration (--no-prompt mode)"
     fi
+  else
+    log_error "No Xcode project artifacts detected in target directory: $dest_dir"
+    return 1
   fi
 
   if [[ "$should_merge" == true ]]; then
@@ -1435,6 +1628,9 @@ function update_gitignore {
 # and list of installed instruction files
 # Usage: synthesize_copilot_instructions
 function synthesize_copilot_instructions {
+  zparseopts -D -F -- \
+    -mode:=opt_mode
+  local mode="${opt_mode[2]:-prompt}"
   local template_file="$user_ai_dir/ai_platforms/copilot/.github/copilot-instructions.template.md"
   local output_file="$ai_platform_instruction_file"
   
@@ -1453,16 +1649,19 @@ function synthesize_copilot_instructions {
   
   # Check if output file exists and --regenerate-main wasn't passed
   if [[ -f "$output_file" ]] && [[ -z "${flag_regenerate_main:-}" ]]; then
-    # Prompt user for update
-
-    log_info "File exists: $output_file"
-    echo "Options:"
-    echo "  1. Update instruction file list only (preserve user edits)"
-    echo "  2. Skip (do nothing)"
-    echo "  3. Regenerate entire file from template (lose user edits)"
-
-    read -r "response?Enter choice [1]: "
-    response="${response:-1}"
+    local response="1"
+    if [[ "$mode" == "prompt" ]]; then
+      log_info "File exists: $output_file"
+      echo "Options:"
+      echo "  1. Update instruction file list only (preserve user edits)"
+      echo "  2. Skip (do nothing)"
+      echo "  3. Regenerate entire file from template (lose user edits)"
+      read -r "response?Enter choice [1]: "
+      response="${response:-1}"
+    else
+      response="3"
+      log_info "Regenerating main instruction file (--no-prompt mode)"
+    fi
     
     case "$response" in
       1)
@@ -1682,7 +1881,7 @@ function display_menu {
     
     local status_indicator="$(format_status_indicator "$file_status")"
     
-    printf "%2d. %s %s\n" "$file_index" "$status_indicator" "$file_basename"
+    printf "%3d. %s %s\n" "$file_index" "$status_indicator" "$file_basename"
     
     # Collect indices of already-installed files
     if [[ "$file_status" != "not_installed" ]]; then
@@ -1781,7 +1980,7 @@ function display_menu {
 # ---- ---- ----     File Installation     ---- ---- ----
 
 # Array to track installed files for summary
-installed_files=()
+typeset -a installed_files=()
 
 # Install a single instruction file by creating symlink or copying
 # Tracks installation in installed_files array for summary display
@@ -1844,9 +2043,49 @@ function install_instruction_file {
   esac
 }
 
+function run_instructions_action {
+  zparseopts -D -F -- \
+    -mode:=opt_mode
+  local mode="${opt_mode[2]:-no-prompt}"
+
+  if [[ "$mode" == "prompt" ]]; then
+    log_info "=== Instruction File Installation (prompt mode) ==="
+    display_menu
+    return 0
+  fi
+
+  log_info "=== Auto-installing instruction files (--no-prompt mode) ==="
+  local -a instruction_files=(${(f)"$(find "$user_ai_instructions_dir" -name "*.instructions.md" -type f | sort)"})
+  if [[ ${#instruction_files[@]} -eq 0 ]]; then
+    log_error "No instruction files found in $user_ai_instructions_dir"
+    return 1
+  fi
+
+  local file_path=""
+  local file_basename=""
+  local file_status=""
+  for file_path in "${instruction_files[@]}"; do
+    file_basename="${file_path:t}"
+    file_status="$(get_file_status --file-basename "$file_basename" --source-file "$file_path")"
+    if [[ "$file_status" == "not_installed" || "$file_status" == "copied_outdated" ]]; then
+      install_instruction_file --file-basename "$file_basename" --source-file "$file_path"
+    else
+      log_debug "Skipping already-installed file: $file_basename"
+    fi
+  done
+  log_success "Auto-installation complete"
+}
+
+function should_run_prompt_mode {
+  typeset action_name="$1"
+  typeset mode_value=""
+  mode_value="$(action_mode_for "$action_name")"
+  [[ "$mode_value" == "prompt" ]]
+}
+
 # ---- ---- ----     Script Work     ---- ---- ----
 
-dry_run_prefix=""
+typeset dry_run_prefix=""
 if [[ -n "${flag_dry_run:-}" ]]; then
   dry_run_prefix="DRY-RUN: "
   log_warning "Running in DRY-RUN mode - no changes will be made"
@@ -1857,84 +2096,66 @@ log_info "Source directory: $user_ai_instructions_dir"
 log_info "Target directory: $target_instructions_dir"
 log_info "Configuration type: $configure_type"
 
-# Create development directory symlink and update .gitignore if requested
-if [[ -n "${flag_dev_link:-}" ]]; then
-  local dev_link_name="${user_ai_dir:t}"
-  create_dev_symlink
-  update_gitignore --dev-link-name "$dev_link_name"
-fi
-
-# Add development directory to VS Code workspace if requested
-if [[ -n "${flag_dev_vscode:-}" ]]; then
-  update_vscode_workspace --user-ai-dir "$user_ai_dir"
-fi
-
-# Launch workspace template menu if requested
-if [[ -n "${flag_workspace_settings:-}" ]]; then
-  run_workspace_settings_menu
-fi
-
-# Launch user settings template menu if requested
-if [[ -n "${flag_user_settings:-}" ]]; then
-  run_user_settings_menu
-fi
-
-# Offer Xcode MCP server configuration and Swift workspace settings if requested or detected
-maybe_merge_xcode_mcp_settings
-
-# Synthesize main instruction file for copilot platform (only if it doesn't exist)
-if [[ "$ai_platform" == "copilot" ]] && [[ ! -f "$ai_platform_instruction_file" ]]; then
-  synthesize_copilot_instructions
-fi
-
-# Handle instruction file installation based on flags
-if [[ -n "${flag_instructions:-}" ]]; then
-  # --instructions flag is set
-  if has_instructions_to_install; then
-    log_success "All instruction files are already installed and current - skipping"
-  else
-    if [[ -n "${flag_prompt:-}" ]]; then
-      # --prompt --instructions: Show interactive menu
-      log_info "=== Instruction File Installation ==="
-      display_menu
-    else
-      # --instructions alone: Auto-install all uninstalled files
-      log_info "=== Auto-installing instruction files ==="
-      local instruction_files
-      instruction_files=(${(f)"$(find "$user_ai_instructions_dir" -name "*.instructions.md" -type f | sort)"})
-      
-      for file_path in "${instruction_files[@]}"; do
-        local file_basename="${file_path:t}"
-        local file_status="$(get_file_status --file-basename "$file_basename" --source-file "$file_path")"
-        
-        # Auto-install files that are not installed or outdated
-        if [[ "$file_status" == "not_installed" || "$file_status" == "copied_outdated" ]]; then
-          install_instruction_file --file-basename "$file_basename" --source-file "$file_path"
-        else
-          log_debug "Skipping already-installed file: $file_basename"
+typeset action_name=""
+typeset action_mode=""
+typeset dev_link_name=""
+for action_name in "${enabled_actions[@]}"; do
+  action_mode="$(action_mode_for "$action_name")"
+  log_info "Executing action: ${action_name} (${action_mode})"
+  case "$action_name" in
+    dev-link)
+      if [[ "$action_mode" == "prompt" ]]; then
+        printf "Create development symlink now? [y/N]: "
+        read -r arg_value
+        if [[ "${arg_value:l}" != y* ]]; then
+          log_info "Skipping dev-link action"
+          continue
         fi
-      done
-      log_success "Auto-installation complete"
-    fi
-  fi
-else
-  # No --instructions flag
-  if [[ -n "${flag_prompt:-}" ]]; then
-    # --prompt alone: Show interactive menu
-    log_info "=== Instruction File Installation ==="
-    display_menu
-  else
-    # No flags: Show info about available instructions but don't install
-    if has_instructions_to_install; then
-      log_info "Some instruction files are not installed or need updates"
-      log_info "To install instructions, re-run with one of these flags:"
-      log_info "  - Use --instructions to auto-install all uninstalled files"
-      log_info "  - Use --prompt to show interactive menu for file selection"
-      log_info "  - Use --instructions --prompt to prompt before installing"
-    else
-      log_success "All instruction files are already installed and current"
-    fi
-  fi
+      fi
+      dev_link_name="${user_ai_dir:t}"
+      create_dev_symlink || { log_error "dev-link action failed"; exit 1; }
+      update_gitignore --dev-link-name "$dev_link_name" || { log_error "dev-link action failed while updating .gitignore"; exit 1; }
+      ;;
+    dev-vscode)
+      if [[ "$action_mode" == "prompt" ]]; then
+        printf "Add development directory to VS Code workspace now? [y/N]: "
+        read -r arg_value
+        if [[ "${arg_value:l}" != y* ]]; then
+          log_info "Skipping dev-vscode action"
+          continue
+        fi
+      fi
+      update_vscode_workspace --user-ai-dir "$user_ai_dir" --mode "$action_mode" || { log_error "dev-vscode action failed"; exit 1; }
+      ;;
+    workspace-settings)
+      run_workspace_settings_menu --mode "$action_mode" || { log_error "workspace-settings action failed"; exit 1; }
+      ;;
+    user-settings)
+      run_user_settings_menu --mode "$action_mode" || { log_error "user-settings action failed"; exit 1; }
+      ;;
+    mcp-xcode)
+      maybe_merge_xcode_mcp_settings --mode "$action_mode" || { log_error "mcp-xcode action failed"; exit 1; }
+      ;;
+    instructions)
+      run_instructions_action --mode "$action_mode" || { log_error "instructions action failed"; exit 1; }
+      ;;
+    regenerate-main)
+      if [[ "$ai_platform" != "copilot" ]]; then
+        log_error "regenerate-main is only supported for copilot platform"
+        exit 2
+      fi
+      flag_regenerate_main="1"
+      synthesize_copilot_instructions --mode "$action_mode" || { log_error "regenerate-main action failed"; exit 1; }
+      ;;
+    *)
+      log_error "Unsupported action: $action_name"
+      exit 2
+      ;;
+  esac
+done
+
+if [[ "$ai_platform" == "copilot" ]] && [[ ! -f "$ai_platform_instruction_file" ]]; then
+  synthesize_copilot_instructions --mode "no-prompt"
 fi
 
 # Regenerate checksums file based on currently installed copied files
@@ -1985,14 +2206,14 @@ fi
 
 # Show summary of installed file
 if [[ ${#installed_files[@]} -gt 0 ]]; then
-  local action_verb
+  typeset action_verb=""
   if [[ "$configure_type" == "symlink" ]]; then
     action_verb="Symlinked"
   else
     action_verb="Copied"
   fi
   
-  local dry_run_prefix_summary=""
+  typeset dry_run_prefix_summary=""
   if [[ -n "${flag_dry_run:-}" ]]; then
     dry_run_prefix_summary="Would have "
     action_verb="${action_verb:l}"  # Lowercase for "would have symlinked"
@@ -2001,7 +2222,7 @@ if [[ ${#installed_files[@]} -gt 0 ]]; then
   log_info "${dry_run_prefix_summary}${action_verb} ${#installed_files[@]} file(s) to " --url "$target_instructions_dir" --default ":"
   
   # Build multiline list of files using (F) expansion
-  local file_lines=()
+  typeset -a file_lines=()
   for ((i=1; i<=${#installed_files[@]}; i++)); do
     file_lines+=("  ${i}. ${installed_files[$i]}")
   done

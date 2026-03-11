@@ -2,7 +2,7 @@
 
 **File:** [scripts/configure_ai_instructions.zsh](scripts/configure_ai_instructions.zsh)
 
-**Status:** Planning Phase - Discussion Required
+**Status:** In Progress - CLI action mode overhaul
 
 **Last Updated:** 2026-02-03
 
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-The `configure_ai_instructions.zsh` script's instruction file installation menu has degraded significantly. The core issue is that the `--instructions` and `--prompt` flags have conflicting and confusing behaviors that don't match user expectations.
+The `configure_ai_instructions.zsh` script requires a unified action-based CLI where every action can explicitly run in prompt or no-prompt mode. The previous boolean-flag interactions (`--instructions`, `--prompt`, implicit MCP behavior) were confusing and inconsistent.
 
 ### Critical Problems Identified
 
@@ -927,7 +927,11 @@ Based on current functionality:
 
 ### Proposed Argument Design (Final)
 
-**Recommended: Interpretation B (keep action flags, scope prompting)**
+**Implemented direction:** each action supports explicit mode selection:
+- `--prompt <action>`
+- `--no-prompt <action>`
+
+Legacy action flags remain supported and are mapped into the same action engine.
 
 ```zsh
 zparseopts -D -E -- \
@@ -937,42 +941,38 @@ zparseopts -D -E -- \
   -user-settings=flag_user_settings \
   -dev-link=flag_dev_link \
   -dev-vscode=flag_dev_vscode \
-  -prompt+:=opt_prompt_actions \
+  -regenerate-main=flag_regenerate_main \
+  -prompt:=opt_prompt_actions \
+  -no-prompt:=opt_no_prompt_actions \
   # ... other flags ...
 ```
 
 **Processing:**
 ```zsh
-# Extract action names from --prompt flags
-local -a prompt_actions=(${opt_prompt_actions[@]:#--prompt})
+# Normalize action names from --prompt / --no-prompt
+local -a prompt_actions=(${opt_prompt_actions:#--prompt})
+local -a no_prompt_actions=(${opt_no_prompt_actions:#--no-prompt})
 
 # Determine which actions are enabled
 local -a enabled_actions=()
+enabled_actions+=("${prompt_actions[@]}")
+enabled_actions+=("${no_prompt_actions[@]}")
 [[ -n "$flag_instructions" ]] && enabled_actions+=(instructions)
-[[ -n "$flag_mcp_xcode" ]] && enabled_actions+=(xcode-mcpserver)
+[[ -n "$flag_mcp_xcode" ]] && enabled_actions+=(mcp-xcode)
 # ... etc ...
 
-# Determine which actions should prompt
-local -a actions_to_prompt=()
-if [[ ${#prompt_actions[@]} -eq 0 ]]; then
-  if [[ -n "$flag_prompt" ]]; then
-    # --prompt with no args: prompt for ALL enabled actions
-    actions_to_prompt=("${enabled_actions[@]}")
-  else
-    # No --prompt: auto-run all enabled actions
-    actions_to_prompt=()
-  fi
-else
-  # --prompt <action>: only prompt for specified actions
-  actions_to_prompt=("${prompt_actions[@]}")
-fi
+# Reject conflicts where the same action is both prompt and no-prompt
+# Resolve mode per action:
+#   prompt > no-prompt > default no-prompt
 
 # Execute each action
 for action in "${enabled_actions[@]}"; do
-  if [[ "${actions_to_prompt[@]}" =~ "$action" ]]; then
-    execute_action_with_prompt "$action"
+  if action_in_array "$action" "${prompt_actions[@]}"; then
+    execute_action "$action" prompt
+  elif action_in_array "$action" "${no_prompt_actions[@]}"; then
+    execute_action "$action" no-prompt
   else
-    execute_action_auto "$action"
+    execute_action "$action" no-prompt
   fi
 done
 ```
@@ -986,46 +986,41 @@ done
 # CURRENT USE CASES (backward compatible)
 # ═══════════════════════════════════════════════════════════
 
-# 1. Auto-install all uninstalled instructions (no prompts)
-./script --instructions
+# 1. Auto-install all uninstalled instructions
+./script --no-prompt instructions
 
 # 2. Show instructions menu interactively
-./script --instructions --prompt
+./script --prompt instructions
 
 # 3. Auto-setup Xcode MCP
-./script --mcp-xcode
+./script --no-prompt mcp-xcode
 
 # 4. Prompt for Xcode MCP setup
-./script --mcp-xcode --prompt
+./script --prompt mcp-xcode
 
 # ═══════════════════════════════════════════════════════════
 # NEW CAPABILITIES (with scoped prompting)
 # ═══════════════════════════════════════════════════════════
 
 # 5. Auto-install instructions, prompt for Xcode MCP
-./script --instructions --mcp-xcode --prompt xcode-mcpserver
+./script --no-prompt instructions --prompt mcp-xcode
 
 # 6. Prompt for instructions, auto-install Xcode MCP
-./script --instructions --mcp-xcode --prompt instructions
+./script --prompt instructions --no-prompt mcp-xcode
 
 # 7. Do multiple things, prompt for all
-./script --instructions --mcp-xcode --workspace-settings --prompt
+./script --prompt instructions --prompt mcp-xcode --prompt workspace-settings
 
 # 8. Do multiple things, prompt for specific ones
-./script --instructions --mcp-xcode --workspace-settings \
-  --prompt instructions --prompt workspace-settings
-# (auto-installs xcode-mcpserver without prompting)
+./script --prompt instructions --prompt workspace-settings --no-prompt mcp-xcode
 
 # ═══════════════════════════════════════════════════════════
 # DEFAULT BEHAVIOR (no action flags)
 # ═══════════════════════════════════════════════════════════
 
-# 9. Show info about available instructions (no installation)
+# 9. No arguments
 ./script
-
-# 10. Prompt for instructions (infer from --prompt argument)
-./script --prompt instructions
-# Equivalent to: ./script --instructions --prompt instructions
+# Prints message and exits non-zero: "No arguments provided. See --help"
 ```
 
 ---
@@ -1033,7 +1028,8 @@ done
 ### Arguments Deprecated/Displaced
 
 **Deprecated:**
-- ❌ Old `--prompt` (boolean) → New `--prompt [<action>...]` (optional repeatable value)
+- ❌ Old `--prompt` boolean intent model
+- ✅ Compatibility still exists for legacy combinations (`--instructions --prompt`, etc.)
 
 **Displaced:**
 - None! All existing action flags remain:
