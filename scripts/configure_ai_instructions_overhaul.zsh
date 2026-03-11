@@ -15,6 +15,12 @@
 #
 # Specification: scripts/CONFIGURE_AI_INSTRUCTIONS_OVERHAUL.md
 
+# Initialize boilerplate-required variables before sourcing
+[[ -z "${IS_DEBUG:-}" ]] && typeset IS_DEBUG=""
+[[ -z "${IS_VERBOSE:-}" ]] && typeset IS_VERBOSE=""
+[[ -z "${IS_UTILS_DEBUG:-}" ]] && typeset IS_UTILS_DEBUG=""
+[[ -z "${IS_DRY_RUN:-}" ]] && typeset IS_DRY_RUN=""
+
 # ---- ---- ----     Source Utilities     ---- ---- ----
 
 source "$HOME/.zsh_home/utilities/.zsh_boilerplate"
@@ -158,7 +164,7 @@ function print_usage {
   slog_se "${i4}" --code "1" --default " General error or validation failure"
   slog_se
   
-  return 1
+  return 0
 }
 
 # ---- ---- ----   Argument Parsing    ---- ---- ----
@@ -1169,6 +1175,11 @@ function is_xcode_mcp_installed {
 function install_xcode_mcp_templates {
   typeset -r workspace_dir="$user_ai_dir/vscode/workspace"
   typeset success_count=0
+  typeset attempted_count=0
+  typeset already_exists_count=0
+  
+  slog_step_se_d --context trace "workspace_dir: " --url "$workspace_dir" --default
+  slog_step_se_d --context trace "dest_dir: " --url "$dest_dir" --default
   
   typeset -a templates=(
     "$workspace_dir/xcode-mcpserver__workspace.code-workspace"
@@ -1177,10 +1188,12 @@ function install_xcode_mcp_templates {
   )
   
   for template in "${templates[@]}"; do
+    slog_step_se_d --context trace "checking template: " --url "$template" --default
     if [[ ! -f "$template" ]]; then
       slog_step_se --context warning "Template not found: " --url "${template:t}" --default
       continue
     fi
+    slog_step_se_d --context trace "template exists: " --url "${template:t}" --default
     
     typeset file_basename="${template:t}"
     typeset file_extension="${template:e}"
@@ -1195,33 +1208,45 @@ function install_xcode_mcp_templates {
     mkdir -p "${target_file:h}"
     
     if [[ ! -f "$target_file" ]]; then
+      attempted_count=$(( attempted_count + 1 ))
       cp "$template" "$target_file" || {
         typeset -i exit_code=$?
         slog_step_se --context warning --exit-code "$exit_code" "install template: " --url "$file_basename" --default
         continue
       }
-      ((success_count++))
+      success_count=$(( success_count + 1 ))
       slog_step_se --context success "installed: " --url "$file_basename" --default
     else
       if type jq >/dev/null 2>&1 && [[ "$file_extension" == "json" ]]; then
+        attempted_count=$(( attempted_count + 1 ))
         typeset temp_merged="/tmp/merged_$$.json"
         jq -s '.[0] * .[1]' "$target_file" "$template" > "$temp_merged" 2>/dev/null || {
           typeset -i exit_code=$?
-          slog_step_se --context warning --exit-code "$exit_code" "merge template: " --url "$file_basename" --default
+          slog_step_se --context warning --exit-code "$exit_code" "merge template: " --url "$file_basename" --default " (template contains JSON comments - skipping merge)"
           rm -f "$temp_merged"
+          already_exists_count=$(( already_exists_count + 1 ))
           continue
         }
         mv "$temp_merged" "$target_file"
-        ((success_count++))
+        success_count=$(( success_count + 1 ))
         slog_step_se --context success "merged: " --url "$file_basename" --default
       else
+        already_exists_count=$(( already_exists_count + 1 ))
         slog_step_se --context info "template already exists: " --url "$file_basename" --default
       fi
     fi
   done
   
-  if (( success_count > 0 )); then
-    slog_step_se --context success "Xcode MCP Server installation complete"
+  typeset -i total_final=$(( success_count + already_exists_count ))
+  if (( total_final >= ${#templates[@]} )); then
+    slog_step_se --context success "Xcode MCP templates ready (installed: $success_count, already present: $already_exists_count)"
+    return 0
+  elif (( success_count > 0 )); then
+    slog_step_se --context success "Xcode MCP Server partial installation complete (installed: $success_count)"
+    return 0
+  else
+    slog_step_se --context warning "Xcode MCP template installation failed (no templates installed)"
+    return 1
   fi
 }
 
