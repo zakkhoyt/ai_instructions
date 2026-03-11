@@ -17,12 +17,6 @@
 
 # ---- ---- ----     Source Utilities     ---- ---- ----
 
-# Initialize variables required by boilerplate (must be done before sourcing)
-export IS_DEBUG=""
-export IS_VERBOSE=""
-export IS_DRY_RUN=""
-export IS_UTILS_DEBUG=""
-
 source "$HOME/.zsh_home/utilities/.zsh_boilerplate"
 
 # ---- ---- ----   Argument Parsing   ---- ---- ----
