@@ -1,4 +1,3 @@
-````instructions
 ---
 applyTo:
   - "**/*.md"
@@ -459,5 +458,3 @@ When writing or reviewing markdown documentation, verify:
 - [ ] Internal links use relative paths
 - [ ] External links have descriptive text
 - [ ] **REQUIRED**: Tables formatted with padded columns (2D rectangle in source - MANDATORY)
-
-````

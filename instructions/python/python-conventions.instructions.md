@@ -1,4 +1,3 @@
-````instructions
 ---
 applyTo: "**/*.py"
 ---
@@ -1167,5 +1166,3 @@ if __name__ == "__main__":
 - [Python Logging HOWTO](https://docs.python.org/3/howto/logging.html)
 - [pytest Documentation](https://docs.pytest.org/)
 - [Python Best Practices](https://docs.python-guide.org/)
-
-````

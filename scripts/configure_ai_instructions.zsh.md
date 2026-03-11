@@ -1101,3 +1101,41 @@ I've been swing agents across workspaces that use this repo's AI instructions cr
       * NOTE: I believe that if you symlink to a directory (not the files with in that dir_) that any files added to the source after the symlink is made will be available. Should the script simply create a symlink to the containing dir?
     * I dont' think the default location icons dir should be hard coded to `docs/images/icons/`
       * Maybe `docs/images/icons/` is a good default value, but should be customizable
+
+
+
+
+
+* Q: `Did you intend icons to be per-repo or centralized in ~/.ai?` 
+  * A: IIRC yes, but as an intermediate source between the target repo and the internet. 
+    * think it would be great if we had a backing store in the `.ai` repo 
+      * `${user_ai_dir}/docs/images/icons/` (IE: `$/.ai/docs/images/icons/`)
+      * The icons would then be copied into the target repsitories as needed
+        * Conversely if the agent obtains a new icon, it would be stored in the backing store first, then copied. This seems entirely feasible, no? Please implement changes to facilitate that. 
+
+* Q: `Do you want agents to actually create these icons, or is this aspirational guidance?` 
+  * A: No, that wasn't the intention. IIRC the instructions give a fallback chain which includes:
+    * Extract the icon from an `*.app` bundle (only for certain cases obviously)
+    * Check local documentation such as PDF files (user manauals, etc...) to see if there is an obvious product icon within
+    * The applications's official documentation often have icons of the app as the page icon, or inline.
+    * Fall back to image search engines
+      * https://duckduckgo.com/&iar=images?q=
+    
+```zsh
+typeset -a -r search_terms=(xcode icon)
+typeset -r search_query_string="${(j|+|)search_terms}"
+typeset -r search_query_string="${(j|%20|)search_terms}"
+# ddg images search (no filters)
+typeset -r ddg_search_url="https://duckduckgo.com/&iar=images?q=${search_query_string}"
+
+
+```
+
+**DDG Example Query String (Filters)**
+Multiple filter terms appear to be joined into a single query string using `%2C`
+* "small" images: `iaf=size%3ASmall`
+* `&iaf=size%3ASmall%2Clicense%3APublic`
+
+* Have you been seeing agents use icon markup at all, or do they skip it?
+
+https://duckduckgo.com/?q=xcode+icon&iar=images&atb=v444-1
