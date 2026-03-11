@@ -229,3 +229,153 @@ slog_step_se_d --context success "detected repository directory"
 # This is just the conformant foundation - actual functionality to be added
 
 slog_step_se --context info "Script execution complete (placeholder - full implementation in progress)"
+
+# ---- ---- ----     Helper Functions     ---- ---- ----
+
+function get_platform_paths {
+  zparseopts -D -F -- \
+    -platform:=opt_platform \
+    -target-base:=opt_target_base
+  
+  typeset -r platform="${opt_platform[2]}"
+  slog_var1_se_d "platform"
+  
+  typeset -r target_base="${opt_target_base[2]}"
+  slog_var1_se_d "target_base"
+  
+  case "$platform" in
+    copilot)
+      target_instructions_dir="${target_base}/.github/instructions"
+      ai_platform_instruction_file="${target_base}/.github/copilot-instructions.md"
+      ai_instruction_settings_file="$ai_platform_instruction_file"
+      ;;
+    claude)
+      target_instructions_dir="${target_base}/.claude"
+      ai_platform_instruction_file="${target_base}/.claude/settings.json"
+      ai_instruction_settings_file="${target_base}/CLAUDE.md"
+      ;;
+    cursor)
+      target_instructions_dir="${target_base}/.cursor/rules"
+      ai_platform_instruction_file="${target_base}/.cursor/rules/mobile.mdc"
+      ai_instruction_settings_file="$ai_platform_instruction_file"
+      ;;
+    coderabbit)
+      slog_step_se --context fatal "CodeRabbit platform not yet implemented"
+      return 2
+      ;;
+    *)
+      slog_step_se --context fatal "Unknown platform: " --code "$platform" --default
+      return 1
+      ;;
+  esac
+  
+  slog_var1_se_d "target_instructions_dir"
+  slog_var1_se_d "ai_platform_instruction_file"
+  slog_var1_se_d "ai_instruction_settings_file"
+}
+
+function get_file_checksum {
+  zparseopts -D -F -- \
+    -file-path:=opt_file_path
+  
+  typeset -r file_path="${opt_file_path[2]}"
+  
+  if [[ ! -f "$file_path" ]]; then
+    slog_step_se --context fatal "File not found: " --url "$file_path" --default
+    return 1
+  fi
+  
+  typeset checksum=""
+  checksum=$(shasum -a 256 "$file_path" | awk '{print $1}') || {
+    typeset -i exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "calculate checksum for: " --url "$file_path" --default
+    return "$exit_code"
+  }
+  
+  echo "$checksum"
+}
+
+function update_checksum {
+  zparseopts -D -F -- \
+    -file-name:=opt_file_name \
+    -checksum:=opt_checksum \
+    -checksum-file:=opt_checksum_file
+  
+  typeset -r file_name="${opt_file_name[2]}"
+  typeset -r checksum="${opt_checksum[2]}"
+  typeset -r checksum_file="${opt_checksum_file[2]}"
+  
+  typeset -r temp_file="${checksum_file}.tmp"
+  
+  if [[ -f "$checksum_file" ]]; then
+    grep -v "^${file_name}:" "$checksum_file" > "$temp_file" 2>/dev/null || true
+  else
+    touch "$temp_file"
+  fi
+  
+  echo "${file_name}:${checksum}" >> "$temp_file"
+  mv "$temp_file" "$checksum_file"
+}
+
+function get_stored_checksum {
+  zparseopts -D -F -- \
+    -file-name:=opt_file_name \
+    -checksum-file:=opt_checksum_file
+  
+  typeset -r file_name="${opt_file_name[2]}"
+  typeset -r checksum_file="${opt_checksum_file[2]}"
+  
+  if [[ ! -f "$checksum_file" ]]; then
+    echo ""
+    return 0
+  fi
+  
+  typeset stored_checksum=""
+  stored_checksum=$(grep "^${file_name}:" "$checksum_file" | cut -d: -f2)
+  echo "$stored_checksum"
+}
+
+function create_dev_symlink {
+  typeset -r dev_link_name="${user_ai_dir:t}"
+  typeset -r dev_link_path="${dest_dir}/${dev_link_name}"
+  
+  slog_step_se_d --context will "set up development directory symlink"
+  
+  if [[ -L "$dev_link_path" ]]; then
+    typeset link_target="${dev_link_path:A}"
+    if [[ "$link_target" == "$user_ai_dir" ]]; then
+      slog_step_se --context info "Development symlink already correct"
+      return 0
+    else
+      slog_step_se --context warning "Existing symlink points to wrong location, removing"
+      rm "$dev_link_path"
+    fi
+  elif [[ -e "$dev_link_path" ]]; then
+    slog_step_se --context fatal "Path exists but is not a symlink: " --url "$dev_link_path" --default
+    return 1
+  fi
+  
+  ln -s "$user_ai_dir" "$dev_link_path" || {
+    typeset -i exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "create development symlink"
+    return "$exit_code"
+  }
+  
+  slog_step_se --context success "created development symlink"
+}
+
+function update_gitignore {
+  zparseopts -D -F -- \
+    -entry:=opt_entry \
+    -gitignore-file:=opt_gitignore_file
+  
+  typeset -r entry="${opt_entry[2]}"
+  typeset -r gitignore_file="${opt_gitignore_file[2]}"
+  
+  if [[ -f "$gitignore_file" ]] && grep -qxF "$entry" "$gitignore_file"; then
+    return 0
+  fi
+  
+  echo "$entry" >> "$gitignore_file"
+  slog_step_se --context success "added to .gitignore: " --code "$entry" --default
+}
