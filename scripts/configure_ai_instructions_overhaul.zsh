@@ -109,10 +109,23 @@ function print_usage {
   slog_se
   
   slog_se "${i2}" --bold "Config Actions (Hierarchical)" --default
+  slog_se "${i4}" --bold "Legacy aliases:" --default
   slog_se "${i4}" --code "workspace-settings" --default
-  slog_se "${i6}Manage VS Code workspace settings templates"
+  slog_se "${i6}Manage VS Code workspace settings templates (legacy alias for config-workspace)"
   slog_se "${i4}" --code "user-settings" --default
-  slog_se "${i6}Manage VS Code user profile settings templates"
+  slog_se "${i6}Manage VS Code user profile settings templates (legacy alias for config-user)"
+  slog_se
+  slog_se "${i4}" --bold "Config selectors (new syntax):" --default
+  slog_se "${i4}" --code "config-<scope>[:<category>][:<theme>]" --default
+  slog_se "${i6}Hierarchical configuration template selector"
+  slog_se "${i6}Scope: " --code "user" --default " | " --code "workspace" --default " | " --code "folder" --default
+  slog_se "${i6}Category (optional): " --code "settings" --default " | " --code "mcp" --default " | " --code "tasks" --default " | " --code "launch" --default
+  slog_se "${i6}Theme (optional): " --code "swift" --default " | " --code "xcode-mcpserver" --default " | etc."
+  slog_se
+  slog_se "${i6}" --bold "Specificity levels:" --default
+  slog_se "${i6}" --code "config-user" --default "                       All user configs (broadest)"
+  slog_se "${i6}" --code "config-workspace:mcp" --default "              All workspace MCP configs"
+  slog_se "${i6}" --code "config-user:settings:swift" --default "       Only swift settings (most specific)"
   slog_se
   
   slog_se --bold "OPTIONS" --default
@@ -152,11 +165,23 @@ function print_usage {
   slog_se "${i2}${SYMBOL_BULLET:-•} Auto-install all uninstalled instructions"
   slog_se "${i4}" --code "./${script_name} --no-prompt instructions" --default
   slog_se
-  slog_se "${i2}${SYMBOL_BULLET:-•} Interactive workspace settings, auto instructions"
-  slog_se "${i4}" --code "./${script_name} --prompt workspace-settings --no-prompt instructions" --default
+  slog_se "${i2}${SYMBOL_BULLET:-•} Interactive workspace settings (legacy)"
+  slog_se "${i4}" --code "./${script_name} --prompt workspace-settings" --default
   slog_se
-  slog_se "${i2}${SYMBOL_BULLET:-•} Multiple actions, all interactive"
-  slog_se "${i4}" --code "./${script_name} --prompt instructions --prompt mcp-xcode" --default
+  slog_se "${i2}${SYMBOL_BULLET:-•} Auto-merge all user configs"
+  slog_se "${i4}" --code "./${script_name} --no-prompt config-user" --default
+  slog_se
+  slog_se "${i2}${SYMBOL_BULLET:-•} Auto-merge workspace MCP configs only"
+  slog_se "${i4}" --code "./${script_name} --no-prompt config-workspace:mcp" --default
+  slog_se
+  slog_se "${i2}${SYMBOL_BULLET:-•} Interactive swift settings in user scope"
+  slog_se "${i4}" --code "./${script_name} --prompt config-user:settings:swift" --default
+  slog_se
+  slog_se "${i2}${SYMBOL_BULLET:-•} Multiple config selectors"
+  slog_se "${i4}" --code "./${script_name} --no-prompt config-user:settings --no-prompt config-workspace:mcp" --default
+  slog_se
+  slog_se "${i2}${SYMBOL_BULLET:-•} Multiple actions, mixed modes"
+  slog_se "${i4}" --code "./${script_name} --prompt instructions --no-prompt config-workspace --prompt mcp-xcode" --default
   slog_se
   
   slog_se --bold "EXIT STATUS" --default
