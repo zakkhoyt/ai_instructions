@@ -32,6 +32,18 @@ typeset -a enabled_targets=()
 typeset -a prompt_targets=()
 typeset -a auto_targets=()
 
+# Configuration paths (set by parse_arguments or defaults)
+typeset user_ai_dir="${HOME}/.ai"
+typeset dest_dir="$(pwd)"
+typeset ai_platform="copilot"
+typeset configure_type="symlink"
+
+# Derived paths (set after config paths are known)
+typeset source_instructions_dir=""
+typeset target_instructions_dir=""
+typeset ai_platform_instruction_file=""
+typeset ai_instruction_settings_file=""
+
 # Valid target names
 typeset -r -a VALID_SIMPLE_ACTIONS=(
   instructions
@@ -161,6 +173,15 @@ function parse_arguments {
     -ai-platform:=opt_ai_platform \
     -configure-type:=opt_configure_type
   
+  # Extract configuration overrides
+  [[ -n "${opt_source_dir[2]:-}" ]] && user_ai_dir="${opt_source_dir[2]}"
+  [[ -n "${opt_dest_dir[2]:-}" ]] && dest_dir="${opt_dest_dir[2]}"
+  [[ -n "${opt_ai_platform[2]:-}" ]] && ai_platform="${opt_ai_platform[2]}"
+  [[ -n "${opt_configure_type[2]:-}" ]] && configure_type="${opt_configure_type[2]}"
+  
+  # Initialize derived paths
+  initialize_paths
+  
   # Extract values from zparseopts arrays (remove flag names, keep values only)
   # Note: Using global arrays, not local
   prompt_targets=(${opt_prompt_targets:#--prompt})
@@ -174,6 +195,37 @@ function parse_arguments {
   
   # Remove duplicates from enabled_targets
   enabled_targets=(${(u)enabled_targets[@]})
+}
+
+function initialize_paths {
+  source_instructions_dir="$user_ai_dir/instructions"
+  target_instructions_dir="$dest_dir/.github/instructions"
+  
+  case "$ai_platform" in
+    copilot)
+      ai_platform_instruction_file="$dest_dir/.github/copilot-instructions.md"
+      ai_instruction_settings_file="$ai_platform_instruction_file"
+      ;;
+    claude)
+      ai_platform_instruction_file="$dest_dir/.claude/instructions.md"
+      ai_instruction_settings_file="$ai_platform_instruction_file"
+      ;;
+    cursor)
+      ai_platform_instruction_file="$dest_dir/.cursorrules"
+      ai_instruction_settings_file="$ai_platform_instruction_file"
+      ;;
+    coderabbit)
+      ai_platform_instruction_file="$dest_dir/.coderabbit.yaml"
+      ai_instruction_settings_file="$ai_platform_instruction_file"
+      ;;
+    *)
+      slog_step_se --context fatal "unsupported AI platform: " --code "$ai_platform" --default
+      exit 1
+      ;;
+  esac
+  
+  # Create target directory if needed
+  mkdir -p "$target_instructions_dir" 2>/dev/null || true
 }
 
 # ---- ---- ----   Target Validation   ---- ---- ----
@@ -342,70 +394,433 @@ function run_auto_action {
 
 # ---- ---- ----   Stub Handlers     ---- ---- ----
 
+# ---- ---- ----   Helper Functions   ---- ---- ----
+
+function has_instructions_to_install {
+  [[ -d "$source_instructions_dir" ]] && [[ -n "$(find "$source_instructions_dir" -type f -name "*.instructions.md" 2>/dev/null)" ]]
+}
+
+function get_file_checksum {
+  zparseopts -D -F -- \
+    -file-path:=opt_file_path
+  
+  typeset -r file_path="${opt_file_path[2]}"
+  shasum -a 256 "$file_path" 2>/dev/null | awk '{print $1}'
+}
+
+function get_file_status {
+  zparseopts -D -F -- \
+    -file-basename:=opt_file_basename \
+    -source-file:=opt_source_file \
+    -checksum-file:=opt_checksum_file
+  
+  typeset -r file_basename="${opt_file_basename[2]}"
+  typeset -r source_file="${opt_source_file[2]}"
+  typeset -r checksum_file="${opt_checksum_file[2]}"
+  
+  # If no checksum file exists, all files are new
+  if [[ ! -f "$checksum_file" ]]; then
+    echo "new"
+    return 0
+  fi
+  
+  # Calculate current checksum
+  typeset -r current_checksum="$(shasum -a 256 "$source_file" 2>/dev/null | awk '{print $1}')"
+  
+  # Look up stored checksum
+  typeset -r stored_checksum="$(grep "^${file_basename}:" "$checksum_file" 2>/dev/null | cut -d: -f2)"
+  
+  if [[ -z "$stored_checksum" ]]; then
+    echo "new"
+  elif [[ "$current_checksum" != "$stored_checksum" ]]; then
+    echo "modified"
+  else
+    echo "unchanged"
+  fi
+}
+
+function format_status_indicator {
+  zparseopts -D -F -- \
+    -status:=opt_status
+  
+  typeset -r status_value="${opt_status[2]}"
+  
+  case "$status_value" in
+    new)
+      echo "🆕"
+      ;;
+    modified)
+      echo "📝"
+      ;;
+    unchanged)
+      echo "✓"
+      ;;
+    *)
+      echo "?"
+      ;;
+  esac
+}
+
+function display_menu {
+  typeset -a instruction_files=(${(f)"$(find "$source_instructions_dir" -type f -name "*.instructions.md" 2>/dev/null | sort)"})
+  typeset -r checksum_file="$user_ai_dir/.gitignored/.ai-checksums"
+  
+  slog_se ""
+  slog_se --bold "Available Instruction Files:" --default
+  slog_se ""
+  
+  typeset -i idx=1
+  for file in "${instruction_files[@]}"; do
+    typeset file_basename="${file:t}"
+    typeset source_file="$file"
+    typeset file_status=$(get_file_status --file-basename "$file_basename" --source-file "$source_file" --checksum-file "$checksum_file")
+    typeset indicator=$(format_status_indicator --status "$file_status")
+    
+    printf "%2d. %s %s\n" "$idx" "$indicator" "$file_basename"
+    ((idx++))
+  done
+  
+  slog_se ""
+  slog_se --bold "Legend:" --default " 🆕 = new file, 📝 = modified, ✓ = unchanged"
+  slog_se ""
+  printf "Enter selections (e.g., '1 3 5', 'all', or press Enter to skip): "
+  
+  typeset user_input=""
+  read -r user_input
+  echo "$user_input"
+}
+
+function update_checksums {
+  zparseopts -D -F -- \
+    -file-basename:=opt_file_basename \
+    -source-file:=opt_source_file \
+    -checksum-file:=opt_checksum_file
+  
+  typeset -r file_basename="${opt_file_basename[2]}"
+  typeset -r source_file="${opt_source_file[2]}"
+  typeset -r checksum_file="${opt_checksum_file[2]}"
+  
+  typeset checksum=""
+  checksum=$(get_file_checksum --file-path "$source_file")
+  
+  # Create checksum dir if needed
+  mkdir -p "${checksum_file:h}" 2>/dev/null
+  
+  # Update or add checksum
+  if [[ -f "$checksum_file" ]]; then
+    # Remove old entry if exists
+    grep -v "^${file_basename}:" "$checksum_file" > "${checksum_file}.tmp" 2>/dev/null || true
+    mv "${checksum_file}.tmp" "$checksum_file"
+  fi
+  
+  echo "${file_basename}:${checksum}" >> "$checksum_file"
+}
+
+function synthesize_copilot_instructions {
+  typeset -r template_file="$user_ai_dir/ai_platforms/copilot/.github/copilot-instructions.template.md"
+  typeset -r output_file="$ai_platform_instruction_file"
+  
+  slog_step_se_d --context will "synthesize copilot-instructions.md"
+  
+  if [[ ! -f "$template_file" ]]; then
+    slog_step_se --context fatal "Template file not found: " --url "$template_file" --default
+    return 1
+  fi
+
+  typeset project_overview="Add your project-specific overview here."
+  typeset detected_languages="(not detected)"
+  typeset detected_frameworks="(not detected)"
+  typeset build_tools="(not detected)"
+  
+  typeset temp_file=""
+  temp_file="$(mktemp)"
+  
+  cat "$template_file" > "$temp_file"
+  
+  sed -i.bak "s|<!-- PROJECT_OVERVIEW -->|$project_overview|g" "$temp_file"
+  sed -i.bak "s|<!-- DETECTED_LANGUAGES -->|$detected_languages|g" "$temp_file"
+  sed -i.bak "s|<!-- DETECTED_FRAMEWORKS -->|$detected_frameworks|g" "$temp_file"
+  sed -i.bak "s|<!-- BUILD_TOOLS -->|$build_tools|g" "$temp_file"
+  
+  typeset instruction_list=""
+  typeset -a instruction_files=(${(f)"$(find "$target_instructions_dir" -type f -name "*.instructions.md" 2>/dev/null | sort)"})
+  
+  typeset -a instruction_lines=()
+  for file in "${instruction_files[@]}"; do
+    typeset filename="${file:t}"
+    typeset title="${filename%.instructions.md}"
+    instruction_lines+=("- <a>${title}</a>")
+  done
+  
+  instruction_list="${(F)instruction_lines[@]}"
+  
+  # Write instruction list to temp file for insertion
+  typeset temp_list=""
+  temp_list="$(mktemp)"
+  echo "$instruction_list" > "$temp_list"
+  
+  # Use awk with getline to read from file (handles multiline correctly)
+  awk -v listfile="$temp_list" '
+    /<!-- INSTRUCTION_FILES_LIST -->/ {
+      while ((getline line < listfile) > 0) {
+        print line
+      }
+      close(listfile)
+      next
+    }
+    { print }
+  ' "$temp_file" > "$temp_file.new"
+  
+  mv "$temp_file.new" "$temp_file"
+  rm -f "$temp_list" "${temp_file}.bak"
+  
+  mv "$temp_file" "$output_file" || {
+    typeset -i exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "write synthesized instructions to: " --url "$output_file" --default
+    return "$exit_code"
+  }
+  
+  slog_step_se --context success "synthesized copilot-instructions.md"
+}
+
+# ---- ---- ----   Action Handlers    ---- ---- ----
+
 function run_prompt_instructions {
-  slog_step_se --context info "Instructions (prompt mode) - NOT YET IMPLEMENTED"
+  if ! has_instructions_to_install; then
+    slog_step_se --context info "No instruction files found in: " --url "$source_instructions_dir" --default
+    return 0
+  fi
+  
+  typeset user_selection=""
+  user_selection=$(display_menu)
+  
+  if [[ -z "$user_selection" ]]; then
+    slog_step_se --context info "No files selected for installation"
+    return 0
+  fi
+  
+  install_selected_instructions "$user_selection"
 }
 
 function run_auto_instructions {
-  slog_step_se --context info "Instructions (auto mode) - NOT YET IMPLEMENTED"
+  if ! has_instructions_to_install; then
+    slog_step_se --context info "No instruction files found in: " --url "$source_instructions_dir" --default
+    return 0
+  fi
+  
+  install_selected_instructions "all"
+}
+
+function install_selected_instructions {
+  typeset -r user_selection="$1"
+  
+  typeset -a instruction_files=(${(f)"$(find "$source_instructions_dir" -type f -name "*.instructions.md" 2>/dev/null | sort)"})
+  typeset -r checksum_file="$user_ai_dir/.gitignored/.ai-checksums"
+  
+  typeset -a selected_indices=()
+  if [[ "$user_selection" == "all" ]]; then
+    for ((idx=1; idx<=${#instruction_files[@]}; idx++)); do
+      selected_indices+=("$idx")
+    done
+  else
+    selected_indices=(${(s: :)user_selection})
+  fi
+  
+  for selection in "${selected_indices[@]}"; do
+    if [[ ! "$selection" =~ ^[0-9]+$ ]] || (( selection < 1 || selection > ${#instruction_files[@]} )); then
+      slog_step_se --context warning "Invalid selection: " --code "$selection" --default
+      continue
+    fi
+    
+    typeset source_file="${instruction_files[$selection]}"
+    typeset file_basename="${source_file:t}"
+    typeset dest_file="$target_instructions_dir/$file_basename"
+    
+    slog_step_se_d --context will "install instruction file: " --url "$file_basename" --default
+    
+    case "$configure_type" in
+      symlink)
+        ln -sf "$source_file" "$dest_file" || {
+          typeset -i exit_code=$?
+          slog_step_se --context fatal --exit-code "$exit_code" "create symlink for: " --url "$file_basename" --default
+          continue
+        }
+        ;;
+      copy)
+        cp "$source_file" "$dest_file" || {
+          typeset -i exit_code=$?
+          slog_step_se --context fatal --exit-code "$exit_code" "copy file: " --url "$file_basename" --default
+          continue
+        }
+        ;;
+    esac
+    
+    update_checksums --file-basename "$file_basename" --source-file "$source_file" --checksum-file "$checksum_file"
+    
+    slog_step_se --context success "installed: " --url "$file_basename" --default
+  done
+  
+  synthesize_copilot_instructions
 }
 
 function run_prompt_workspace_settings {
-  slog_step_se --context info "Workspace settings (prompt mode) - NOT YET IMPLEMENTED"
+  slog_step_se --context info "Workspace settings configuration is complex"
+  slog_se "For now, use the legacy script or implement config selectors"
+  slog_se "Example: " --code "--prompt config-workspace:settings:theme" --default
+  return 0
 }
 
 function run_auto_workspace_settings {
-  slog_step_se --context info "Workspace settings (auto mode) - NOT YET IMPLEMENTED"
+  slog_step_se --context info "Auto workspace settings not yet implemented"
+  slog_se "Use legacy script or specific config selectors"
+  return 0
 }
 
 function run_prompt_user_settings {
-  slog_step_se --context info "User settings (prompt mode) - NOT YET IMPLEMENTED"
+  slog_step_se --context info "User settings configuration is complex"
+  slog_se "For now, use the legacy script or implement config selectors"
+  slog_se "Example: " --code "--prompt config-user:settings:theme" --default
+  return 0
 }
 
 function run_auto_user_settings {
-  slog_step_se --context info "User settings (auto mode) - NOT YET IMPLEMENTED"
+  slog_step_se --context info "Auto user settings not yet implemented"
+  slog_se "Use legacy script or specific config selectors"
+  return 0
 }
 
 function run_prompt_dev_link {
-  slog_step_se --context info "Dev link (prompt mode) - NOT YET IMPLEMENTED"
+  slog_step_se_d --context will "create development repository symlink"
+  
+  typeset -r link_path="$dest_dir/ai"
+  typeset -r target_path="$user_ai_dir"
+  
+  if [[ -L "$link_path" ]]; then
+    typeset current_target=""
+    current_target="$(readlink "$link_path")"
+    
+    if [[ "$current_target" == "$target_path" ]]; then
+      slog_step_se --context info "Development symlink already exists and points to correct location"
+      return 0
+    fi
+    
+    slog_se "Existing symlink points to different location:"
+    slog_se "  Current: " --url "$current_target" --default
+    slog_se "  Desired: " --url "$target_path" --default
+    slog_se ""
+    printf "Replace existing symlink? (y/N): "
+    
+    typeset response=""
+    read -r response
+    
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+      slog_step_se --context info "Skipping symlink creation"
+      return 0
+    fi
+    
+    rm "$link_path"
+  elif [[ -e "$link_path" ]]; then
+    slog_step_se --context fatal "Path exists but is not a symlink: " --url "$link_path" --default
+    return 1
+  fi
+  
+  ln -s "$target_path" "$link_path" || {
+    typeset -i exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "create symlink: " --url "$link_path" --default
+    return "$exit_code"
+  }
+  
+  slog_step_se --context success "created development symlink: " --url "$link_path" --default " → " --url "$target_path" --default
 }
 
 function run_auto_dev_link {
-  slog_step_se --context info "Dev link (auto mode) - NOT YET IMPLEMENTED"
+  slog_step_se_d --context will "create development repository symlink (auto mode)"
+  
+  typeset -r link_path="$dest_dir/ai"
+  typeset -r target_path="$user_ai_dir"
+  
+  if [[ -L "$link_path" ]]; then
+    typeset current_target=""
+    current_target="$(readlink "$link_path")"
+    
+    if [[ "$current_target" == "$target_path" ]]; then
+      slog_step_se --context info "Development symlink already correct"
+      return 0
+    fi
+    
+    rm "$link_path"
+  elif [[ -e "$link_path" ]]; then
+    slog_step_se --context warning "Path exists but is not a symlink (skipping): " --url "$link_path" --default
+    return 0
+  fi
+  
+  ln -s "$target_path" "$link_path" || {
+    typeset -i exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "create symlink: " --url "$link_path" --default
+    return "$exit_code"
+  }
+  
+  slog_step_se --context success "created development symlink: " --url "$link_path" --default
 }
 
 function run_prompt_dev_vscode {
-  slog_step_se --context info "Dev VSCode (prompt mode) - NOT YET IMPLEMENTED"
+  slog_step_se --context info "VS Code workspace integration not yet implemented"
+  slog_se "This would add the repository to a VS Code workspace file"
+  return 0
 }
 
 function run_auto_dev_vscode {
-  slog_step_se --context info "Dev VSCode (auto mode) - NOT YET IMPLEMENTED"
+  slog_step_se --context info "Auto VS Code integration not yet implemented"
+  return 0
 }
 
 function run_prompt_regenerate_main {
-  slog_step_se --context info "Regenerate main (prompt mode) - NOT YET IMPLEMENTED"
+  slog_step_se_d --context will "regenerate main AI instruction file"
+  
+  slog_se "This will regenerate: " --url "$ai_platform_instruction_file" --default
+  slog_se ""
+  printf "Continue? (y/N): "
+  
+  typeset response=""
+  read -r response
+  
+  if [[ ! "$response" =~ ^[Yy]$ ]]; then
+    slog_step_se --context info "Skipping regeneration"
+    return 0
+  fi
+  
+  synthesize_copilot_instructions
 }
 
 function run_auto_regenerate_main {
-  slog_step_se --context info "Regenerate main (auto mode) - NOT YET IMPLEMENTED"
+  slog_step_se_d --context will "regenerate main AI instruction file (auto mode)"
+  synthesize_copilot_instructions
 }
 
 function run_prompt_mcp_xcode {
-  slog_step_se --context info "MCP Xcode (prompt mode) - NOT YET IMPLEMENTED"
+  slog_step_se --context info "Xcode MCP server installation not yet implemented"
+  slog_se "This would configure MCP server in .vscode/mcp.json"
+  return 0
 }
 
 function run_auto_mcp_xcode {
-  slog_step_se --context info "MCP Xcode (auto mode) - NOT YET IMPLEMENTED"
+  slog_step_se --context info "Auto Xcode MCP installation not yet implemented"
+  return 0
 }
 
 function run_prompt_config_selector {
   typeset -r target="$1"
-  slog_step_se --context info "Config selector (prompt mode): " --code "$target" --default " - NOT YET IMPLEMENTED"
+  slog_step_se --context info "Config selector (prompt mode): " --code "$target" --default
+  slog_se "Config selector engine not yet implemented"
+  slog_se "This would parse hierarchical paths like: config-user:settings:theme"
+  return 0
 }
 
 function run_auto_config_selector {
   typeset -r target="$1"
-  slog_step_se --context info "Config selector (auto mode): " --code "$target" --default " - NOT YET IMPLEMENTED"
+  slog_step_se --context info "Config selector (auto mode): " --code "$target" --default
+  slog_se "Config selector engine not yet implemented"
+  return 0
 }
 
 # ---- ---- ----   Main Execution    ---- ---- ----
