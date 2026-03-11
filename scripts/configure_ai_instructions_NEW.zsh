@@ -225,10 +225,110 @@ slog_var1_se_d "repo_dir"
 
 slog_step_se_d --context success "detected repository directory"
 
-# TODO: Continue with rest of implementation
-# This is just the conformant foundation - actual functionality to be added
+# ---- ---- ----     Main Script Work     ---- ---- ----
 
-slog_step_se --context info "Script execution complete (placeholder - full implementation in progress)"
+# [step] Set up platform paths
+get_platform_paths --platform "$ai_platform" --target-base "$dest_dir"
+slog_var1_se_d "target_instructions_dir"
+slog_var1_se_d "ai_platform_instruction_file"
+slog_var1_se_d "ai_instruction_settings_file"
+
+typeset -r source_instructions_dir="$user_ai_dir/instructions"
+slog_var1_se_d "source_instructions_dir"
+
+# [step] Create target instructions directory
+slog_step_se_d --context will "create target instructions directory if needed"
+if [[ ! -d "$target_instructions_dir" ]]; then
+  mkdir -p "$target_instructions_dir" || {
+    typeset -i exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "create directory: " --url "$target_instructions_dir" --default
+    exit "$exit_code"
+  }
+  slog_step_se_d --context success "created target instructions directory"
+else
+  slog_step_se_d --context success "target instructions directory already exists"
+fi
+
+# Handle --dev-link flag
+if [[ -n "${flag_dev_link:-}" ]]; then
+  create_dev_symlink
+  typeset -r dev_link_name="${user_ai_dir:t}"
+  update_gitignore --entry "$dev_link_name" --gitignore-file "$dest_dir/.gitignore"
+  exit 0
+fi
+
+# Handle --instructions flag
+if [[ -n "${flag_instructions:-}" ]]; then
+  if ! has_instructions_to_install; then
+    slog_step_se --context info "No instruction files found in: " --url "$source_instructions_dir" --default
+    exit 0
+  fi
+  
+  typeset user_selection=""
+  if [[ -n "${flag_prompt:-}" ]]; then
+    user_selection=$(display_menu)
+  else
+    user_selection="all"
+  fi
+  
+  if [[ -z "$user_selection" ]]; then
+    slog_step_se --context info "No files selected for installation"
+    exit 0
+  fi
+  
+  typeset -a instruction_files=(${(f)"$(find "$source_instructions_dir" -type f -name "*.instructions.md" 2>/dev/null | sort)"})
+  typeset -r checksum_file="$user_ai_dir/.gitignored/.ai-checksums"
+  
+  typeset -a selected_indices=()
+  if [[ "$user_selection" == "all" ]]; then
+    for ((idx=1; idx<=${#instruction_files[@]}; idx++)); do
+      selected_indices+=("$idx")
+    done
+  else
+    selected_indices=(${(s: :)user_selection})
+  fi
+  
+  for selection in "${selected_indices[@]}"; do
+    if [[ ! "$selection" =~ ^[0-9]+$ ]] || (( selection < 1 || selection > ${#instruction_files[@]} )); then
+      slog_step_se --context warning "Invalid selection: " --code "$selection" --default
+      continue
+    fi
+    
+    typeset source_file="${instruction_files[$selection]}"
+    typeset file_basename="${source_file:t}"
+    typeset dest_file="$target_instructions_dir/$file_basename"
+    
+    slog_step_se_d --context will "install instruction file: " --url "$file_basename" --default
+    
+    case "$configure_type" in
+      symlink)
+        ln -sf "$source_file" "$dest_file" || {
+          typeset -i exit_code=$?
+          slog_step_se --context fatal --exit-code "$exit_code" "create symlink for: " --url "$file_basename" --default
+          continue
+        }
+        ;;
+      copy)
+        cp "$source_file" "$dest_file" || {
+          typeset -i exit_code=$?
+          slog_step_se --context fatal --exit-code "$exit_code" "copy file: " --url "$file_basename" --default
+          continue
+        }
+        ;;
+    esac
+    
+    typeset checksum=""
+    checksum=$(get_file_checksum --file-path "$source_file")
+    update_checksum --file-name "$file_basename" --checksum "$checksum" --checksum-file "$checksum_file"
+    
+    slog_step_se_d --context success "installed instruction file: " --url "$file_basename" --default
+  done
+  
+  synthesize_copilot_instructions
+fi
+
+slog_step_se --context info "Script execution complete"
+
 
 # ---- ---- ----     Helper Functions     ---- ---- ----
 
@@ -379,3 +479,267 @@ function update_gitignore {
   echo "$entry" >> "$gitignore_file"
   slog_step_se --context success "added to .gitignore: " --code "$entry" --default
 }
+
+function select_workspace_settings_file {
+  setopt local_options null_glob
+  typeset -a workspace_files=("$dest_dir"/*.code-workspace(N))
+
+  if [[ ${#workspace_files[@]} -eq 0 ]]; then
+    echo ""
+    return 0
+  fi
+
+  if [[ ${#workspace_files[@]} -eq 1 ]]; then
+    echo "${workspace_files[1]}"
+    return 0
+  fi
+
+  typeset -a file_mtimes
+  for file in "${workspace_files[@]}"; do
+    typeset mtime=""
+    mtime=$(stat -f "%m" "$file" 2>/dev/null || stat -c "%Y" "$file" 2>/dev/null)
+    file_mtimes+=("$mtime:$file")
+  done
+
+  typeset -a sorted_files=(${(On)file_mtimes[@]})
+  echo "${sorted_files[1]#*:}"
+}
+
+function split_template_basename {
+  typeset -r filename="$1"
+  typeset topic=""
+  typeset remainder="$filename"
+  if [[ "$filename" == *__* ]]; then
+    topic="${filename%%__*}"
+    remainder="${filename#*__}"
+  fi
+  printf '%s|%s' "$topic" "$remainder"
+}
+
+function merge_json_files {
+  zparseopts -D -F -- \
+    -template-file:=opt_template_file \
+    -destination-file:=opt_destination_file \
+    -description:=opt_description \
+    -auto-init=flag_auto_init
+
+  typeset -r template_file="${opt_template_file[2]}"
+  typeset -r destination_file="${opt_destination_file[2]}"
+  typeset -r description="${opt_description[2]:-JSON merge}"
+  typeset auto_init=false
+  [[ -n "${flag_auto_init:-}" ]] && auto_init=true
+
+  if [[ -z "$template_file" || -z "$destination_file" ]]; then
+    slog_step_se --context fatal "merge_json_files requires --template-file and --destination-file"
+    return 1
+  fi
+
+  if [[ ! -f "$template_file" ]]; then
+    slog_step_se --context fatal "Template file not found: " --url "$template_file" --default
+    return 1
+  fi
+
+  typeset -r destination_dir="${destination_file:h}"
+  if [[ ! -d "$destination_dir" ]]; then
+    mkdir -p "$destination_dir" || {
+      typeset -i exit_code=$?
+      slog_step_se --context fatal --exit-code "$exit_code" "create destination directory: " --url "$destination_dir" --default
+      return "$exit_code"
+    }
+  fi
+
+  if [[ ! -f "$destination_file" ]]; then
+    if [[ "$auto_init" == true ]]; then
+      printf '{}\n' > "$destination_file" || {
+        typeset -i exit_code=$?
+        slog_step_se --context fatal --exit-code "$exit_code" "initialize destination file: " --url "$destination_file" --default
+        return "$exit_code"
+      }
+    else
+      slog_step_se --context fatal "Destination JSON file not found: " --url "$destination_file" --default
+      return 1
+    fi
+  fi
+
+  typeset -r backup_file="${destination_file}.backup.$(date +%Y%m%d_%H%M%S)"
+  cp "$destination_file" "$backup_file" || {
+    typeset -i exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "create backup for: " --url "$destination_file" --default
+    return "$exit_code"
+  }
+
+  typeset temp_file=""
+  temp_file="$(mktemp)"
+  typeset -r merge_script="$user_ai_dir/scripts/json_merge.py"
+  
+  if [[ ! -x "$merge_script" ]]; then
+    slog_step_se --context fatal "json_merge.py not found or not executable: " --url "$merge_script" --default
+    rm -f "$backup_file" "$temp_file"
+    return 1
+  fi
+
+  typeset -a merge_command=(
+    "$merge_script"
+    --destination "$destination_file"
+    --template "$template_file"
+    --output "$temp_file"
+    --indent 2
+  )
+  
+  if [[ -n "${flag_debug:-}" ]]; then
+    merge_command+=(--debug)
+  fi
+
+  "${merge_command[@]}" || {
+    typeset -i exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "merge $description with json_merge.py"
+    rm -f "$temp_file" "$backup_file"
+    return "$exit_code"
+  }
+
+  mv "$temp_file" "$destination_file" || {
+    typeset -i exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "update destination file: " --url "$destination_file" --default
+    rm -f "$temp_file" "$backup_file"
+    return "$exit_code"
+  }
+
+  slog_step_se --context success "merged $description"
+  rm -f "$backup_file"
+}
+
+typeset workspace_destination_file=""
+
+function get_workspace_destination_file {
+  if [[ -n "$workspace_destination_file" ]]; then
+    echo "$workspace_destination_file"
+    return 0
+  fi
+
+  typeset selected_workspace=""
+  selected_workspace="$(select_workspace_settings_file)"
+  if [[ -z "$selected_workspace" ]]; then
+    slog_step_se --context info "No .code-workspace files detected under: " --url "$dest_dir" --default
+    return 1
+  fi
+
+  workspace_destination_file="${selected_workspace:A}"
+  slog_var1_se_d "workspace_destination_file"
+  echo "$workspace_destination_file"
+}
+
+function is_xcode_mcp_installed {
+  typeset -r mcp_file="$dest_dir/.vscode/mcp.json"
+  
+  if [[ ! -f "$mcp_file" ]]; then
+    return 1
+  fi
+  
+  if type jq >/dev/null 2>&1; then
+    if jq -e '.mcpServers."xcode-mcp-server"' "$mcp_file" >/dev/null 2>&1; then
+      return 0
+    fi
+  else
+    if grep -q "xcode-mcp-server" "$mcp_file"; then
+      return 0
+    fi
+  fi
+  
+  return 1
+}
+
+
+function synthesize_copilot_instructions {
+  typeset -r template_file="$user_ai_dir/ai_platforms/copilot/.github/copilot-instructions.template.md"
+  typeset -r output_file="$ai_platform_instruction_file"
+  
+  slog_step_se_d --context will "synthesize copilot-instructions.md"
+  
+  if [[ ! -f "$template_file" ]]; then
+    slog_step_se --context fatal "Template file not found: " --url "$template_file" --default
+    return 1
+  fi
+
+  typeset project_overview=""
+  typeset detected_languages=""
+  typeset detected_frameworks=""
+  typeset build_tools=""
+  
+  project_overview=$(analyze_project_and_populate)
+  
+  typeset temp_file=""
+  temp_file="$(mktemp)"
+  
+  cat "$template_file" > "$temp_file"
+  
+  sed -i.bak "s|<!-- PROJECT_OVERVIEW -->|$project_overview|g" "$temp_file"
+  sed -i.bak "s|<!-- DETECTED_LANGUAGES -->|$detected_languages|g" "$temp_file"
+  sed -i.bak "s|<!-- DETECTED_FRAMEWORKS -->|$detected_frameworks|g" "$temp_file"
+  sed -i.bak "s|<!-- BUILD_TOOLS -->|$build_tools|g" "$temp_file"
+  
+  typeset instruction_list=""
+  instruction_list=$(update_instruction_list)
+  sed -i.bak "s|<!-- INSTRUCTION_FILES_LIST -->|$instruction_list|g" "$temp_file"
+  
+  mv "$temp_file" "$output_file" || {
+    typeset -i exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "write synthesized instructions to: " --url "$output_file" --default
+    rm -f "$temp_file" "$temp_file.bak"
+    return "$exit_code"
+  }
+  
+  rm -f "$temp_file.bak"
+  slog_step_se_d --context success "synthesized copilot-instructions.md"
+}
+
+function analyze_project_and_populate {
+  echo "Add your project-specific coding standards here."
+}
+
+function update_instruction_list {
+  typeset -a instruction_files=(${(f)"$(find "$target_instructions_dir" -type f -name "*.instructions.md" 2>/dev/null | sort)"})
+  
+  typeset instruction_list=""
+  for file in "${instruction_files[@]}"; do
+    typeset filename="${file:t}"
+    typeset title="${filename%.instructions.md}"
+    instruction_list="${instruction_list}- <a>${title}</a>\n"
+  done
+  
+  echo -n "$instruction_list"
+}
+
+function has_instructions_to_install {
+  [[ -d "$source_instructions_dir" ]] && [[ -n "$(find "$source_instructions_dir" -type f -name "*.instructions.md" 2>/dev/null)" ]]
+}
+
+function display_menu {
+  typeset -a instruction_files=(${(f)"$(find "$source_instructions_dir" -type f -name "*.instructions.md" 2>/dev/null | sort)"})
+  typeset -r checksum_file="$user_ai_dir/.gitignored/.ai-checksums"
+  
+  slog_se ""
+  slog_se --bold "Available Instruction Files:" --default
+  slog_se ""
+  
+  typeset -i idx=1
+  for file in "${instruction_files[@]}"; do
+    typeset -r file_basename="${file:t}"
+    typeset -r source_file="$file"
+    typeset -r status=$(get_file_status --file-basename "$file_basename" --source-file "$source_file" --checksum-file "$checksum_file")
+    typeset -r indicator=$(format_status_indicator --status "$status")
+    
+    printf "%2d. %s %s\n" "$idx" "$indicator" "$file_basename"
+    ((idx++))
+  done
+  
+  slog_se ""
+  slog_se --bold "Legend:" --default " 🆕 = new file, 📝 = modified, ✓ = unchanged"
+  slog_se ""
+  printf "Enter selections (e.g., '1 3 5', 'all', or press Enter to skip): "
+  
+  typeset user_input=""
+  read -r user_input
+  echo "$user_input"
+}
+
+
