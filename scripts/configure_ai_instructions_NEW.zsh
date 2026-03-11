@@ -256,8 +256,9 @@ function get_platform_paths {
       ai_instruction_settings_file="$ai_platform_instruction_file"
       ;;
     coderabbit)
-      slog_step_se --context fatal "CodeRabbit platform not yet implemented"
-      return 2
+      target_instructions_dir="${target_base}/.coderabbit"
+      ai_platform_instruction_file="${target_base}/.coderabbit/config.yml"
+      ai_instruction_settings_file="$ai_platform_instruction_file"
       ;;
     *)
       slog_step_se --context fatal "Unknown platform: " --code "$platform" --default
@@ -575,7 +576,26 @@ function synthesize_copilot_instructions {
   
   typeset instruction_list=""
   instruction_list=$(update_instruction_list)
-  sed -i.bak "s|<!-- INSTRUCTION_FILES_LIST -->|$instruction_list|g" "$temp_file"
+  
+  # Write instruction list to temp file for insertion
+  typeset temp_list=""
+  temp_list="$(mktemp)"
+  echo "$instruction_list" > "$temp_list"
+  
+  # Use awk with getline to read from file (handles multiline correctly)
+  awk -v listfile="$temp_list" '
+    /<!-- INSTRUCTION_FILES_LIST -->/ {
+      while ((getline line < listfile) > 0) {
+        print line
+      }
+      close(listfile)
+      next
+    }
+    { print }
+  ' "$temp_file" > "$temp_file.new"
+  
+  mv "$temp_file.new" "$temp_file"
+  rm -f "$temp_list"
   
   mv "$temp_file" "$output_file" || {
     typeset -i exit_code=$?
@@ -595,18 +615,72 @@ function analyze_project_and_populate {
 function update_instruction_list {
   typeset -a instruction_files=(${(f)"$(find "$target_instructions_dir" -type f -name "*.instructions.md" 2>/dev/null | sort)"})
   
-  typeset instruction_list=""
+  typeset -a instruction_lines=()
   for file in "${instruction_files[@]}"; do
     typeset filename="${file:t}"
     typeset title="${filename%.instructions.md}"
-    instruction_list="${instruction_list}- <a>${title}</a>\n"
+    instruction_lines+=("- <a>${title}</a>")
   done
   
-  echo -n "$instruction_list"
+  # Join array with actual newlines using (F) flag
+  echo "${(F)instruction_lines[@]}"
 }
 
 function has_instructions_to_install {
   [[ -d "$source_instructions_dir" ]] && [[ -n "$(find "$source_instructions_dir" -type f -name "*.instructions.md" 2>/dev/null)" ]]
+}
+
+function get_file_status {
+  zparseopts -D -F -- \
+    -file-basename:=opt_file_basename \
+    -source-file:=opt_source_file \
+    -checksum-file:=opt_checksum_file
+  
+  typeset -r file_basename="${opt_file_basename[2]}"
+  typeset -r source_file="${opt_source_file[2]}"
+  typeset -r checksum_file="${opt_checksum_file[2]}"
+  
+  # If no checksum file exists, all files are new
+  if [[ ! -f "$checksum_file" ]]; then
+    echo "new"
+    return 0
+  fi
+  
+  # Calculate current checksum
+  typeset -r current_checksum="$(shasum -a 256 "$source_file" 2>/dev/null | awk '{print $1}')"
+  
+  # Look up stored checksum
+  typeset -r stored_checksum="$(grep "^${file_basename}:" "$checksum_file" 2>/dev/null | cut -d: -f2)"
+  
+  if [[ -z "$stored_checksum" ]]; then
+    echo "new"
+  elif [[ "$current_checksum" != "$stored_checksum" ]]; then
+    echo "modified"
+  else
+    echo "unchanged"
+  fi
+}
+
+function format_status_indicator {
+  zparseopts -D -F -- \
+    -status:=opt_status
+  
+  typeset -r status_value="${opt_status[2]}"
+  
+  case "$status_value" in
+    new)
+      echo "🆕"
+      ;;
+    modified)
+      echo "📝"
+      ;;
+    unchanged)
+      echo "✓"
+      ;;
+    *)
+      echo "?"
+      ;;
+  esac
 }
 
 function display_menu {
@@ -619,10 +693,10 @@ function display_menu {
   
   typeset -i idx=1
   for file in "${instruction_files[@]}"; do
-    typeset -r file_basename="${file:t}"
-    typeset -r source_file="$file"
-    typeset -r status=$(get_file_status --file-basename "$file_basename" --source-file "$source_file" --checksum-file "$checksum_file")
-    typeset -r indicator=$(format_status_indicator --status "$status")
+    typeset file_basename="${file:t}"
+    typeset source_file="$file"
+    typeset file_status=$(get_file_status --file-basename "$file_basename" --source-file "$source_file" --checksum-file "$checksum_file")
+    typeset indicator=$(format_status_indicator --status "$file_status")
     
     printf "%2d. %s %s\n" "$idx" "$indicator" "$file_basename"
     ((idx++))

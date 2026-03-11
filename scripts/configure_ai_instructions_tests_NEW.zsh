@@ -167,21 +167,24 @@ run_test \
 run_test \
   --name "test_02_debug" \
   --description "Enable debug output" \
-  --command "$script_to_test --debug" \
+  --setup "rm -rf ${test_root_dir}/test02 && mkdir -p ${test_root_dir}/test02 && cd ${test_root_dir}/test02 && git init" \
+  --command "cd ${test_root_dir}/test02 && $script_to_test --debug --dest-dir ${test_root_dir}/test02" \
   --expected-exit 0
 
 # Test 03: Verbose flag  
 run_test \
   --name "test_03_verbose" \
   --description "Enable verbose output" \
-  --command "$script_to_test --verbose" \
+  --setup "rm -rf ${test_root_dir}/test03 && mkdir -p ${test_root_dir}/test03 && cd ${test_root_dir}/test03 && git init" \
+  --command "cd ${test_root_dir}/test03 && $script_to_test --verbose --dest-dir ${test_root_dir}/test03" \
   --expected-exit 0
 
 # Test 04: Dry-run flag
 run_test \
   --name "test_04_dryrun" \
   --description "Show what would be done without making changes" \
-  --command "$script_to_test --debug --dry-run --instructions" \
+  --setup "rm -rf ${test_root_dir}/test04 && mkdir -p ${test_root_dir}/test04 && cd ${test_root_dir}/test04 && git init" \
+  --command "cd ${test_root_dir}/test04 && $script_to_test --debug --dry-run --instructions --dest-dir ${test_root_dir}/test04" \
   --expected-exit 0
 
 # ---- PLATFORM & CONFIGURATION TYPE ----
@@ -190,42 +193,48 @@ run_test \
 run_test \
   --name "test_05_platform_copilot" \
   --description "Test Copilot platform configuration" \
-  --command "$script_to_test --debug --ai-platform copilot" \
+  --setup "rm -rf ${test_root_dir}/test05 && mkdir -p ${test_root_dir}/test05 && cd ${test_root_dir}/test05 && git init" \
+  --command "cd ${test_root_dir}/test05 && $script_to_test --debug --ai-platform copilot --dest-dir ${test_root_dir}/test05" \
   --expected-exit 0
 
 # Test 06: Claude platform
 run_test \
   --name "test_06_platform_claude" \
   --description "Test Claude platform configuration" \
-  --command "$script_to_test --debug --ai-platform claude" \
+  --setup "rm -rf ${test_root_dir}/test06 && mkdir -p ${test_root_dir}/test06 && cd ${test_root_dir}/test06 && git init" \
+  --command "cd ${test_root_dir}/test06 && $script_to_test --debug --ai-platform claude --dest-dir ${test_root_dir}/test06" \
   --expected-exit 0
 
 # Test 07: Cursor platform
 run_test \
   --name "test_07_platform_cursor" \
   --description "Test Cursor platform configuration" \
-  --command "$script_to_test --debug --ai-platform cursor" \
+  --setup "rm -rf ${test_root_dir}/test07 && mkdir -p ${test_root_dir}/test07 && cd ${test_root_dir}/test07 && git init" \
+  --command "cd ${test_root_dir}/test07 && $script_to_test --debug --ai-platform cursor --dest-dir ${test_root_dir}/test07" \
   --expected-exit 0
 
 # Test 08: CodeRabbit platform
 run_test \
   --name "test_08_platform_coderabbit" \
   --description "Test CodeRabbit platform configuration" \
-  --command "$script_to_test --debug --ai-platform coderabbit" \
+  --setup "rm -rf ${test_root_dir}/test08 && mkdir -p ${test_root_dir}/test08 && cd ${test_root_dir}/test08 && git init" \
+  --command "cd ${test_root_dir}/test08 && $script_to_test --debug --ai-platform coderabbit --dest-dir ${test_root_dir}/test08" \
   --expected-exit 0
 
 # Test 09: Symlink mode (default)
 run_test \
   --name "test_09_configure_symlink" \
   --description "Test symlink configuration type" \
-  --command "$script_to_test --debug --configure-type symlink" \
+  --setup "rm -rf ${test_root_dir}/test09 && mkdir -p ${test_root_dir}/test09 && cd ${test_root_dir}/test09 && git init" \
+  --command "cd ${test_root_dir}/test09 && $script_to_test --debug --configure-type symlink --dest-dir ${test_root_dir}/test09" \
   --expected-exit 0
 
 # Test 10: Copy mode
 run_test \
   --name "test_10_configure_copy" \
   --description "Test copy configuration type" \
-  --command "$script_to_test --debug --configure-type copy" \
+  --setup "rm -rf ${test_root_dir}/test10 && mkdir -p ${test_root_dir}/test10 && cd ${test_root_dir}/test10 && git init" \
+  --command "cd ${test_root_dir}/test10 && $script_to_test --debug --configure-type copy --dest-dir ${test_root_dir}/test10" \
   --expected-exit 0
 
 # ---- SPECIAL OPERATIONS ----
@@ -234,17 +243,18 @@ run_test \
 run_test \
   --name "test_11_instructions" \
   --description "Auto-install all instruction files" \
-  --command "$script_to_test --debug --instructions" \
+  --setup "rm -rf ${test_root_dir}/test11 && mkdir -p ${test_root_dir}/test11 && cd ${test_root_dir}/test11 && git init" \
+  --command "cd ${test_root_dir}/test11 && $script_to_test --debug --instructions --dest-dir ${test_root_dir}/test11" \
   --expected-exit 0 \
   --validate "
-    test_dir='${repo_dir}/.github/instructions' && \
+    test_dir='${test_root_dir}/test11/.github/instructions' && \
     echo \"Checking directory exists: \$test_dir\" && \
     test -d \"\$test_dir\" || { echo \"ERROR: Directory not created\"; exit 1; } && \
     file_count=\$(ls -1 \"\$test_dir\"/*.instructions.md 2>/dev/null | wc -l | tr -d ' ') && \
     echo \"Found \$file_count instruction files\" && \
     test \"\$file_count\" -ge 11 || { echo \"ERROR: Expected at least 11 files, found \$file_count\"; exit 1; } && \
-    test -f '${repo_dir}/.github/copilot-instructions.md' || { echo \"ERROR: copilot-instructions.md not found\"; exit 1; } && \
-    grep -q 'GitHub Copilot Instructions' '${repo_dir}/.github/copilot-instructions.md' || { echo \"ERROR: copilot-instructions.md missing expected content\"; exit 1; } && \
+    test -f '${test_root_dir}/test11/.github/copilot-instructions.md' || { echo \"ERROR: copilot-instructions.md not found\"; exit 1; } && \
+    grep -q 'GitHub Copilot Instructions' '${test_root_dir}/test11/.github/copilot-instructions.md' || { echo \"ERROR: copilot-instructions.md missing expected content\"; exit 1; } && \
     echo \"✅ All validations passed\"
   "
 
@@ -252,57 +262,65 @@ run_test \
 run_test \
   --name "test_12_instructions_dryrun" \
   --description "Show instruction installation without making changes" \
-  --command "$script_to_test --debug --dry-run --instructions" \
+  --setup "rm -rf ${test_root_dir}/test12 && mkdir -p ${test_root_dir}/test12 && cd ${test_root_dir}/test12 && git init" \
+  --command "cd ${test_root_dir}/test12 && $script_to_test --debug --dry-run --instructions --dest-dir ${test_root_dir}/test12" \
   --expected-exit 0
 
 # Test 13: Regenerate main instruction file
 run_test \
   --name "test_13_regenerate_main" \
   --description "Force regeneration of main instruction file" \
-  --command "$script_to_test --debug --regenerate-main" \
+  --setup "rm -rf ${test_root_dir}/test13 && mkdir -p ${test_root_dir}/test13 && cd ${test_root_dir}/test13 && git init" \
+  --command "cd ${test_root_dir}/test13 && $script_to_test --debug --regenerate-main --dest-dir ${test_root_dir}/test13" \
   --expected-exit 0
 
 # Test 14: Dev-link operation
 run_test \
   --name "test_14_dev_link" \
   --description "Create development symlink" \
-  --command "$script_to_test --debug --dev-link" \
+  --setup "rm -rf ${test_root_dir}/test14 && mkdir -p ${test_root_dir}/test14 && cd ${test_root_dir}/test14 && git init" \
+  --command "cd ${test_root_dir}/test14 && $script_to_test --debug --dev-link --dest-dir ${test_root_dir}/test14" \
   --expected-exit 0
 
 # Test 15: Dev-vscode operation
 run_test \
   --name "test_15_dev_vscode" \
   --description "Add AI dev directory to VS Code workspace" \
-  --command "$script_to_test --debug --dev-vscode" \
+  --setup "rm -rf ${test_root_dir}/test15 && mkdir -p ${test_root_dir}/test15 && cd ${test_root_dir}/test15 && git init" \
+  --command "cd ${test_root_dir}/test15 && $script_to_test --debug --dev-vscode --dest-dir ${test_root_dir}/test15" \
   --expected-exit 0
 
 # Test 16: Workspace settings
 run_test \
   --name "test_16_workspace_settings" \
   --description "Launch workspace settings menu" \
-  --command "$script_to_test --debug --workspace-settings" \
+  --setup "rm -rf ${test_root_dir}/test16 && mkdir -p ${test_root_dir}/test16 && cd ${test_root_dir}/test16 && git init" \
+  --command "cd ${test_root_dir}/test16 && $script_to_test --debug --workspace-settings --dest-dir ${test_root_dir}/test16" \
   --expected-exit 0
 
 # Test 17: User settings
 run_test \
   --name "test_17_user_settings" \
   --description "Launch user settings menu" \
-  --command "$script_to_test --debug --user-settings" \
+  --setup "rm -rf ${test_root_dir}/test17 && mkdir -p ${test_root_dir}/test17 && cd ${test_root_dir}/test17 && git init" \
+  --command "cd ${test_root_dir}/test17 && $script_to_test --debug --user-settings --dest-dir ${test_root_dir}/test17" \
   --expected-exit 0
 
 # Test 18: MCP Xcode
 run_test \
   --name "test_18_mcp_xcode" \
   --description "Install Xcode MCP server configuration" \
-  --command "$script_to_test --debug --mcp-xcode" \
+  --setup "rm -rf ${test_root_dir}/test18 && mkdir -p ${test_root_dir}/test18 && cd ${test_root_dir}/test18 && git init" \
+  --command "cd ${test_root_dir}/test18 && $script_to_test --debug --mcp-xcode --dest-dir ${test_root_dir}/test18" \
   --expected-exit 0
 
-# Test 19: Prompt mode
-run_test \
-  --name "test_19_prompt" \
-  --description "Enable interactive prompts" \
-  --command "$script_to_test --debug --prompt --instructions" \
-  --expected-exit 0
+# Test 19: Prompt mode (skip - requires interactive input)
+# run_test \
+#   --name "test_19_prompt" \
+#   --description "Enable interactive prompts" \
+#   --setup "rm -rf ${test_root_dir}/test19 && mkdir -p ${test_root_dir}/test19 && cd ${test_root_dir}/test19 && git init" \
+#   --command "cd ${test_root_dir}/test19 && echo '' | $script_to_test --debug --prompt --instructions --dest-dir ${test_root_dir}/test19" \
+#   --expected-exit 0
 
 # ---- SOURCE & DESTINATION DIRECTORIES ----
 
@@ -310,14 +328,16 @@ run_test \
 run_test \
   --name "test_20_custom_source" \
   --description "Use custom source directory" \
-  --command "$script_to_test --debug --source-dir $HOME/.ai" \
+  --setup "rm -rf ${test_root_dir}/test20 && mkdir -p ${test_root_dir}/test20 && cd ${test_root_dir}/test20 && git init" \
+  --command "cd ${test_root_dir}/test20 && $script_to_test --debug --source-dir $HOME/.ai --dest-dir ${test_root_dir}/test20" \
   --expected-exit 0
 
 # Test 21: Custom destination directory
 run_test \
   --name "test_21_custom_dest" \
   --description "Use custom destination directory" \
-  --command "$script_to_test --debug --dest-dir $repo_dir" \
+  --setup "rm -rf ${test_root_dir}/test21 && mkdir -p ${test_root_dir}/test21 && cd ${test_root_dir}/test21 && git init" \
+  --command "cd ${test_root_dir}/test21 && $script_to_test --debug --dest-dir ${test_root_dir}/test21" \
   --expected-exit 0
 
 # ---- COMBINED FLAGS ----
@@ -326,28 +346,32 @@ run_test \
 run_test \
   --name "test_22_combined_platforms" \
   --description "Test copilot + claude combination" \
-  --command "$script_to_test --debug --instructions --ai-platform copilot" \
+  --setup "rm -rf ${test_root_dir}/test22 && mkdir -p ${test_root_dir}/test22 && cd ${test_root_dir}/test22 && git init" \
+  --command "cd ${test_root_dir}/test22 && $script_to_test --debug --instructions --ai-platform copilot --dest-dir ${test_root_dir}/test22" \
   --expected-exit 0
 
 # Test 23: Development workflow
 run_test \
   --name "test_23_dev_workflow" \
   --description "Combined dev-link + dev-vscode + workspace-settings" \
-  --command "$script_to_test --debug --dev-link --dev-vscode --workspace-settings" \
+  --setup "rm -rf ${test_root_dir}/test23 && mkdir -p ${test_root_dir}/test23 && cd ${test_root_dir}/test23 && git init" \
+  --command "cd ${test_root_dir}/test23 && $script_to_test --debug --dev-link --dev-vscode --workspace-settings --dest-dir ${test_root_dir}/test23" \
   --expected-exit 0
 
 # Test 24: Full configuration
 run_test \
   --name "test_24_full_config" \
   --description "Instructions + workspace + user settings + mcp-xcode" \
-  --command "$script_to_test --debug --instructions --workspace-settings --user-settings --mcp-xcode" \
+  --setup "rm -rf ${test_root_dir}/test24 && mkdir -p ${test_root_dir}/test24 && cd ${test_root_dir}/test24 && git init" \
+  --command "cd ${test_root_dir}/test24 && $script_to_test --debug --instructions --workspace-settings --user-settings --mcp-xcode --dest-dir ${test_root_dir}/test24" \
   --expected-exit 0
 
 # Test 25: All flags combined
 run_test \
   --name "test_25_all_flags" \
   --description "Test maximum flag combination" \
-  --command "$script_to_test --debug --verbose --instructions --workspace-settings --user-settings --mcp-xcode --dev-link --dev-vscode" \
+  --setup "rm -rf ${test_root_dir}/test25 && mkdir -p ${test_root_dir}/test25 && cd ${test_root_dir}/test25 && git init" \
+  --command "cd ${test_root_dir}/test25 && $script_to_test --debug --verbose --instructions --workspace-settings --user-settings --mcp-xcode --dev-link --dev-vscode --dest-dir ${test_root_dir}/test25" \
   --expected-exit 0
 
 # ---- ISOLATED DIRECTORY TESTS ----
