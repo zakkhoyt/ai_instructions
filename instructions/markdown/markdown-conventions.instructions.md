@@ -11,79 +11,164 @@ applyTo:
 
 These conventions ensure consistent formatting, branding, and readability across all markdown documentation. They apply to all `.md` files, including README.md, documentation files, and guides.
 
-## Icon Usage for Apps, Companies, and Hardware Vendors
+## Icon and Banner Usage for Apps, Companies, and Hardware Vendors
 
-### Icon Preparation Requirements
+### Central Backing Store Pattern
 
-When adding icons for apps, companies, or hardware vendors mentioned in markdown documentation:
+**CRITICAL**: All icons and banners are managed through a central backing store to avoid duplicate downloads and ensure consistency across repositories.
 
-1. **Icon Acquisition**:
-   - Download the app icon, company logo, or hardware vendor logo to a temporary location
-   - Prefer 1:1 aspect ratio (square) images
-   - Prefer transparent background (PNG format)
+**Storage hierarchy**:
+1. **Central backing store**: `~/.ai/docs/images/icons/` - Permanent cache shared across all projects
+2. **Target repository**: `docs/images/icons/` - Project-specific copies
 
-2. **Icon Processing**:
-   - Resize to emoji size (approximately 16x16 to 32x32 pixels for inline use)
-   - Add corner rounding if possible (to match emoji aesthetic)
-   - Save final images to `docs/images/icons/`
-   - Use `snake_case.png` for filenames (e.g., `xcode.png`, `mac_stadium.png`, `github_actions.png`)
+**Flow pattern**:
+- **Acquisition**: Internet → central backing store (`~/.ai/docs/images/icons/`) → target repository (`docs/images/icons/`)
+- **Reverse flow**: If agent obtains new icon, store in backing store first, then copy to target repository
 
-3. **Icon Location**:
-   - All icons must be stored in: `docs/images/icons/`
-   - Use relative paths when referencing icons in markdown
+### Icon Types
 
-### Icon Usage in Markdown
+Two distinct image types are used:
 
-**CRITICAL**: When mentioning apps, companies, or hardware vendors in markdown:
+1. **Icons** (`*_icon.png`):
+   - Square aspect ratio (~1:1)
+   - Used inline with text
+   - Rendered at `height="16"`
 
-1. **Prefix with icon**: Add the relevant icon before the name
-2. **Format name with backticks**: Use code-style formatting for the name
+2. **Banners** (`*_banner.png`):
+   - Wide aspect ratio (>3:1)
+   - Used standalone only (never inline with text)
+   - Rendered at `height="64"`
 
-**Format**:
-```markdown
-![icon](docs/images/icons/icon_name.png) `App Name`
+### Icon Acquisition Fallback Chain
+
+When an icon or banner is needed but not present in the backing store, follow this priority order:
+
+1. **Extract from `*.app` bundle** (macOS only):
+   ```zsh
+   # Extract icon from application bundle
+   sips -s format png /Applications/Xcode.app/Contents/Resources/AppIcon.icns \
+     --out ~/.ai/docs/images/icons/xcode_icon.png
+   ```
+
+2. **Check local documentation** (PDFs, user manuals):
+   - Open PDF files related to the product
+   - Look for official product icons on cover pages or headers
+   - Extract and process the image
+
+3. **Official application documentation**:
+   - Visit the official website or documentation
+   - Extract favicon or inline product images
+   - Download high-quality version
+
+4. **DuckDuckGo image search** (fallback):
+   ```zsh
+   typeset -a -r search_terms=(xcode icon)
+   typeset -r search_query="${(j:+:)search_terms}"
+   
+   # Small images with public domain license
+   typeset -r ddg_url="https://duckduckgo.com/&iar=images?q=${search_query}&iaf=size%3ASmall%2Clicense%3APublic"
+   ```
+   - Use `+` or `%20` for URL-encoding spaces in search terms
+   - Filter: `size%3ASmall` for small images
+   - Filter: `license%3APublic` for public domain only
+   - Join multiple filters with `%2C`
+
+5. **If no suitable image found**:
+   - **Do NOT use a placeholder or wrong icon**
+   - Wrong icons are misleading and disorienting
+   - Use text-only reference without icon
+
+### HTML Markup (Required)
+
+**CRITICAL**: Images must be expressed as HTML `<img>` tags (not markdown image syntax) to control size.
+
+**Inline with text** (icons only):
+```html
+<img src="docs/images/icons/xcode_icon.png" alt="xcode_icon" height="16">
 ```
 
-**Examples**:
+**Standalone** (icons or banners):
+```html
+<!-- Icon standalone -->
+<img src="docs/images/icons/xcode_icon.png" alt="xcode_icon" height="64">
 
-✅ **Good:**
-```markdown
-- Install ![xcode](docs/images/icons/xcode.png) `Xcode` using the xcodes CLI tool
-- Configure ![github](docs/images/icons/github.png) `GitHub Actions` runner
-- Provision hardware from ![macstadium](docs/images/icons/mac_stadium.png) `MacStadium`
-- Building the ![hatch](docs/images/icons/hatch.png) `Hatch Sleep` iOS app
-- Use ![homebrew](docs/images/icons/homebrew.png) `Homebrew` to install packages
+<!-- Banner standalone -->
+<img src="docs/images/icons/github_actions_banner.png" alt="github_actions_banner" height="64">
 ```
 
-❌ **Bad:**
+**Alt text guidelines**:
+- Use basename of image file without extension
+- Example: `xcode_icon.png` → `alt="xcode_icon"`
+- Example: `mac_stadium_banner.png` → `alt="mac_stadium_banner"`
+
+**Size guidelines**:
+- `height="16"` - Inline with text (icons only)
+- `height="64"` - Standalone display (icons or banners)
+- Width auto-sizes to maintain aspect ratio
+- Never specify both width and height
+
+### Naming Conventions
+
+**Icons** (square images):
+- Pattern: `${service}_icon.png`
+- Examples: `xcode_icon.png`, `github_icon.png`, `homebrew_icon.png`
+- Use `snake_case` for multi-word names
+- Example: `github_actions_icon.png`, `mac_stadium_icon.png`
+
+**Banners** (wide images):
+- Pattern: `${service}_banner.png`
+- Examples: `xcode_banner.png`, `github_banner.png`
+- Use `snake_case` for multi-word names
+- Example: `github_actions_banner.png`, `mac_stadium_banner.png`
+
+### Usage Examples
+
+**Inline with text** (icon only):
 ```markdown
-- Install Xcode using the xcodes CLI tool              # Missing icon and backticks
-- Configure GitHub Actions runner                      # Missing icon and backticks
-- Provision hardware from MacStadium                   # Missing icon and backticks
+Install <img src="docs/images/icons/xcode_icon.png" alt="xcode_icon" height="16"> `Xcode` using the xcodes CLI tool.
+
+Configure <img src="docs/images/icons/github_icon.png" alt="github_icon" height="16"> `GitHub Actions` runner.
+
+Provision hardware from <img src="docs/images/icons/mac_stadium_icon.png" alt="mac_stadium_icon" height="16"> `MacStadium`.
 ```
 
-### Common Entities Requiring Icons
+**Standalone display** (icon or banner):
+```markdown
+## Development Tools
 
-Create and use icons for these entities when mentioned in documentation:
+<img src="docs/images/icons/xcode_icon.png" alt="xcode_icon" height="64">
+
+Apple's integrated development environment for macOS and iOS development.
+
+---
+
+<img src="docs/images/icons/github_actions_banner.png" alt="github_actions_banner" height="64">
+
+Continuous integration and deployment platform.
+```
+
+### Common Entities
+
+Add icons/banners for these when mentioned:
 
 **Development Tools**:
-- ![xcode](docs/images/icons/xcode.png) `Xcode`
-- ![homebrew](docs/images/icons/homebrew.png) `Homebrew`
-- ![fastlane](docs/images/icons/fastlane.png) `Fastlane`
-- ![ruby](docs/images/icons/ruby.png) `Ruby`
-- ![github](docs/images/icons/github.png) `GitHub`
-- ![github_actions](docs/images/icons/github_actions.png) `GitHub Actions`
+- `xcode_icon.png` / `xcode_banner.png` - Xcode
+- `homebrew_icon.png` / `homebrew_banner.png` - Homebrew
+- `fastlane_icon.png` / `fastlane_banner.png` - Fastlane
+- `ruby_icon.png` / `ruby_banner.png` - Ruby
+- `github_icon.png` / `github_banner.png` - GitHub
+- `github_actions_icon.png` / `github_actions_banner.png` - GitHub Actions
 
 **Operating Systems & Platforms**:
-- ![macos](docs/images/icons/macos.png) `macOS`
-- ![ios](docs/images/icons/ios.png) `iOS`
-- ![apple](docs/images/icons/apple.png) `Apple`
+- `macos_icon.png` / `macos_banner.png` - macOS
+- `ios_icon.png` / `ios_banner.png` - iOS
+- `apple_icon.png` / `apple_banner.png` - Apple
 
 **Companies & Services**:
-- ![hatch](docs/images/icons/hatch.png) `Hatch`
-- ![mac_stadium](docs/images/icons/mac_stadium.png) `MacStadium`
+- `hatch_icon.png` / `hatch_banner.png` - Hatch
+- `mac_stadium_icon.png` / `mac_stadium_banner.png` - MacStadium
 
-**Note**: This is not an exhaustive list. Add icons for any app, company, or hardware vendor mentioned in your documentation.
+**Note**: This is not an exhaustive list. Add icons/banners for any app, company, or hardware vendor mentioned in documentation.
 
 ## Code Formatting with Backticks
 
