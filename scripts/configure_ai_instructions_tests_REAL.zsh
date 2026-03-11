@@ -32,7 +32,7 @@ slog_var1_se_d "script_to_test"
 typeset -r timestamp=$(date +%Y%m%d_%H%M%S)
 slog_var1_se_d "timestamp"
 
-typeset -r log_dir="${repo_dir}/.gitignored/test_logs/legacy_real_comprehensive"
+typeset -r log_dir="${repo_dir}/.gitignored/logs/test_legacy_real"
 slog_var1_se_d "log_dir"
 
 mkdir -p "$log_dir"
@@ -49,13 +49,15 @@ function run_test {
     -description:=opt_description \
     -command:=opt_command \
     -expected-exit:=opt_expected_exit \
-    -setup:=opt_setup
+    -setup:=opt_setup \
+    -validate:=opt_validate
   
   typeset -r test_name="${opt_name[2]}"
   typeset -r description="${opt_description[2]}"
   typeset -r command="${opt_command[2]}"
   typeset -r expected_exit="${opt_expected_exit[2]}"
   typeset -r setup_cmd="${opt_setup[2]:-}"
+  typeset -r validate_cmd="${opt_validate[2]:-}"
   
   typeset -r log_file="${log_dir}/${test_name}_${timestamp}.log"
   
@@ -101,15 +103,44 @@ EOF
   echo "EXIT CODE: $actual_exit" >> "$log_file"
   echo "Expected: $expected_exit" >> "$log_file"
   
-  if [[ $actual_exit -eq $expected_exit ]]; then
+  # Run validation if provided
+  typeset validation_passed="true"
+  if [[ -n "$validate_cmd" ]]; then
+    echo "" >> "$log_file"
+    echo "VALIDATION:" >> "$log_file"
+    echo "--------------------------------------------------------------------------------" >> "$log_file"
+    echo "Command: $validate_cmd" >> "$log_file"
+    echo "" >> "$log_file"
+    
+    typeset -i validate_exit=0
+    /bin/zsh -c "source ~/.zshrc > /dev/null 2>&1 && $validate_cmd" 2>&1 | tee -a "$log_file" > /dev/null || validate_exit=$?
+    
+    echo "" >> "$log_file"
+    echo "Validation exit code: $validate_exit" >> "$log_file"
+    
+    if [[ $validate_exit -ne 0 ]]; then
+      validation_passed="false"
+      echo "Validation: FAILED" >> "$log_file"
+    else
+      echo "Validation: PASSED" >> "$log_file"
+    fi
+    echo "--------------------------------------------------------------------------------" >> "$log_file"
+  fi
+  
+  # Determine final status
+  if [[ $actual_exit -eq $expected_exit && "$validation_passed" == "true" ]]; then
     echo "Status: PASS" >> "$log_file"
     slog_step_se --context success "$test_name"
   else
     echo "Status: FAIL" >> "$log_file"
-    slog_step_se --context error "$test_name - Expected exit $expected_exit but got $actual_exit"
+    if [[ $actual_exit -ne $expected_exit ]]; then
+      slog_step_se --context error "$test_name - Expected exit $expected_exit but got $actual_exit"
+    else
+      slog_step_se --context error "$test_name - Validation failed"
+    fi
   fi
   
-  echo "================================================================================  " >> "$log_file"
+  echo "================================================================================" >> "$log_file"
 }
 
 # ---- ---- ----     Test Suite     ---- ---- ----
@@ -204,7 +235,18 @@ run_test \
   --name "test_11_instructions" \
   --description "Auto-install all instruction files" \
   --command "$script_to_test --debug --instructions" \
-  --expected-exit 0
+  --expected-exit 0 \
+  --validate "
+    test_dir='${repo_dir}/.github/instructions' && \
+    echo \"Checking directory exists: \$test_dir\" && \
+    test -d \"\$test_dir\" || { echo \"ERROR: Directory not created\"; exit 1; } && \
+    file_count=\$(ls -1 \"\$test_dir\"/*.instructions.md 2>/dev/null | wc -l | tr -d ' ') && \
+    echo \"Found \$file_count instruction files\" && \
+    test \"\$file_count\" -ge 11 || { echo \"ERROR: Expected at least 11 files, found \$file_count\"; exit 1; } && \
+    test -f '${repo_dir}/.github/copilot-instructions.md' || { echo \"ERROR: copilot-instructions.md not found\"; exit 1; } && \
+    grep -q 'GitHub Copilot Instructions' '${repo_dir}/.github/copilot-instructions.md' || { echo \"ERROR: copilot-instructions.md missing expected content\"; exit 1; } && \
+    echo \"✅ All validations passed\"
+  "
 
 # Test 12: Instructions with dry-run
 run_test \
@@ -316,7 +358,20 @@ run_test \
   --description "Install copilot instructions in clean directory" \
   --setup "rm -rf ${test_root_dir}/test26 && mkdir -p ${test_root_dir}/test26 && cd ${test_root_dir}/test26 && git init" \
   --command "cd ${test_root_dir}/test26 && $script_to_test --debug --instructions --ai-platform copilot" \
-  --expected-exit 0
+  --expected-exit 0 \
+  --validate "
+    test_dir='${test_root_dir}/test26/.github/instructions' && \
+    echo \"Checking directory exists: \$test_dir\" && \
+    test -d \"\$test_dir\" || { echo \"ERROR: Directory not created\"; exit 1; } && \
+    file_count=\$(ls -1 \"\$test_dir\" | wc -l | tr -d ' ') && \
+    echo \"Found \$file_count instruction files\" && \
+    test \"\$file_count\" -eq 11 || { echo \"ERROR: Expected 11 files, found \$file_count\"; exit 1; } && \
+    for file in \"\$test_dir\"/*.instructions.md; do \
+      test -L \"\$file\" || { echo \"ERROR: \$file is not a symlink\"; exit 1; }; \
+    done && \
+    test -f '${test_root_dir}/test26/.github/copilot-instructions.md' || { echo \"ERROR: copilot-instructions.md not found\"; exit 1; } && \
+    echo \"✅ All validations passed\"
+  "
 
 # Test 27: Clean directory installation (claude)
 run_test \
@@ -324,7 +379,16 @@ run_test \
   --description "Install claude instructions in clean directory" \
   --setup "rm -rf ${test_root_dir}/test27 && mkdir -p ${test_root_dir}/test27 && cd ${test_root_dir}/test27 && git init" \
   --command "cd ${test_root_dir}/test27 && $script_to_test --debug --instructions --ai-platform claude" \
-  --expected-exit 0
+  --expected-exit 0 \
+  --validate "
+    test_dir='${test_root_dir}/test27/.claude' && \
+    echo \"Checking directory exists: \$test_dir\" && \
+    test -d \"\$test_dir\" || { echo \"ERROR: Directory not created\"; exit 1; } && \
+    file_count=\$(ls -1 \"\$test_dir\"/*.instructions.md 2>/dev/null | wc -l | tr -d ' ') && \
+    echo \"Found \$file_count instruction files\" && \
+    test \"\$file_count\" -eq 11 || { echo \"ERROR: Expected 11 files, found \$file_count\"; exit 1; } && \
+    echo \"✅ All validations passed\"
+  "
 
 # Test 28: Clean directory installation (cursor)
 run_test \
@@ -332,7 +396,17 @@ run_test \
   --description "Install cursor instructions in clean directory" \
   --setup "rm -rf ${test_root_dir}/test28 && mkdir -p ${test_root_dir}/test28 && cd ${test_root_dir}/test28 && git init" \
   --command "cd ${test_root_dir}/test28 && $script_to_test --debug --instructions --ai-platform cursor" \
-  --expected-exit 0
+  --expected-exit 0 \
+  --validate "
+    test_dir='${test_root_dir}/test28/.cursor/rules' && \
+    echo \"Checking directory exists: \$test_dir\" && \
+    test -d \"\$test_dir\" || { echo \"ERROR: Directory not created\"; exit 1; } && \
+    file_count=\$(ls -1 \"\$test_dir\"/*.instructions.md 2>/dev/null | wc -l | tr -d ' ') && \
+    echo \"Found \$file_count instruction files\" && \
+    test \"\$file_count\" -eq 11 || { echo \"ERROR: Expected 11 files, found \$file_count\"; exit 1; } && \
+    test -f '${test_root_dir}/test28/.cursor/rules/mobile.mdc' || { echo \"ERROR: mobile.mdc not found\"; exit 1; } && \
+    echo \"✅ All validations passed\"
+  "
 
 # Test 29: Copy mode in clean directory
 run_test \
@@ -340,7 +414,19 @@ run_test \
   --description "Test copy mode instead of symlink" \
   --setup "rm -rf ${test_root_dir}/test29 && mkdir -p ${test_root_dir}/test29 && cd ${test_root_dir}/test29 && git init" \
   --command "cd ${test_root_dir}/test29 && $script_to_test --debug --instructions --configure-type copy" \
-  --expected-exit 0
+  --expected-exit 0 \
+  --validate "
+    test_dir='${test_root_dir}/test29/.github/instructions' && \
+    echo \"Checking directory exists: \$test_dir\" && \
+    test -d \"\$test_dir\" || { echo \"ERROR: Directory not created\"; exit 1; } && \
+    file_count=\$(ls -1 \"\$test_dir\" | wc -l | tr -d ' ') && \
+    echo \"Found \$file_count instruction files\" && \
+    test \"\$file_count\" -eq 11 || { echo \"ERROR: Expected 11 files, found \$file_count\"; exit 1; } && \
+    for file in \"\$test_dir\"/*.instructions.md; do \
+      test -f \"\$file\" && ! test -L \"\$file\" || { echo \"ERROR: \$file should be regular file not symlink\"; exit 1; }; \
+    done && \
+    echo \"✅ All validations passed (files are copies not symlinks)\"
+  "
 
 # Test 30: Regenerate with existing files
 run_test \
