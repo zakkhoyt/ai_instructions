@@ -274,3 +274,59 @@ All questions answered in documentation:
 *Branch*: zakk/script_overhaul  
 *PR*: #6  
 *Commits*: 17
+
+---
+
+## TEST LOG IMPROVEMENTS (Added 2026-03-11)
+
+**User feedback**: "those test logs suck. They don't even include the command"
+
+**Problem**: Original test logs only captured errors, not full output. Didn't show:
+- What command was executed
+- Complete stdout/stderr
+- Test descriptions or validation
+
+**Solution**: Created comprehensive test suite with:
+- ✅ Full command logging in every test log
+- ✅ Complete stdout + stderr capture  
+- ✅ Structured format with headers/footers
+- ✅ Proper zsh environment (sources ~/.zshrc)
+- ✅ 11 real test scenarios
+- ✅ Automated summary generation
+- ✅ 100% pass rate validation
+
+**New Files**:
+- `scripts/configure_ai_instructions_tests_COMPREHENSIVE.zsh` (309 lines)
+- `scripts/TEST_IMPROVEMENTS.md` (detailed documentation)
+
+**Test Results**: All 11 tests passing
+**Log Location**: `.gitignored/test_logs/legacy_comprehensive/`
+
+**Example log format**:
+```
+================================================================================
+TEST: test_04_list_instructions
+================================================================================
+Description: Verify --instructions flag lists available instruction files
+Command: /Users/zakkhoyt/.ai/scripts/configure_ai_instructions_NEW.zsh --debug --instructions
+Expected exit code: 0
+Timestamp: Wed Mar 11 03:14:11 MDT 2026
+================================================================================
+
+COMMAND OUTPUT:
+--------------------------------------------------------------------------------
+flag_debug : ' '
+user_ai_dir : ' /Users/zakkhoyt/.ai '
+  [WILL]   🔜   install instruction file: agent-chat-response-conventions.instructions.md
+  [SUCCESS]   ✅   installed instruction file: agent-chat-response-conventions.instructions.md
+  [... 11 more files installed ...]
+  [WILL]   🔜   synthesize copilot-instructions.md
+  [SUCCESS]   ✅   synthesized copilot-instructions.md
+--------------------------------------------------------------------------------
+EXIT CODE: 0
+Expected: 0
+Status: PASS
+================================================================================
+```
+
+Old basic test scripts deprecated - comprehensive suite is the standard now.
