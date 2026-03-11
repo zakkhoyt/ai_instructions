@@ -225,110 +225,6 @@ slog_var1_se_d "repo_dir"
 
 slog_step_se_d --context success "detected repository directory"
 
-# ---- ---- ----     Main Script Work     ---- ---- ----
-
-# [step] Set up platform paths
-get_platform_paths --platform "$ai_platform" --target-base "$dest_dir"
-slog_var1_se_d "target_instructions_dir"
-slog_var1_se_d "ai_platform_instruction_file"
-slog_var1_se_d "ai_instruction_settings_file"
-
-typeset -r source_instructions_dir="$user_ai_dir/instructions"
-slog_var1_se_d "source_instructions_dir"
-
-# [step] Create target instructions directory
-slog_step_se_d --context will "create target instructions directory if needed"
-if [[ ! -d "$target_instructions_dir" ]]; then
-  mkdir -p "$target_instructions_dir" || {
-    typeset -i exit_code=$?
-    slog_step_se --context fatal --exit-code "$exit_code" "create directory: " --url "$target_instructions_dir" --default
-    exit "$exit_code"
-  }
-  slog_step_se_d --context success "created target instructions directory"
-else
-  slog_step_se_d --context success "target instructions directory already exists"
-fi
-
-# Handle --dev-link flag
-if [[ -n "${flag_dev_link:-}" ]]; then
-  create_dev_symlink
-  typeset -r dev_link_name="${user_ai_dir:t}"
-  update_gitignore --entry "$dev_link_name" --gitignore-file "$dest_dir/.gitignore"
-  exit 0
-fi
-
-# Handle --instructions flag
-if [[ -n "${flag_instructions:-}" ]]; then
-  if ! has_instructions_to_install; then
-    slog_step_se --context info "No instruction files found in: " --url "$source_instructions_dir" --default
-    exit 0
-  fi
-  
-  typeset user_selection=""
-  if [[ -n "${flag_prompt:-}" ]]; then
-    user_selection=$(display_menu)
-  else
-    user_selection="all"
-  fi
-  
-  if [[ -z "$user_selection" ]]; then
-    slog_step_se --context info "No files selected for installation"
-    exit 0
-  fi
-  
-  typeset -a instruction_files=(${(f)"$(find "$source_instructions_dir" -type f -name "*.instructions.md" 2>/dev/null | sort)"})
-  typeset -r checksum_file="$user_ai_dir/.gitignored/.ai-checksums"
-  
-  typeset -a selected_indices=()
-  if [[ "$user_selection" == "all" ]]; then
-    for ((idx=1; idx<=${#instruction_files[@]}; idx++)); do
-      selected_indices+=("$idx")
-    done
-  else
-    selected_indices=(${(s: :)user_selection})
-  fi
-  
-  for selection in "${selected_indices[@]}"; do
-    if [[ ! "$selection" =~ ^[0-9]+$ ]] || (( selection < 1 || selection > ${#instruction_files[@]} )); then
-      slog_step_se --context warning "Invalid selection: " --code "$selection" --default
-      continue
-    fi
-    
-    typeset source_file="${instruction_files[$selection]}"
-    typeset file_basename="${source_file:t}"
-    typeset dest_file="$target_instructions_dir/$file_basename"
-    
-    slog_step_se_d --context will "install instruction file: " --url "$file_basename" --default
-    
-    case "$configure_type" in
-      symlink)
-        ln -sf "$source_file" "$dest_file" || {
-          typeset -i exit_code=$?
-          slog_step_se --context fatal --exit-code "$exit_code" "create symlink for: " --url "$file_basename" --default
-          continue
-        }
-        ;;
-      copy)
-        cp "$source_file" "$dest_file" || {
-          typeset -i exit_code=$?
-          slog_step_se --context fatal --exit-code "$exit_code" "copy file: " --url "$file_basename" --default
-          continue
-        }
-        ;;
-    esac
-    
-    typeset checksum=""
-    checksum=$(get_file_checksum --file-path "$source_file")
-    update_checksum --file-name "$file_basename" --checksum "$checksum" --checksum-file "$checksum_file"
-    
-    slog_step_se_d --context success "installed instruction file: " --url "$file_basename" --default
-  done
-  
-  synthesize_copilot_instructions
-fi
-
-slog_step_se --context info "Script execution complete"
-
 
 # ---- ---- ----     Helper Functions     ---- ---- ----
 
@@ -742,4 +638,272 @@ function display_menu {
   echo "$user_input"
 }
 
+
+
+function apply_workspace_template_if_exists {
+  zparseopts -D -F -- \
+    -relative-path:=opt_relative_path \
+    -description:=opt_description
+  
+  typeset -r relative_path="${opt_relative_path[2]}"
+  typeset -r description="${opt_description[2]}"
+  typeset -r template_file="$user_ai_dir/vscode/workspace/$relative_path"
+  
+  if [[ ! -f "$template_file" ]]; then
+    slog_step_se --context warning "Workspace template not found: " --url "$template_file" --default
+    return 0
+  fi
+  
+  typeset workspace_file=""
+  if ! workspace_file="$(get_workspace_destination_file)"; then
+    slog_step_se --context warning "Skipping $description - no .code-workspace file detected"
+    return 0
+  fi
+  
+  merge_json_files --template-file "$template_file" --destination-file "$workspace_file" --description "$description"
+}
+
+function apply_workspace_dotfile_template_if_exists {
+  zparseopts -D -F -- \
+    -relative-path:=opt_relative_path \
+    -description:=opt_description
+  
+  typeset -r relative_path="${opt_relative_path[2]}"
+  typeset -r description="${opt_description[2]}"
+  typeset -r template_file="$user_ai_dir/vscode/workspace/.vscode/$relative_path"
+  
+  if [[ ! -f "$template_file" ]]; then
+    slog_step_se --context warning "Workspace .vscode template not found: " --url "$template_file" --default
+    return 0
+  fi
+  
+  typeset -r filename="${template_file:t}"
+  typeset parts=""
+  typeset topic=""
+  typeset remainder=""
+  parts="$(split_template_basename "$filename")"
+  IFS='|' read -r topic remainder <<< "$parts"
+  typeset -r destination_file="$dest_dir/.vscode/$remainder"
+  
+  merge_json_files --template-file "$template_file" --destination-file "$destination_file" --description "$description" --auto-init
+}
+
+function maybe_merge_xcode_mcp_settings {
+  typeset should_merge=false
+  
+  if is_xcode_mcp_installed; then
+    slog_step_se --context success "Xcode MCP Server already installed - skipping"
+    return 0
+  fi
+  
+  if [[ -n "${flag_mcp_xcode:-}" ]]; then
+    should_merge=true
+  fi
+  
+  if [[ "$should_merge" == true ]]; then
+    apply_workspace_template_if_exists \
+      --relative-path "xcode-mcpserver__workspace.code-workspace" \
+      --description "Xcode MCP workspace template"
+    apply_workspace_template_if_exists \
+      --relative-path "swift__workspace.code-workspace" \
+      --description "Swift workspace template"
+    apply_workspace_dotfile_template_if_exists \
+      --relative-path "xcode-mcpserver__mcp.json" \
+      --description "Xcode MCP server configuration"
+  fi
+}
+
+function run_workspace_settings_menu {
+  typeset -r workspace_dir="$user_ai_dir/vscode/workspace"
+  typeset -r dot_vscode_dir="$workspace_dir/.vscode"
+  
+  if ! type jq >/dev/null 2>&1; then
+    slog_step_se --context warning "jq not found - skipping workspace template merge"
+    return 0
+  fi
+  
+  if [[ ! -d "$workspace_dir" ]]; then
+    slog_step_se --context info "No workspace templates directory found at: " --url "$workspace_dir" --default
+    return 0
+  fi
+  
+  setopt local_options null_glob
+  typeset -a workspace_files=("$workspace_dir"/*.code-workspace(N))
+  typeset -a config_files=("$dot_vscode_dir"/*.json(N))
+  
+  if [[ ${#workspace_files[@]} -eq 0 && ${#config_files[@]} -eq 0 ]]; then
+    slog_step_se --context info "No workspace templates found in: " --url "$workspace_dir" --default
+    return 0
+  fi
+  
+  slog_se ""
+  slog_se --bold "Workspace Templates Available:" --default
+  slog_se ""
+  
+  typeset -i idx=1
+  for file in "${workspace_files[@]}"; do
+    printf "%2d. [workspace] %s\n" "$idx" "${file:t}"
+    ((idx++))
+  done
+  
+  for file in "${config_files[@]}"; do
+    printf "%2d. [.vscode] %s\n" "$idx" "${file:t}"
+    ((idx++))
+  done
+  
+  slog_se ""
+  printf "Enter selections (e.g., '1 3', 'all', or press Enter to skip): "
+  
+  typeset user_selection=""
+  read -r user_selection
+  
+  if [[ -z "$user_selection" ]]; then
+    slog_step_se --context info "Skipping workspace template merge"
+    return 0
+  fi
+  
+  slog_step_se --context info "Workspace template merge not yet fully implemented"
+}
+
+function run_user_settings_menu {
+  typeset -r user_templates_dir="$user_ai_dir/vscode/user"
+  typeset -r code_user_dir="$HOME/Library/Application Support/Code/User"
+  
+  if ! type jq >/dev/null 2>&1; then
+    slog_step_se --context warning "jq not found - skipping user settings merge"
+    return 0
+  fi
+  
+  if [[ ! -d "$user_templates_dir" ]]; then
+    slog_step_se --context info "No user settings templates found at: " --url "$user_templates_dir" --default
+    return 0
+  fi
+  
+  if [[ ! -d "$code_user_dir" ]]; then
+    slog_step_se --context warning "VS Code user settings directory not found: " --url "$code_user_dir" --default
+    return 0
+  fi
+  
+  setopt local_options null_glob
+  typeset -a user_files=("$user_templates_dir"/*.json(N))
+  
+  if [[ ${#user_files[@]} -eq 0 ]]; then
+    slog_step_se --context info "No user settings templates to merge"
+    return 0
+  fi
+  
+  slog_step_se --context info "User settings template merge not yet fully implemented"
+}
+
+# ---- ---- ----     Main Script Work     ---- ---- ----
+
+# Declare variables that will be set by get_platform_paths
+typeset target_instructions_dir=""
+typeset ai_platform_instruction_file=""
+typeset ai_instruction_settings_file=""
+
+# [step] Set up platform paths
+get_platform_paths --platform "$ai_platform" --target-base "$dest_dir"
+slog_var1_se_d "target_instructions_dir"
+slog_var1_se_d "ai_platform_instruction_file"
+slog_var1_se_d "ai_instruction_settings_file"
+
+typeset -r source_instructions_dir="$user_ai_dir/instructions"
+slog_var1_se_d "source_instructions_dir"
+
+# [step] Create target instructions directory
+slog_step_se_d --context will "create target instructions directory if needed"
+if [[ ! -d "$target_instructions_dir" ]]; then
+  mkdir -p "$target_instructions_dir" || {
+    typeset -i exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "create directory: " --url "$target_instructions_dir" --default
+    exit "$exit_code"
+  }
+  slog_step_se_d --context success "created target instructions directory"
+else
+  slog_step_se_d --context success "target instructions directory already exists"
+fi
+
+# Handle --dev-link flag
+if [[ -n "${flag_dev_link:-}" ]]; then
+  create_dev_symlink
+  typeset -r dev_link_name="${user_ai_dir:t}"
+  update_gitignore --entry "$dev_link_name" --gitignore-file "$dest_dir/.gitignore"
+  exit 0
+fi
+
+# Handle --instructions flag
+if [[ -n "${flag_instructions:-}" ]]; then
+  if ! has_instructions_to_install; then
+    slog_step_se --context info "No instruction files found in: " --url "$source_instructions_dir" --default
+    exit 0
+  fi
+  
+  typeset user_selection=""
+  if [[ -n "${flag_prompt:-}" ]]; then
+    user_selection=$(display_menu)
+  else
+    user_selection="all"
+  fi
+  
+  if [[ -z "$user_selection" ]]; then
+    slog_step_se --context info "No files selected for installation"
+    exit 0
+  fi
+  
+  typeset -a instruction_files=(${(f)"$(find "$source_instructions_dir" -type f -name "*.instructions.md" 2>/dev/null | sort)"})
+  typeset -r checksum_file="$user_ai_dir/.gitignored/.ai-checksums"
+  
+  typeset -a selected_indices=()
+  if [[ "$user_selection" == "all" ]]; then
+    for ((idx=1; idx<=${#instruction_files[@]}; idx++)); do
+      selected_indices+=("$idx")
+    done
+  else
+    selected_indices=(${(s: :)user_selection})
+  fi
+  
+  for selection in "${selected_indices[@]}"; do
+    if [[ ! "$selection" =~ ^[0-9]+$ ]] || (( selection < 1 || selection > ${#instruction_files[@]} )); then
+      slog_step_se --context warning "Invalid selection: " --code "$selection" --default
+      continue
+    fi
+    
+    typeset source_file="${instruction_files[$selection]}"
+    typeset file_basename="${source_file:t}"
+    typeset dest_file="$target_instructions_dir/$file_basename"
+    
+    slog_step_se_d --context will "install instruction file: " --url "$file_basename" --default
+    
+    case "$configure_type" in
+      symlink)
+        ln -sf "$source_file" "$dest_file" || {
+          typeset -i exit_code=$?
+          slog_step_se --context fatal --exit-code "$exit_code" "create symlink for: " --url "$file_basename" --default
+          continue
+        }
+        ;;
+      copy)
+        cp "$source_file" "$dest_file" || {
+          typeset -i exit_code=$?
+          slog_step_se --context fatal --exit-code "$exit_code" "copy file: " --url "$file_basename" --default
+          continue
+        }
+        ;;
+    esac
+    
+    typeset checksum=""
+    checksum=$(get_file_checksum --file-path "$source_file")
+    update_checksum --file-name "$file_basename" --checksum "$checksum" --checksum-file "$checksum_file"
+    
+    slog_step_se_d --context success "installed instruction file: " --url "$file_basename" --default
+  done
+  
+  synthesize_copilot_instructions
+fi
+
+slog_step_se --context info "Script execution complete"
+
+
+# ---- ---- ----     Helper Functions     ---- ---- ----
 
