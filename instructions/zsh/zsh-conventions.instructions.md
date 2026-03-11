@@ -365,6 +365,57 @@ local -r mode="safe"
 
 Use mutable variables only when mutation is intentional and required by control flow.
 
+#### Before Declaring Readonly (Critical)
+
+**CRITICAL**: Before adding `-r` to any variable declaration, verify the variable is never reassigned later in the script.
+
+**Analysis steps:**
+1. Search entire script for reassignments: `grep "^variable_name=" script.zsh`
+2. Check within functions: `grep "variable_name=" script.zsh` (without `^` anchor)
+3. If any reassignments exist, the variable **MUST** remain mutable (omit `-r`)
+4. Only use `-r` if variable is never reassigned after initialization
+
+**Example of proper analysis:**
+
+```zsh
+# Step 1: Search for all assignments to dest_dir
+$ grep "dest_dir=" script.zsh
+483:typeset dest_dir="${opt_dest_dir[2]:-$PWD}"
+570:dest_dir="$git_root_dir"
+
+# Step 2: Analysis shows reassignment on line 570
+# Conclusion: dest_dir MUST remain mutable
+
+# ✅ Correct - no -r flag
+typeset dest_dir="${opt_dest_dir[2]:-$PWD}"
+
+# Later in script (line 570):
+if [[ "$dest_dir_absolute" != "$git_root_dir" ]]; then
+  dest_dir="$git_root_dir"  # Valid reassignment
+fi
+```
+
+**Common mistake:**
+
+```zsh
+# ❌ Bad - declares readonly but reassigns later
+typeset -r dest_dir="${opt_dest_dir[2]:-$PWD}"
+
+# Later in script:
+dest_dir="$git_root_dir"  # CRASH: attempt to assign readonly variable
+```
+
+**When to use readonly:**
+
+```zsh
+# ✅ Good - variable never reassigned
+typeset -r script_dir="${0:A:h}"
+typeset -r script_name="${0:t}"
+typeset -r config_file="$HOME/.config/app.yml"
+
+# These variables are set once and never change
+```
+
 #### Type-Specific Declarations
 
 Use `typeset` flags to match variable semantics and storage needs. `-r`, `-a`, and `-A` are common examples, not an exhaustive list.
@@ -2352,7 +2403,7 @@ When writing or reviewing Zsh scripts, verify:
 - [ ] Variables declared and initialized in compound statements
 - [ ] `zparseopts` target variables treated as parser-managed exception only
 - [ ] Wrapper/derived variables explicitly declared (prefer readonly)
-- [ ] Readonly (`-r`) used where mutation is not required
+- [ ] **Readonly (`-r`) verified**: Searched for reassignments with `grep "variable_name=" script.zsh` before adding `-r`
 - [ ] Type flags selected according to situation (`-r`, `-a`, `-A`, `-i`, `-F`, `-x`, etc.)
 - [ ] Shared/parser vars are not redeclared readonly when reused across parsing/bootstrap phases
 - [ ] Functions use `function name { }` syntax
@@ -2372,3 +2423,4 @@ When writing or reviewing Zsh scripts, verify:
 - [ ] Decorators used correctly (--code for commands/vars, --url for paths/URLs)
 - [ ] Commands that use pagers are piped to `cat` or use `--no-pager`
 - [ ] `echo -n` used with `jq` pipelines
+- [ ] **Script tested**: Run with representative inputs to verify no runtime errors
