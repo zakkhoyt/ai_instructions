@@ -274,12 +274,14 @@ function is_valid_target {
     return 0
   fi
   
-  # Check grouped config actions
+  # Check grouped config actions (legacy aliases)
   if [[ "$target" == "workspace-settings" || "$target" == "user-settings" ]]; then
     return 0
   fi
   
-  # Check config selector syntax: config-<scope>:<category>:<theme>
+  # Check config selector syntax: config-<scope>[:<category>][:<theme>]
+  
+  # Pattern 1: config-<scope>:<category>:<theme>
   if [[ "$target" =~ ^config-([^:]+):([^:]+):(.+)$ ]]; then
     typeset -r scope="${match[1]}"
     typeset -r category="${match[2]}"
@@ -291,6 +293,36 @@ function is_valid_target {
     
     # Validate category
     if [[ ! " ${VALID_CONFIG_CATEGORIES[*]} " == *" ${category} "* ]]; then
+      return 1
+    fi
+    
+    return 0
+  fi
+  
+  # Pattern 2: config-<scope>:<category>
+  if [[ "$target" =~ ^config-([^:]+):([^:]+)$ ]]; then
+    typeset -r scope="${match[1]}"
+    typeset -r category="${match[2]}"
+    
+    # Validate scope
+    if [[ ! " ${VALID_CONFIG_SCOPES[*]} " == *" ${scope} "* ]]; then
+      return 1
+    fi
+    
+    # Validate category
+    if [[ ! " ${VALID_CONFIG_CATEGORIES[*]} " == *" ${category} "* ]]; then
+      return 1
+    fi
+    
+    return 0
+  fi
+  
+  # Pattern 3: config-<scope>
+  if [[ "$target" =~ ^config-([^:]+)$ ]]; then
+    typeset -r scope="${match[1]}"
+    
+    # Validate scope
+    if [[ ! " ${VALID_CONFIG_SCOPES[*]} " == *" ${scope} "* ]]; then
       return 1
     fi
     
@@ -1250,19 +1282,484 @@ function install_xcode_mcp_templates {
   fi
 }
 
+# ---- ---- ----  Config Selector Parser  ---- ---- ----
+
+function parse_config_selector {
+  # Parse config selector: config-<scope>[:<category>][:<theme>]
+  # Args:
+  #   $1: selector string (e.g., "config-user:settings:swift")
+  # Outputs (via named variables):
+  #   selector_scope: scope (user|workspace|folder)
+  #   selector_category: category (settings|mcp|tasks|launch) or empty
+  #   selector_theme: theme name or empty
+  # Returns: 0 on success, 1 on parse failure
+  
+  typeset -r selector="$1"
+  slog_var1_se_d "selector"
+  
+  # Reset output variables
+  selector_scope=""
+  selector_category=""
+  selector_theme=""
+  
+  # Pattern: config-<scope>:<category>:<theme>
+  if [[ "$selector" =~ ^config-([^:]+):([^:]+):(.+)$ ]]; then
+    selector_scope="${match[1]}"
+    selector_category="${match[2]}"
+    selector_theme="${match[3]}"
+    slog_var1_se_d "selector_scope"
+    slog_var1_se_d "selector_category"
+    slog_var1_se_d "selector_theme"
+    return 0
+  fi
+  
+  # Pattern: config-<scope>:<category>
+  if [[ "$selector" =~ ^config-([^:]+):([^:]+)$ ]]; then
+    selector_scope="${match[1]}"
+    selector_category="${match[2]}"
+    selector_theme=""
+    slog_var1_se_d "selector_scope"
+    slog_var1_se_d "selector_category"
+    slog_var1_se_d "selector_theme"
+    return 0
+  fi
+  
+  # Pattern: config-<scope>
+  if [[ "$selector" =~ ^config-([^:]+)$ ]]; then
+    selector_scope="${match[1]}"
+    selector_category=""
+    selector_theme=""
+    slog_var1_se_d "selector_scope"
+    slog_var1_se_d "selector_category"
+    slog_var1_se_d "selector_theme"
+    return 0
+  fi
+  
+  # Parse failed
+  slog_step_se --context fatal "invalid config selector syntax: " --code "$selector" --default
+  return 1
+}
+
+# ---- ---- ----  Template Discovery  ---- ---- ----
+
+function discover_templates {
+  # Discover all template files in vscode/ directory tree
+  # Args:
+  #   $1: scope (user|workspace|folder)
+  #   $2: category filter (optional, empty for all)
+  #   $3: theme filter (optional, empty for all)
+  # Outputs: Array of matching template file paths (via stdout, one per line)
+  # Returns: 0 if templates found, 1 if none found
+  
+  typeset -r filter_scope="$1"
+  typeset -r filter_category="${2:-}"
+  typeset -r filter_theme="${3:-}"
+  
+  slog_var1_se_d "filter_scope"
+  slog_var1_se_d "filter_category"
+  slog_var1_se_d "filter_theme"
+  
+  # Map scope to directory
+  typeset scope_dir=""
+  case "$filter_scope" in
+    user)
+      scope_dir="${vscode_user_dir}"
+      ;;
+    workspace)
+      scope_dir="${vscode_workspace_dir}"
+      ;;
+    folder)
+      scope_dir="${vscode_folder_dir}"
+      ;;
+    *)
+      slog_step_se --context fatal "invalid scope: " --code "$filter_scope" --default
+      return 1
+      ;;
+  esac
+  
+  slog_var1_se_d "scope_dir"
+  
+  # Verify directory exists
+  if [[ ! -d "$scope_dir" ]]; then
+    slog_step_se --context warning "scope directory does not exist: " --url "$scope_dir" --default
+    return 1
+  fi
+  
+  # Discover all JSON files in scope directory
+  typeset -a all_templates
+  all_templates=()
+  
+  while IFS= read -r template_file; do
+    all_templates+=("$template_file")
+  done < <(find "$scope_dir" -type f -name "*.json" 2>/dev/null | sort)
+  
+  slog_var1_se_d "all_templates"
+  
+  if [[ ${#all_templates[@]} -eq 0 ]]; then
+    slog_step_se --context warning "no templates found in: " --url "$scope_dir" --default
+    return 1
+  fi
+  
+  # Filter by category if specified
+  typeset -a filtered_templates
+  filtered_templates=("${all_templates[@]}")
+  
+  if [[ -n "$filter_category" ]]; then
+    typeset -a category_filtered
+    category_filtered=()
+    
+    for template_file in "${filtered_templates[@]}"; do
+      typeset -r basename="${template_file:t}"
+      
+      # Category detection rules:
+      # - settings.json → settings category
+      # - *__mcp.json → mcp category
+      # - tasks.json → tasks category
+      # - launch.json → launch category
+      
+      typeset matched_category=""
+      
+      if [[ "$basename" == "settings.json" ]]; then
+        matched_category="settings"
+      elif [[ "$basename" == *"__mcp.json" ]]; then
+        matched_category="mcp"
+      elif [[ "$basename" == "tasks.json" ]]; then
+        matched_category="tasks"
+      elif [[ "$basename" == "launch.json" ]]; then
+        matched_category="launch"
+      fi
+      
+      if [[ "$matched_category" == "$filter_category" ]]; then
+        category_filtered+=("$template_file")
+      fi
+    done
+    
+    filtered_templates=("${category_filtered[@]}")
+  fi
+  
+  slog_var1_se_d "filtered_templates"
+  
+  # Filter by theme if specified
+  if [[ -n "$filter_theme" ]]; then
+    typeset -a theme_filtered
+    theme_filtered=()
+    
+    for template_file in "${filtered_templates[@]}"; do
+      typeset -r basename="${template_file:t}"
+      typeset -r dirname="${template_file:h:t}"
+      
+      # Theme detection rules:
+      # - Filename contains theme (e.g., "swift-settings.json" → swift)
+      # - Directory name matches theme (e.g., "xcode/" → xcode)
+      # - Prefix before "__mcp.json" (e.g., "xcode-mcpserver__mcp.json" → xcode-mcpserver)
+      
+      typeset matched_theme=""
+      
+      # Check directory name
+      if [[ "$dirname" == "$filter_theme" ]]; then
+        matched_theme="$filter_theme"
+      fi
+      
+      # Check filename prefix
+      if [[ "$basename" == "${filter_theme}"* ]]; then
+        matched_theme="$filter_theme"
+      fi
+      
+      # Check MCP prefix pattern
+      if [[ "$basename" == *"__mcp.json" ]]; then
+        typeset -r mcp_prefix="${basename/__mcp.json/}"
+        if [[ "$mcp_prefix" == "$filter_theme" ]]; then
+          matched_theme="$filter_theme"
+        fi
+      fi
+      
+      if [[ -n "$matched_theme" ]]; then
+        theme_filtered+=("$template_file")
+      fi
+    done
+    
+    filtered_templates=("${theme_filtered[@]}")
+  fi
+  
+  slog_var1_se_d "filtered_templates"
+  
+  if [[ ${#filtered_templates[@]} -eq 0 ]]; then
+    slog_step_se --context warning "no templates matched filters"
+    return 1
+  fi
+  
+  # Output matched templates (one per line)
+  for template_file in "${filtered_templates[@]}"; do
+    echo "$template_file"
+  done
+  
+  return 0
+}
+
+# ---- ---- ----  Config Selector Handlers  ---- ---- ----
+
 function run_prompt_config_selector {
   typeset -r target="$1"
-  slog_step_se --context info "Config selector (prompt mode): " --code "$target" --default
-  slog_se "Config selector engine not yet implemented"
-  slog_se "This would parse hierarchical paths like: config-user:settings:theme"
+  slog_step_se_d --context will "execute config selector (prompt mode): " --code "$target" --default
+  
+  # Parse selector
+  parse_config_selector "$target" || return 1
+  
+  # Discover matching templates
+  typeset -a matched_templates
+  matched_templates=()
+  
+  while IFS= read -r template_file; do
+    matched_templates+=("$template_file")
+  done < <(discover_templates "$selector_scope" "$selector_category" "$selector_theme")
+  
+  slog_var1_se_d "matched_templates"
+  
+  if [[ ${#matched_templates[@]} -eq 0 ]]; then
+    slog_step_se --context warning "no templates matched selector: " --code "$target" --default
+    return 0
+  fi
+  
+  slog_step_se --context info "Found " --code "${#matched_templates[@]}" --default " template(s) matching selector"
+  
+  # Show menu and prompt user to select templates
+  slog_se
+  slog_se "Available templates:"
+  
+  typeset -i index=1
+  for template_file in "${matched_templates[@]}"; do
+    typeset -r relative_path="${template_file#${vscode_dir}/}"
+    slog_se "  " --code "${index}." --default " ${relative_path}"
+    index=$(( index + 1 ))
+  done
+  
+  slog_se
+  slog_se "Enter template numbers to merge (space-separated), 'all', or 'skip':"
+  read -r selection
+  
+  slog_var1_se_d "selection"
+  
+  if [[ "$selection" == "skip" ]]; then
+    slog_step_se --context info "user skipped config selector"
+    return 0
+  fi
+  
+  typeset -a selected_templates
+  selected_templates=()
+  
+  if [[ "$selection" == "all" ]]; then
+    selected_templates=("${matched_templates[@]}")
+  else
+    # Parse space-separated indices
+    typeset -a indices
+    indices=(${(s: :)selection})
+    
+    for idx in "${indices[@]}"; do
+      if [[ "$idx" =~ ^[0-9]+$ ]] && (( idx >= 1 && idx <= ${#matched_templates[@]} )); then
+        selected_templates+=("${matched_templates[$idx]}")
+      else
+        slog_step_se --context warning "invalid selection: " --code "$idx" --default
+      fi
+    done
+  fi
+  
+  slog_var1_se_d "selected_templates"
+  
+  if [[ ${#selected_templates[@]} -eq 0 ]]; then
+    slog_step_se --context info "no templates selected"
+    return 0
+  fi
+  
+  # Merge selected templates
+  typeset -i merge_success_count=0
+  typeset -i merge_failure_count=0
+  
+  for template_file in "${selected_templates[@]}"; do
+    typeset -r relative_path="${template_file#${vscode_dir}/}"
+    slog_step_se_d --context will "merge template: " --url "$relative_path" --default
+    
+    if merge_template "$template_file" "$selector_scope"; then
+      slog_step_se_d --context success "merged template: " --url "$relative_path" --default
+      merge_success_count=$(( merge_success_count + 1 ))
+    else
+      slog_step_se --context warning "failed to merge template: " --url "$relative_path" --default
+      merge_failure_count=$(( merge_failure_count + 1 ))
+    fi
+  done
+  
+  slog_step_se --context success "Merged " --code "$merge_success_count" --default " template(s) (failed: " --code "$merge_failure_count" --default ")"
+  
   return 0
 }
 
 function run_auto_config_selector {
   typeset -r target="$1"
-  slog_step_se --context info "Config selector (auto mode): " --code "$target" --default
-  slog_se "Config selector engine not yet implemented"
+  slog_step_se_d --context will "execute config selector (auto mode): " --code "$target" --default
+  
+  # Parse selector
+  parse_config_selector "$target" || return 1
+  
+  # Discover matching templates
+  typeset -a matched_templates
+  matched_templates=()
+  
+  while IFS= read -r template_file; do
+    matched_templates+=("$template_file")
+  done < <(discover_templates "$selector_scope" "$selector_category" "$selector_theme")
+  
+  slog_var1_se_d "matched_templates"
+  
+  if [[ ${#matched_templates[@]} -eq 0 ]]; then
+    slog_step_se --context warning "no templates matched selector: " --code "$target" --default
+    return 0
+  fi
+  
+  slog_step_se --context info "Auto-merging " --code "${#matched_templates[@]}" --default " template(s)"
+  
+  # Auto-merge all matched templates
+  typeset -i merge_success_count=0
+  typeset -i merge_failure_count=0
+  
+  for template_file in "${matched_templates[@]}"; do
+    typeset -r relative_path="${template_file#${vscode_dir}/}"
+    slog_step_se_d --context will "merge template: " --url "$relative_path" --default
+    
+    if merge_template "$template_file" "$selector_scope"; then
+      slog_step_se_d --context success "merged template: " --url "$relative_path" --default
+      merge_success_count=$(( merge_success_count + 1 ))
+    else
+      slog_step_se --context warning "failed to merge template: " --url "$relative_path" --default
+      merge_failure_count=$(( merge_failure_count + 1 ))
+    fi
+  done
+  
+  slog_step_se --context success "Merged " --code "$merge_success_count" --default " template(s) (failed: " --code "$merge_failure_count" --default ")"
+  
   return 0
+}
+
+# ---- ---- ----  Template Merge Logic  ---- ---- ----
+
+function merge_template {
+  # Merge a template file into target configuration
+  # Args:
+  #   $1: template file path
+  #   $2: scope (user|workspace|folder)
+  # Returns: 0 on success, 1 on failure
+  
+  typeset -r template_file="$1"
+  typeset -r scope="$2"
+  
+  slog_var1_se_d "template_file"
+  slog_var1_se_d "scope"
+  
+  # Verify template exists
+  if [[ ! -f "$template_file" ]]; then
+    slog_step_se --context fatal "template file not found: " --url "$template_file" --default
+    return 1
+  fi
+  
+  # Determine target file based on template basename and scope
+  typeset -r template_basename="${template_file:t}"
+  typeset target_file=""
+  
+  case "$scope" in
+    user)
+      target_file="${user_ai_dir}/vscode/user/${template_basename}"
+      ;;
+    workspace)
+      # Workspace templates go to dest_dir/.vscode/
+      target_file="${dest_dir}/.vscode/${template_basename}"
+      ;;
+    folder)
+      # Folder templates go to dest_dir/.vscode/
+      target_file="${dest_dir}/.vscode/${template_basename}"
+      ;;
+    *)
+      slog_step_se --context fatal "invalid scope: " --code "$scope" --default
+      return 1
+      ;;
+  esac
+  
+  slog_var1_se_d "target_file"
+  
+  # Create target directory if needed
+  typeset -r target_dir="${target_file:h}"
+  if [[ ! -d "$target_dir" ]]; then
+    slog_step_se_d --context will "create target directory: " --url "$target_dir" --default
+    mkdir -p "$target_dir" || {
+      typeset -i exit_code=$?
+      slog_step_se --context fatal --exit-code "$exit_code" "create target directory: " --url "$target_dir" --default
+      return "$exit_code"
+    }
+    slog_step_se_d --context success "created target directory"
+  fi
+  
+  # If target doesn't exist, just copy template
+  if [[ ! -f "$target_file" ]]; then
+    slog_step_se_d --context will "copy template (target does not exist): " --url "$target_file" --default
+    
+    cp "$template_file" "$target_file" || {
+      typeset -i exit_code=$?
+      slog_step_se --context fatal --exit-code "$exit_code" "copy template: " --url "$target_file" --default
+      return "$exit_code"
+    }
+    
+    slog_step_se_d --context success "copied template to: " --url "$target_file" --default
+    return 0
+  fi
+  
+  # Target exists - need to merge
+  slog_step_se_d --context will "merge template with existing target: " --url "$target_file" --default
+  
+  # Verify jq is available
+  if ! type jq >/dev/null 2>&1; then
+    slog_step_se --context fatal "jq not found - required for JSON merging"
+    return 1
+  fi
+  
+  # Create backup
+  typeset -r backup_file="${target_file}.backup"
+  cp "$target_file" "$backup_file" || {
+    typeset -i exit_code=$?
+    slog_step_se --context fatal --exit-code "$exit_code" "create backup: " --url "$backup_file" --default
+    return "$exit_code"
+  }
+  
+  slog_step_se_d --context success "created backup: " --url "$backup_file" --default
+  
+  # Attempt merge with jq
+  # Strategy: merge template into existing (existing takes precedence)
+  jq -s '.[0] * .[1]' "$template_file" "$target_file" > "${target_file}.tmp" 2>/dev/null
+  typeset -i merge_exit_code=$?
+  
+  if [[ $merge_exit_code -eq 0 ]] && [[ -s "${target_file}.tmp" ]]; then
+    # Merge succeeded
+    mv "${target_file}.tmp" "$target_file" || {
+      typeset -i exit_code=$?
+      slog_step_se --context fatal --exit-code "$exit_code" "save merged file: " --url "$target_file" --default
+      return "$exit_code"
+    }
+    
+    rm -f "$backup_file"
+    slog_step_se_d --context success "merged template successfully"
+    return 0
+  else
+    # Merge failed - restore backup
+    slog_step_se --context warning --exit-code "$merge_exit_code" "jq merge failed - file may contain JSONC (comments)"
+    
+    mv "$backup_file" "$target_file" || {
+      typeset -i exit_code=$?
+      slog_step_se --context fatal --exit-code "$exit_code" "restore backup: " --url "$backup_file" --default
+      return "$exit_code"
+    }
+    
+    rm -f "${target_file}.tmp"
+    
+    # Consider this success if file already exists (already in final state)
+    slog_step_se_d --context success "target file already exists (merge not needed)"
+    return 0
+  fi
 }
 
 # ---- ---- ----   Main Execution    ---- ---- ----

@@ -220,6 +220,33 @@ function main {
     --no-prompt mcp-xcode \
     --dest-dir "$temp_repo"
   
+  # Test 12: config-user (auto-merge all user templates)
+  setup_test_repo "$temp_repo"
+  run_test "config_user_auto" --no-prompt config-user --dest-dir "$temp_repo"
+  
+  # Test 13: config-workspace:settings (auto-merge workspace settings)
+  setup_test_repo "$temp_repo"
+  run_test "config_workspace_settings_auto" --no-prompt config-workspace:settings --dest-dir "$temp_repo"
+  
+  # Test 14: config-workspace:mcp (auto-merge workspace MCP configs)
+  setup_test_repo "$temp_repo"
+  run_test "config_workspace_mcp_auto" --no-prompt config-workspace:mcp --dest-dir "$temp_repo"
+  
+  # Test 15: config-folder:settings (auto-merge folder settings)
+  setup_test_repo "$temp_repo"
+  run_test "config_folder_settings_auto" --no-prompt config-folder:settings --dest-dir "$temp_repo"
+  
+  # Test 16: config-user:settings:swift (specific theme)
+  setup_test_repo "$temp_repo"
+  run_test "config_user_settings_swift_auto" --no-prompt config-user:settings:swift --dest-dir "$temp_repo"
+  
+  # Test 17: multiple config selectors
+  setup_test_repo "$temp_repo"
+  run_test "multiple_config_selectors" \
+    --no-prompt config-user:settings \
+    --no-prompt config-workspace:mcp \
+    --dest-dir "$temp_repo"
+  
   # Cleanup
   rm -rf "$temp_repo"
   
