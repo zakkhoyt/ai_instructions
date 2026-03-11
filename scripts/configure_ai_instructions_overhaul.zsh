@@ -19,7 +19,7 @@
 [[ -z "${IS_DEBUG:-}" ]] && typeset IS_DEBUG=""
 [[ -z "${IS_VERBOSE:-}" ]] && typeset IS_VERBOSE=""
 [[ -z "${IS_UTILS_DEBUG:-}" ]] && typeset IS_UTILS_DEBUG=""
-[[ -z "${IS_DRY_RUN:-}" ]] && typeset IS_DRY_RUN=""
+[[ -z "${is_dry_run:-}" ]] && typeset is_dry_run=""
 
 # ---- ---- ----     Source Utilities     ---- ---- ----
 
@@ -256,7 +256,11 @@ function initialize_paths {
   esac
   
   # Create target directory if needed
-  mkdir -p "$target_instructions_dir" 2>/dev/null || true
+  if [[ -n "${is_dry_run:-}" ]]; then
+    slog_se_d "[DRY-RUN] would create directory if needed: " --url "$target_instructions_dir" --default
+  else
+    mkdir -p "$target_instructions_dir" 2>/dev/null || true
+  fi
 }
 
 # ---- ---- ----   Target Validation   ---- ---- ----
@@ -617,6 +621,11 @@ function synthesize_copilot_instructions {
   
   instruction_list="${(F)instruction_lines[@]}"
   
+  if [[ -n "${is_dry_run:-}" ]]; then
+    slog_step_se --context success "[DRY-RUN] would synthesize copilot-instructions.md with ${#instruction_files[@]} files"
+    return 0
+  fi
+  
   # Write instruction list to temp file for insertion
   typeset temp_list=""
   temp_list="$(mktemp)"
@@ -701,26 +710,38 @@ function install_selected_instructions {
     
     slog_step_se_d --context will "install instruction file: " --url "$file_basename" --default
     
-    case "$configure_type" in
-      symlink)
-        ln -sf "$source_file" "$dest_file" || {
-          typeset -i exit_code=$?
-          slog_step_se --context fatal --exit-code "$exit_code" "create symlink for: " --url "$file_basename" --default
-          continue
-        }
-        ;;
-      copy)
-        cp "$source_file" "$dest_file" || {
-          typeset -i exit_code=$?
-          slog_step_se --context fatal --exit-code "$exit_code" "copy file: " --url "$file_basename" --default
-          continue
-        }
-        ;;
-    esac
-    
-    update_checksums --file-basename "$file_basename" --source-file "$source_file" --checksum-file "$checksum_file"
-    
-    slog_step_se --context success "installed: " --url "$file_basename" --default
+    if [[ -n "${is_dry_run:-}" ]]; then
+      case "$configure_type" in
+        symlink)
+          slog_step_se --context success "[DRY-RUN] would create symlink: " --url "$dest_file" --default " → " --url "$source_file" --default
+          ;;
+        copy)
+          slog_step_se --context success "[DRY-RUN] would copy: " --url "$source_file" --default " → " --url "$dest_file" --default
+          ;;
+      esac
+      slog_step_se_d --context success "[DRY-RUN] would update checksums for: " --url "$file_basename" --default
+    else
+      case "$configure_type" in
+        symlink)
+          ln -sf "$source_file" "$dest_file" || {
+            typeset -i exit_code=$?
+            slog_step_se --context fatal --exit-code "$exit_code" "create symlink for: " --url "$file_basename" --default
+            continue
+          }
+          ;;
+        copy)
+          cp "$source_file" "$dest_file" || {
+            typeset -i exit_code=$?
+            slog_step_se --context fatal --exit-code "$exit_code" "copy file: " --url "$file_basename" --default
+            continue
+          }
+          ;;
+      esac
+      
+      update_checksums --file-basename "$file_basename" --source-file "$source_file" --checksum-file "$checksum_file"
+      
+      slog_step_se --context success "installed: " --url "$file_basename" --default
+    fi
   done
   
   synthesize_copilot_instructions
@@ -1022,10 +1043,21 @@ function run_prompt_dev_link {
       return 0
     fi
     
+    if [[ -n "${is_dry_run:-}" ]]; then
+      slog_step_se --context success "[DRY-RUN] would remove existing symlink: " --url "$link_path" --default
+      slog_step_se --context success "[DRY-RUN] would create symlink: " --url "$link_path" --default " → " --url "$target_path" --default
+      return 0
+    fi
+    
     rm "$link_path"
   elif [[ -e "$link_path" ]]; then
     slog_step_se --context fatal "Path exists but is not a symlink: " --url "$link_path" --default
     return 1
+  fi
+  
+  if [[ -n "${is_dry_run:-}" ]]; then
+    slog_step_se --context success "[DRY-RUN] would create symlink: " --url "$link_path" --default " → " --url "$target_path" --default
+    return 0
   fi
   
   ln -s "$target_path" "$link_path" || {
@@ -1052,9 +1084,20 @@ function run_auto_dev_link {
       return 0
     fi
     
+    if [[ -n "${is_dry_run:-}" ]]; then
+      slog_step_se --context success "[DRY-RUN] would remove existing symlink: " --url "$link_path" --default
+      slog_step_se --context success "[DRY-RUN] would create symlink: " --url "$link_path" --default " → " --url "$target_path" --default
+      return 0
+    fi
+    
     rm "$link_path"
   elif [[ -e "$link_path" ]]; then
     slog_step_se --context warning "Path exists but is not a symlink (skipping): " --url "$link_path" --default
+    return 0
+  fi
+  
+  if [[ -n "${is_dry_run:-}" ]]; then
+    slog_step_se --context success "[DRY-RUN] would create symlink: " --url "$link_path" --default " → " --url "$target_path" --default
     return 0
   fi
   
@@ -1711,17 +1754,26 @@ function merge_template {
   # Create target directory if needed
   typeset -r target_dir="${target_file:h}"
   if [[ ! -d "$target_dir" ]]; then
-    slog_step_se_d --context will "create target directory: " --url "$target_dir" --default
-    mkdir -p "$target_dir" || {
-      typeset -i exit_code=$?
-      slog_step_se --context fatal --exit-code "$exit_code" "create target directory: " --url "$target_dir" --default
-      return "$exit_code"
-    }
-    slog_step_se_d --context success "created target directory"
+    if [[ -n "${is_dry_run:-}" ]]; then
+      slog_step_se_d --context success "[DRY-RUN] would create target directory: " --url "$target_dir" --default
+    else
+      slog_step_se_d --context will "create target directory: " --url "$target_dir" --default
+      mkdir -p "$target_dir" || {
+        typeset -i exit_code=$?
+        slog_step_se --context fatal --exit-code "$exit_code" "create target directory: " --url "$target_dir" --default
+        return "$exit_code"
+      }
+      slog_step_se_d --context success "created target directory"
+    fi
   fi
   
   # If target doesn't exist, just copy template
   if [[ ! -f "$target_file" ]]; then
+    if [[ -n "${is_dry_run:-}" ]]; then
+      slog_step_se_d --context success "[DRY-RUN] would copy template: " --url "$template_file" --default " → " --url "$target_file" --default
+      return 0
+    fi
+    
     slog_step_se_d --context will "copy template (target does not exist): " --url "$target_file" --default
     
     cp "$template_file" "$target_file" || {
@@ -1735,6 +1787,11 @@ function merge_template {
   fi
   
   # Target exists - need to merge
+  if [[ -n "${is_dry_run:-}" ]]; then
+    slog_step_se_d --context success "[DRY-RUN] would merge template with existing target: " --url "$target_file" --default
+    return 0
+  fi
+  
   slog_step_se_d --context will "merge template with existing target: " --url "$target_file" --default
   
   # Verify jq is available

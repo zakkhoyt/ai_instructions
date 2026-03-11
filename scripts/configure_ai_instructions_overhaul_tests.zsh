@@ -34,20 +34,28 @@ typeset fail_count=0
 # ---- ---- ----     Helper Functions     ---- ---- ----
 
 function run_test {
-  typeset -r test_name="$1"
+  echo "run_test called with: $@" >&2
+  typeset test_name="$1"
+  echo "test_name=$test_name" >&2
   shift
+  echo "After shift, remaining args: $@" >&2
   typeset -a test_args=("$@")
+  echo "test_args=${test_args[*]}" >&2
   
   ((test_count++))
-  typeset -r test_num="$(printf "%02d" "$test_count")"
+  # typeset test_num="$(printf "%02d" "$test_count")"
+  typeset test_num="$test_count"
+  echo "test_num=$test_num" >&2
   
   slog_se ""
   slog_se --bold "TEST $test_num: " --default "$test_name"
   slog_se --bold "========================================" --default
   
-  typeset -r log_file="$log_dir/test_${test_num}_${test_name// /_}_${timestamp}.log"
+  typeset log_file="$log_dir/test_${test_num}_${test_name// /_}_${timestamp}.log"
+  echo "log_file=$log_file" >&2
   
-  typeset -r cmd="$script_path ${test_args[*]}"
+  typeset cmd="$script_path ${test_args[*]}"
+  echo "cmd=$cmd" >&2
   slog_se "Command: " --code "$cmd" --default
   slog_se ""
   
@@ -56,13 +64,16 @@ function run_test {
   echo "========================================" >> "$log_file"
   echo "" >> "$log_file"
   
-  if "$script_path" "${test_args[@]}" >> "$log_file" 2>&1; then
+  echo "Executing: $cmd" >&2
+  if timeout 30 "$script_path" "${test_args[@]}" >> "$log_file" 2>&1; then
+    echo "Command completed successfully" >&2
     ((pass_count++))
     slog_step_se --context success "Test passed"
     echo "" >> "$log_file"
     echo "RESULT: PASS" >> "$log_file"
   else
     typeset -i exit_code=$?
+    echo "Command failed with exit code: $exit_code" >&2
     ((fail_count++))
     slog_step_se --context warning --exit-code "$exit_code" "Test failed"
     echo "" >> "$log_file"
@@ -145,6 +156,7 @@ function verify_symlink {
 # ---- ---- ----     Test Execution     ---- ---- ----
 
 function main {
+  echo "MAIN FUNCTION CALLED" >&2
   slog_se ""
   slog_se --bold "CONFIGURE_AI_INSTRUCTIONS_OVERHAUL TEST SUITE" --default
   slog_se --bold "=============================================" --default
@@ -154,8 +166,10 @@ function main {
   
   typeset -r temp_repo="/tmp/ai_test_repo_$$"
   
+  echo "About to run test 1" >&2
   # Test 1: Help flag
   run_test "help_flag" --help
+  echo "Test 1 complete" >&2
   
   # Test 2: Instructions (auto mode)
   setup_test_repo "$temp_repo"
@@ -246,6 +260,64 @@ function main {
     --no-prompt config-user:settings \
     --no-prompt config-workspace:mcp \
     --dest-dir "$temp_repo"
+  
+  # ---- Dry-Run Tests ----
+  
+  # Test 18: Dry-run instructions (should not create files)
+  run_test "dry-run instructions" \
+    --dry-run --no-prompt instructions --dest-dir "$temp_repo"
+  
+  # Verify no files created
+  if [[ ! -d "$temp_repo/.github/instructions" ]]; then
+    slog_step_se --context success "dry-run correctly prevented directory creation"
+    ((pass_count++))
+  else
+    slog_step_se --context warning "dry-run failed - directory was created"
+    ((fail_count++))
+  fi
+  
+  # Test 19: Dry-run dev-link (should not create symlink)
+  run_test "dry-run dev-link" \
+    --dry-run --no-prompt dev-link --dest-dir "$temp_repo"
+  
+  # Verify no symlink created
+  if [[ ! -L "$temp_repo/ai" ]]; then
+    slog_step_se --context success "dry-run correctly prevented symlink creation"
+    ((pass_count++))
+  else
+    slog_step_se --context warning "dry-run failed - symlink was created"
+    ((fail_count++))
+  fi
+  
+  # Test 20: Dry-run regenerate-main (should not modify file)
+  # First create the file normally
+  run_test "setup for dry-run regenerate-main" \
+    --no-prompt instructions --dest-dir "$temp_repo"
+  
+  # Capture original checksum
+  typeset original_checksum=""
+  if [[ -f "$temp_repo/.github/copilot-instructions.md" ]]; then
+    original_checksum="$(md5 -q "$temp_repo/.github/copilot-instructions.md")"
+  fi
+  
+  # Run dry-run regenerate
+  run_test "dry-run regenerate-main" \
+    --dry-run --no-prompt regenerate-main --dest-dir "$temp_repo"
+  
+  # Verify file unchanged
+  if [[ -f "$temp_repo/.github/copilot-instructions.md" ]]; then
+    typeset new_checksum="$(md5 -q "$temp_repo/.github/copilot-instructions.md")"
+    if [[ "$original_checksum" == "$new_checksum" ]]; then
+      slog_step_se --context success "dry-run correctly prevented file modification"
+      ((pass_count++))
+    else
+      slog_step_se --context warning "dry-run failed - file was modified"
+      ((fail_count++))
+    fi
+  else
+    slog_step_se --context warning "test setup failed - file missing"
+    ((fail_count++))
+  fi
   
   # Cleanup
   rm -rf "$temp_repo"
