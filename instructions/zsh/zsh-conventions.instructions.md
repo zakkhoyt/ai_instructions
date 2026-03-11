@@ -1927,67 +1927,96 @@ Always prefer long-form arguments for clarity:
 
 ```zsh
 function print_usage {
-  cat << 'EOF'
-SYNOPSIS
-    script_name.zsh [OPTIONS] [DEVELOPMENT OPTIONS]
+  typeset -r script_name="${0:A:t}"
+  typeset -r i2="${INDENT_2:-  }"
+  typeset -r i4="${INDENT_4:-    }"
+  typeset -r i6="${i2}${i4}"
 
-OPTIONS
-    --required-arg <value>
-                        Description of required argument
-    --optional-arg <value>
-                        Description of optional argument (optional)
+  # SYNOPSIS
+  slog_se --bold "SYNOPSIS" --default
+  slog_se
+  slog_se "${i2}" --code "${script_name} [OPTIONS] [DEVELOPMENT OPTIONS]" --default
+  slog_se
 
-    --help              Display this help message and exit
+  # OPTIONS
+  slog_se --bold "OPTIONS" --default
+  slog_se
+  slog_se "${i2}" --bold --italic "SCRIPT OPTIONS" --default
+  slog_se "${i4}" --code '--required-arg <value>' --default
+  slog_se "${i6}Description of required argument"
+  slog_se "${i4}" --code '--optional-arg <value>' --default
+  slog_se "${i6}Description of optional argument (optional)"
+  slog_se
+  slog_se "${i2}" --bold --italic "META-OPTIONS" --default
+  slog_se "${i4}" --code '--help' --default
+  slog_se "${i6}Display this help message and exit"
+  slog_se "${i4}" --code '--dry-run' --default
+  slog_se "${i6}Show what would be done without making changes"
+  slog_se
 
-    --dry-run           Show what would be done without making changes
+  # DEVELOPMENT OPTIONS
+  slog_se --bold "DEVELOPMENT OPTIONS" --default
+  slog_se
+  slog_se "${i4}" --code '-d, --debug' --default
+  slog_se "${i6}Enable debug output (can be specified multiple times for more verbosity)"
+  slog_se "${i6}" --code '-d' --default " Basic debug output"
+  slog_se "${i6}" --code '-dd' --default " Enable ERR trap debugging (see --trap-err)"
+  slog_se "${i6}${i2}(also: -d -d, -d2)"
+  slog_se "${i6}" --code '-ddd' --default " Enable ERR and EXIT trap debugging (see --trap-exit)"
+  slog_se "${i6}${i2}(also: -d -d -d, -d3)"
+  slog_se
+  slog_se "${i4}" --code '--trap-err, --debug-err' --default
+  slog_se "${i6}Enable ERR trap handler (shows line numbers on script failures)"
+  slog_se
+  slog_se "${i4}" --code '--trap-exit, --debug-exit' --default
+  slog_se "${i6}Enable EXIT trap handler (shows exit status information)"
+  slog_se
 
-DEVELOPMENT OPTIONS
-    -d, --debug
-        Enable debug output (can be specified multiple times for more verbosity)
-          -d           Basic debug output
-          -dd          Enable ERR trap debugging (see --trap-err)
-                       (also: -d -d, -d2)
-          -ddd         Enable ERR and EXIT trap debugging (see --trap-exit)
-                       (also: -d -d -d, -d3)
+  # ENVIRONMENT
+  slog_se --bold "ENVIRONMENT" --default
+  slog_se
+  slog_se "${i4}" --code 'REQUIRED_VAR' --default " Description of required environment variable"
+  slog_se "${i4}" --code 'OPTIONAL_VAR' --default " Description of optional environment variable (optional)"
+  slog_se
 
-    --trap-err, --debug-err
-        Enable ERR trap handler (shows line numbers on script failures)
+  # EXIT STATUS
+  slog_se --bold "EXIT STATUS" --default
+  slog_se
+  slog_se "${i4}" --code '0' --default " Success"
+  slog_se "${i4}" --code '1' --default " General error"
+  slog_se "${i4}" --code '40-49' --default " Validation/verification failures"
+  slog_se "${i4}" --code '50-59' --default " Configuration errors"
+  slog_se
 
-    --trap-exit, --debug-exit
-        Enable EXIT trap handler (shows exit status information)
+  # OUTPUT / STDERR
+  slog_se --bold "OUTPUT" --default
+  slog_se
+  slog_se "${i2}Description of what gets written to stdout on success"
+  slog_se
+  slog_se --bold "STDERR" --default
+  slog_se
+  slog_se "${i2}Debug logs and context information (when --debug is enabled)"
+  slog_se
 
-ENVIRONMENT
-    REQUIRED_VAR        Description of required environment variable
-    OPTIONAL_VAR        Description of optional environment variable (optional)
+  # EXAMPLES
+  slog_se --bold "EXAMPLES" --default
+  slog_se
+  slog_se "${i2}${SYMBOL_BULLET:-•} Example command"
+  slog_se "${i4}" --code "./${script_name} --required-arg value" --default
+  slog_se
+  slog_se "${i2}${SYMBOL_BULLET:-•} Example with debug output"
+  slog_se "${i4}" --code "./${script_name} --required-arg value --debug" --default
+  slog_se
+  slog_se "${i2}${SYMBOL_BULLET:-•} Example with full trap debugging"
+  slog_se "${i4}" --code "./${script_name} --required-arg value -ddd" --default
+  slog_se
 
-EXIT STATUS
-    0                   Success
-    1                   General error
-    40-49               Validation/verification failures
-    50-59               Configuration errors
+  # REFERENCES
+  slog_se --bold "REFERENCES" --default
+  slog_se
+  slog_se "${i4}SwiftArgumentParser: " --url "https://apple.github.io/swift-argument-parser/" --default
 
-OUTPUT
-    Description of what gets written to stdout on success
-
-STDERR
-    Debug logs and context information (when --debug is enabled)
-
-EXAMPLES
-EOF
-  echo_pretty "    # Example command" --default
-  echo_pretty "    " --code "./script_name.zsh --required-arg value" --default
-  echo ""
-  echo_pretty "    # Example with debug output" --default
-  echo_pretty "    " --code "./script_name.zsh --required-arg value --debug" --default
-  echo ""
-  echo_pretty "    # Example with full trap debugging" --default
-  echo_pretty "    " --code "./script_name.zsh --required-arg value -ddd" --default
-
-  cat << 'EOF'
-
-REFERENCES
-EOF
-  echo_pretty "    SwiftArgumentParser: " --url "https://apple.github.io/swift-argument-parser/" --default
+  return 1
 }
 ```
 
@@ -2020,7 +2049,13 @@ EOF
     -   Use `--code` and `--default` for command examples
     -   Use `--url` and `--default` for URLs
 
-5.  **SwiftArgumentParser Style**: Follow conventions from Swift's ArgumentParser for synopsis formatting:
+5.  **Rendering Implementation**:
+  -   Prefer `slog_se` for all `print_usage` output so content consistently goes to stderr
+  -   Prefer decoration-first calls (`--bold`, `--italic`, `--code`, `--url`) over plain text where applicable
+  -   Avoid direct `echo_pretty` calls in `print_usage`
+  -   Heredoc usage is discouraged for decorated sections because decorator tokens are not applied inside static blocks
+
+6.  **SwiftArgumentParser Style**: Follow conventions from Swift's ArgumentParser for synopsis formatting:
     -   Reference: `swift package --help`
     -   Web docs: https://apple.github.io/swift-argument-parser/
 
@@ -2035,7 +2070,7 @@ zparseopts -D -F -- \
 # Display help if requested
 if [[ -n "${flag_help:-}" ]]; then
   print_usage
-  exit 0
+  exit $?
 fi
 ```
 

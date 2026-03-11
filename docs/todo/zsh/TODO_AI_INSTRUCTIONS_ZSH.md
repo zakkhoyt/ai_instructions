@@ -79,6 +79,7 @@ the current instructions tend to use heredoc to encapsulate the whole output in 
     * Then levarge the `(F)`? I'm not sure how feasible this is, or if the code will be very legible. 
 * Please let's discuss this. Present a few print_usage functions that explore these throughts and let's see how they work out
 
+* The end goal here is to update AI instructions about print_usage
 
 # Scripting Conventions
 
