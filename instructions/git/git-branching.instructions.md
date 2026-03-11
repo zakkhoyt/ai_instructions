@@ -1,4 +1,3 @@
-````instructions
 ---
 applyTo: "**/*"
 ---
@@ -453,5 +452,3 @@ username=$(git config user.name | tr ' ' '_' | tr '[:upper:]' '[:lower:]')
 2. **Create branch**: `git checkout -b username/category/topic`
 3. **Apply stash**: `git stash pop`
 4. **Commit and push**: Create PR immediately
-
-````

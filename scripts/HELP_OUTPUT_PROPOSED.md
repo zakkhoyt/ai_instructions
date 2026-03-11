@@ -10,71 +10,89 @@ DESCRIPTION:
     Configure AI instructions and VSCode settings for projects.
     Supports granular control over installation scope, category, and theme.
 
-NEW PROMPT SYSTEM:
-    --prompt <scope[:<category>][:<theme>]>
-        Show interactive menu for specified configuration.
-        
-        Scope only (all categories & themes):
-            --prompt user                   # All user profile configs
-            --prompt workspace              # All workspace configs
-            --prompt folder                 # All folder (.vscode) configs
-        
-        Scope + Category (all themes):
-            --prompt user:settings          # All user settings themes
-            --prompt user:mcp               # All user MCP themes
-            --prompt workspace:settings     # All workspace settings themes
-            --prompt workspace:mcp          # All workspace MCP themes
-            --prompt folder:settings        # All folder settings themes
-        
-        Scope + Category + Theme (specific):
-            --prompt user:settings:swift    # Swift user settings only
-            --prompt user:mcp:atlassian     # Atlassian MCP user config
-            --prompt workspace:mcp:xcode-mcpserver
-            --prompt folder:settings:fileNesting
+ACTION TYPES:
+    The script supports two types of actions:
     
-    --no-prompt <scope[:<category>][:<theme>]>
-        Auto-apply configuration without menu (same scope syntax as --prompt).
+    1. CONFIG ACTIONS (with selectors):
+       Syntax: config-<scope>[:<category>][:<theme>]
+       These manage VSCode configuration files with hierarchical selection.
+    
+    2. SIMPLE ACTIONS:
+       Syntax: <action-name>
+       These perform specific operations without hierarchical selection.
+
+NEW PROMPT SYSTEM:
+    --prompt <action>
+        Show interactive menu/confirmation for specified action.
+        Can be repeated to prompt for multiple actions.
         
-        Examples:
-            --no-prompt user                # Install all user configs
-            --no-prompt workspace:mcp       # Install all workspace MCP configs
-            --no-prompt user:settings:swift # Install swift user settings only
+    --no-prompt <action>
+        Execute action automatically without prompts.
+        Can be repeated for multiple actions.
 
-AVAILABLE SCOPES:
-    user        User profile settings (~/.../Code/User/*.json)
-    workspace   Workspace files (*.code-workspace)
-    folder      Folder settings ($dest_dir/.vscode/*.json)
+CONFIG ACTIONS (VSCode Settings with Selectors):
+    
+    Scope only (all categories & themes):
+        --prompt config-user                   # All user profile configs
+        --prompt config-workspace              # All workspace configs
+        --prompt config-folder                 # All folder (.vscode) configs
+    
+    Scope + Category (all themes):
+        --prompt config-user:settings          # All user settings themes
+        --prompt config-user:mcp               # All user MCP themes
+        --prompt config-workspace:settings     # All workspace settings themes
+        --prompt config-workspace:mcp          # All workspace MCP themes
+        --prompt config-folder:settings        # All folder settings themes
+    
+    Scope + Category + Theme (specific):
+        --prompt config-user:settings:swift    # Swift user settings only
+        --prompt config-user:mcp:atlassian     # Atlassian MCP user config
+        --prompt config-workspace:mcp:xcode-mcpserver
+        --prompt config-folder:settings:fileNesting
 
-AVAILABLE CATEGORIES:
+SIMPLE ACTIONS:
+    
+    instructions        Manage AI instruction files
+        --prompt instructions           # Show menu of instruction files
+        --no-prompt instructions        # Auto-install all instructions
+    
+    dev-link            Create development symlink
+        --prompt dev-link               # Confirm before creating symlink
+        --no-prompt dev-link            # Create symlink automatically
+    
+    dev-vscode          Add to VSCode workspace
+        --prompt dev-vscode             # Confirm before adding to workspace
+        --no-prompt dev-vscode          # Add to workspace automatically
+    
+    regenerate-main     Regenerate main instruction file
+        --prompt regenerate-main        # Confirm before regenerating
+        --no-prompt regenerate-main     # Regenerate automatically
+    
+    mcp-xcode           Install Xcode MCP configuration
+        --prompt mcp-xcode              # Confirm before installing
+        --no-prompt mcp-xcode           # Install automatically
+
+CONFIG SCOPE DETAILS:
+    config-user        User profile settings (~/.../Code/User/*.json)
+    config-workspace   Workspace files (*.code-workspace) + .vscode/ in workspace
+    config-folder      Folder settings ($dest_dir/.vscode/*.json)
+
+AVAILABLE CATEGORIES (for config actions):
     settings    VS Code settings.json
     mcp         Model Context Protocol servers (mcp.json)
     tasks       Task definitions (tasks.json) [FUTURE]
     launch      Launch configurations (launch.json) [FUTURE]
-    keybindings Keyboard shortcuts (keybindings.json) [FUTURE - user only]
+    keybindings Keyboard shortcuts (keybindings.json) [FUTURE - config-user only]
 
-AVAILABLE THEMES:
-    User scope:
+AVAILABLE THEMES (for config actions):
+    config-user scope:
         swift, chat, github, atlassian
     
-    Workspace scope:
+    config-workspace scope:
         swift, xcode-mcpserver, ai_autoapprove
     
-    Folder scope:
+    config-folder scope:
         swift, xcode-mcpserver, atlassian-mcpserver, fileNesting
-
-INSTRUCTION FILES:
-    --prompt instructions           # Show menu of instruction files
-    --no-prompt instructions        # Auto-install all instructions
-    
-    Note: Instruction files are copied/symlinked from:
-        ~/.ai/instructions/** → $dest_dir/.github/instructions/
-
-DEVELOPMENT FLAGS:
-    --dev-link [NAME]              Create symlink to ~/.ai in project
-                                   Optional NAME overrides default dirname
-    
-    --dev-vscode [NAME]            Add ~/.ai folder to VSCode workspace
-                                   Optional NAME overrides display name
 
 MAINTENANCE:
     --regenerate-main              Regenerate .github/copilot-instructions.md
@@ -85,20 +103,27 @@ MAINTENANCE:
 
 EXAMPLES:
     # Install all user and workspace configs with menus
-    configure_ai_instructions.zsh --prompt user --prompt workspace
+    configure_ai_instructions.zsh --prompt config-user --prompt config-workspace
     
     # Auto-install specific configs without prompts
-    configure_ai_instructions.zsh --no-prompt user:settings:swift \\
-                                  --no-prompt workspace:mcp:xcode-mcpserver
+    configure_ai_instructions.zsh --no-prompt config-user:settings:swift \\
+                                  --no-prompt config-workspace:mcp:xcode-mcpserver
     
     # Install instructions and setup development environment
     configure_ai_instructions.zsh --prompt instructions \\
-                                  --dev-link \\
-                                  --dev-vscode
+                                  --prompt dev-link \\
+                                  --prompt dev-vscode
     
     # Mixed: prompt for some, auto for others
-    configure_ai_instructions.zsh --prompt workspace:settings \\
-                                  --no-prompt user:mcp
+    configure_ai_instructions.zsh --prompt config-workspace:settings \\
+                                  --no-prompt config-user:mcp
+    
+    # Complete project setup (auto mode)
+    configure_ai_instructions.zsh --no-prompt instructions \\
+                                  --no-prompt config-user:settings:swift \\
+                                  --no-prompt config-workspace \\
+                                  --no-prompt dev-link \\
+                                  --no-prompt dev-vscode
 ```
 
 ---
@@ -110,17 +135,37 @@ These are the **current** arguments that exist but are being redesigned:
 ```
 CURRENT FLAGS (TO BE DEPRECATED):
     --instructions              Install instruction files (menu-driven)
+                               Maps to: --prompt instructions
+    
     --workspace-settings        Workspace settings [BROKEN - doesn't work]
+                               Maps to: --prompt config-workspace
+    
     --user-settings             User settings [BROKEN - doesn't work]
+                               Maps to: --prompt config-user
+    
     --mcp-xcode                 Force Xcode MCP installation
-    --prompt                    Enable menu prompts [AMBIGUOUS]
-    --no-prompt                 Disable menu prompts [AMBIGUOUS]
+                               Maps to: --no-prompt mcp-xcode
+    
+    --dev-link                  Create development symlink
+                               Maps to: --no-prompt dev-link
+    
+    --dev-vscode                Add to VSCode workspace
+                               Maps to: --no-prompt dev-vscode
+    
+    --prompt                    Enable menu prompts [AMBIGUOUS - being replaced]
+                               Old: Boolean flag (all or nothing)
+                               New: Repeatable with action targets
+    
+    --no-prompt                 Disable menu prompts [AMBIGUOUS - being replaced]
+                               Old: Boolean flag (all or nothing)
+                               New: Repeatable with action targets
 
 ISSUES WITH CURRENT SYSTEM:
     1. --workspace-settings and --user-settings don't work as documented
     2. --prompt has no argument, just enables prompting globally
     3. No way to specify granular control (specific themes/categories)
     4. Boolean flag explosion (would need --swift-user-settings, etc.)
+    5. No unified syntax for all action types
 ```
 
 ---
@@ -130,23 +175,28 @@ ISSUES WITH CURRENT SYSTEM:
 The script currently performs these actions **automatically** without requiring flags:
 
 ```
+AUTO-DETECTION BEHAVIORS:
+
 XCODE MCP AUTO-DETECTION:
     When: Script detects Package.swift, *.xcworkspace, or *.xcodeproj
     Action: Prompts user to install Xcode MCP server configuration
+    New equivalent: --prompt mcp-xcode or --prompt config-workspace:mcp:xcode-mcpserver
     Files affected:
         - Most recent *.code-workspace file (merged)
         - .vscode/mcp.json (created/merged)
     
-    Problem: Happens even when user didn't request it
-    Solution: Should only trigger with --prompt workspace:mcp:xcode-mcpserver
-              or via menu when using --prompt workspace:mcp
+    Problem: Happens automatically even when user didn't request it
+    Solution: Only trigger with explicit action:
+              --prompt mcp-xcode
+              --prompt config-workspace:mcp:xcode-mcpserver
 
 INSTRUCTION FILE MENU:
     When: No instruction files exist in destination
-    Action: Always shows menu (gates with has_instructions_to_install check)
+    Action: Shows menu (gates with has_instructions_to_install check)
+    New equivalent: --prompt instructions
     
     Problem: Menu skip logic conflicts with --prompt flag
-    Solution: Should show menu when --prompt instructions used,
+    Solution: Show menu when --prompt instructions used,
               regardless of installation state
 
 NUMBER FORMATTING:
@@ -182,17 +232,17 @@ PLATFORM-SPECIFIC INSTRUCTIONS:
         - Example: --platform claude creates CLAUDE.md + .claude/settings.json
 
 FUTURE WORKSPACE FOLDER SUPPORT:
-    --prompt folder[<name>]:<category>[:<theme>]
+    --prompt config-folder[<name>]:<category>[:<theme>]
     
     Examples:
-        --prompt folder[]:settings              # All folders, settings category
-        --prompt folder[scripts]:settings       # "scripts" folder only
-        --prompt folder[src]:settings:swift     # "src" folder, swift theme
+        --prompt config-folder[]:settings              # All folders, settings category
+        --prompt config-folder[scripts]:settings       # "scripts" folder only
+        --prompt config-folder[src]:settings:swift     # "src" folder, swift theme
 
 WILDCARDS/PATTERNS (FUTURE):
-    --prompt user:settings:mark*               # All themes starting with "mark"
-    --prompt workspace:mcp:*-mcpserver         # All MCP server themes
-    --prompt user:*:swift                      # Swift configs across all categories
+    --prompt config-user:settings:mark*               # All themes starting with "mark"
+    --prompt config-workspace:mcp:*-mcpserver         # All MCP server themes
+    --prompt config-user:*:swift                      # Swift configs across all categories
 ```
 
 ---
@@ -204,21 +254,21 @@ WILDCARDS/PATTERNS (FUTURE):
 # Install instructions + Swift configs + Xcode MCP + dev environment
 configure_ai_instructions.zsh \\
     --no-prompt instructions \\
-    --no-prompt user:settings:swift \\
-    --no-prompt workspace:settings:swift \\
-    --no-prompt workspace:mcp:xcode-mcpserver \\
-    --no-prompt folder:settings:swift \\
-    --dev-link \\
-    --dev-vscode
+    --no-prompt config-user:settings:swift \\
+    --no-prompt config-workspace:settings:swift \\
+    --no-prompt config-workspace:mcp:xcode-mcpserver \\
+    --no-prompt config-folder:settings:swift \\
+    --no-prompt dev-link \\
+    --no-prompt dev-vscode
 ```
 
 ### Interactive Selection (Current Repo State)
 ```zsh
 # Let user choose what to install via menus
 configure_ai_instructions.zsh \\
-    --prompt user \\
-    --prompt workspace \\
-    --prompt folder \\
+    --prompt config-user \\
+    --prompt config-workspace \\
+    --prompt config-folder \\
     --prompt instructions
 ```
 
@@ -232,9 +282,19 @@ configure_ai_instructions.zsh --no-prompt instructions
 ```zsh
 # Auto-install known configs, prompt for workspace-specific ones
 configure_ai_instructions.zsh \\
-    --no-prompt user:settings:swift \\
-    --no-prompt user:mcp:atlassian \\
-    --prompt workspace              # Menu for workspace configs
+    --no-prompt config-user:settings:swift \\
+    --no-prompt config-user:mcp:atlassian \\
+    --prompt config-workspace              # Menu for workspace configs
+```
+
+### Development Workflow
+```zsh
+# Setup repository for AI development
+configure_ai_instructions.zsh \\
+    --no-prompt instructions \\
+    --no-prompt dev-link \\
+    --no-prompt dev-vscode \\
+    --prompt config-workspace
 ```
 
 ---
@@ -260,34 +320,38 @@ configure_ai_instructions.zsh \\
 
 ## Open Questions
 
-1. **Multiple specifications**: Should `--prompt user:settings workspace:mcp` work, or require separate flags?
+1. **Multiple specifications**: Should `--prompt config-user:settings config-workspace:mcp` work, or require separate flags?
 2. **Default behavior**: What happens when script runs with no args at all?
 3. **Conflict resolution**: What if `--prompt` and `--no-prompt` both specify same config?
-4. **Validation**: Should script validate scope:category:theme against available files?
+4. **Validation**: Should script validate config-scope:category:theme against available files?
 5. **Discovery**: How does user know what themes are available? Add `--list` flag?
 
 ---
 
 ## Suggested Additional Flags
 
+SUGGESTED ADDITIONAL FLAGS:
+
 ```
 DISCOVERY:
-    --list-scopes                  Show available scopes
-    --list-categories [SCOPE]      Show categories for scope
+    --list-actions                 Show all available actions
+    --list-config-scopes           Show available config scopes
+    --list-categories [SCOPE]      Show categories for config scope
     --list-themes [SCOPE[:CATEGORY]]
                                    Show available themes
     
     Examples:
-        --list-themes user:settings
-        --list-themes workspace
+        --list-actions
+        --list-themes config-user:settings
+        --list-themes config-workspace
         --list-themes
 
 VALIDATION:
-    --dry-run <spec>               Show what would be installed without doing it
+    --dry-run <action>             Show what would be executed without doing it
     --validate                     Check all template files for syntax errors
 
 CLEANUP:
-    --unlink <spec>                Remove previously installed configs
+    --unlink <action>              Remove previously installed configs
     --reset                        Remove all installed configs (dangerous!)
 ```
 

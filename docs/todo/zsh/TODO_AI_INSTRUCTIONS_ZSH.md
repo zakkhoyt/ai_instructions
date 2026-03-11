@@ -1,23 +1,199 @@
+Let's add more changes to those zsh AI instruction files
+
+
+# print_usage
+
+Let's overhaul the way that print_usage is implemented in each script. 
+
+* I want the print_usage to embrace text decorations/formatting
+  * Reminder: All `slog_*` use `echo_pretty` under the hood (if available), and `echo_pretty` makes this easy. 
+* All of print_usage should be printed on stderr
+* print_usage should take advantage of env vars that are configured in `$HOME/.zsh_home/utilities/.zsh_main` (part of `.zsh_boilerplate)
+```zsh
+# a few examples from $HOME/.zsh_home/utilities/.zsh_main
+# Don't copy from here, instead read $HOME/.zsh_home/utilities/.zsh_main
+export INDENT_2='  '
+export INDENT_4='    '
+export INDENT="$INDENT_2"
+export SYMBOL_BULLET='•'
+export SYMBOL_BULLET_SMALL='∙'
+export SYMBOL_BULLET_TARGET_1='◦'
+export SYMBOL_BULLET_TARGET_2='⦿'
+export SYMBOL_BULLET_TARGET_3='⦾'
+export SYMBOL_BULLET_TARGET=$SYMBOL_BULLET_TARGET_3
+export SYMBOL_BULLET_HEART='❥'
+export SYMBOL_BULLET_ENCLOSED='‣'
+export NIL_STRING='<nil>'
+
+# Also these arrays
+export -a EMOJI_BASE10=('🄋' '①' '②' '③' '④' '⑤' '⑥' '⑦' '⑧' '⑨')
+export -a EMOJI_BASE16=("${EMOJI_BASE10[@]}" 'Ⓐ' 'Ⓑ' 'Ⓒ' 'Ⓓ' 'Ⓔ' 'Ⓕ')
+export -a EMOJI_CIRCLE=('🔴' '⚫️' '🔵' '⚪️' '🟢' '🟤' '🟡' '🟣' '🟠')
+# Also these dictionaries
+export -A EMOJI_COLOR_CIRCLES=([red]='🔴' [black]='⚫️' [blue]='🔵' [white]='⚪️' [green]='🟢' [brown]='🟤' [yellow]='🟡' [purple]='🟣' [orange]='🟠')
+export -A EMOJI_BASE16_CIRCLES=([0]='🄋' [1]='①' [2]='②' [3]='③' [4]='④' [5]='⑤' [6]='⑥' [7]='⑦' [8]='⑧' [9]='⑨' [A]='Ⓐ' [B]='Ⓑ' [C]='Ⓒ' [D]='Ⓓ' [E]='Ⓔ' [F]='Ⓕ')
+```
+  
+* Section headers decorations:
+* level 1 headers should be decorated with `--bold`. EX: SYNOPSIS, DESCRIPTION, USAGE, ARGUMENTS, EXIT STATUS, STDOUT, STDERR, etc...
+EX: 
+```zsh
+slog_se --bold "USAGE" --default
+slog_se
+slog_se "${INDENT_2}" --code "$script_name [OPTIONS] [META-OPTIONS]"
+```
+
+* level 2 headers should be decorated with `--bold --italic`. EX: (argument) OPTIONS, etc...
+EX: 
+```zsh
+slog_se "${INDENT_2}" --bold "META-OPTIONS" --default
+slog_se
+slog_se "${INDENT_2}${INDENT_2}" --code '--help' --default
+slog_se "${INDENT_2}${INDENT_2}${INDENT_2} Print this message"
+slog_se
+slog_se "${INDENT_2}${INDENT_2}" --code '--debug' --default
+slog_se "${INDENT_2}${INDENT_2}${INDENT_2} Print additional debug info to stderr"
+```
+
+* Anything that could be a terminal command should use: `--code` / `--default`
+* Anything begining with http://, https://, ftp://, file://, etc... should use: `--url` / `--default`
+* Any absolute filepaths should use: `--url` / `--default`
+* Have a look at these `echo_pretty` help/demo outputs, then infer additional decorations. Each command shows how to decorate in different ways
+```zsh
+echo_pretty --help             # Print the help/usage message (this message)
+echo_pretty --demo             # A demonstration comparing echo_pretty syntax vs ANSI codes using echo
+echo_pretty --demo-basics      # Prints common ANSI escape code (litearls) for use in shell scripts
+echo_pretty --demo-8-bit       # A demonstration of 8-bit color flags
+echo_pretty --demo-24-bit      # A demonstration of 24-bit color flags
+echo_pretty --demo-web-colors  # Prints escape codes for (litearls) for use in shell scripts
+```
+
+
+## heredoc? Maybe not
+the current instructions tend to use heredoc to encapsulate the whole output in a single string. 
+* I like the idea here, but I dont' think there's a way to use these env vars and the echo_pretty arguments with a heredoc? 
+  * [ ] If there is, please let me know and let's discuss this
+* If a print_usage is composed of say 50-75 `slog_se` commands, each using echo_pretty args, the output can take a while to print/render. 
+  * I've found that what can help is to print multiple lines with a single `slog_se` command
+  * Since we are embracing zsh expansion, perhaps we can use a single array to hold all args to a single slog_se (or fewer than 50-75 of them)
+    * Then levarge the `(F)`? I'm not sure how feasible this is, or if the code will be very legible. 
+* Please let's discuss this. Present a few print_usage functions that explore these throughts and let's see how they work out
+
+* The end goal here is to update AI instructions about print_usage
+
+# Scripting Conventions
+
+<details >
+<summary>*see more...*</summary>
+
+* [ ] always declare zsh variables!
+  * One exception are the variables that zparseopts provides. 
+```zsh
+zparseopts -D -E -- \
+  -done=flag_done \
+  -some-key:=opt_some_value
+
+# zparseopts allocates and initializes flag_done and opt_some_value, so we don't need to.
+# We do need to declare this "wrapper var" though
+typeset -r some_value="${opt_some_value[-1]:default}"
+```
+
+Declared vars should be declared readonly where possible (either with `typeset -r <var>`, `local -r <var>`, or `readonly <var>`
+
+Declared vars should use specific flags according to var type:
+```zsh
+typeset -r -a my_array=(a b 'cd')
+typeset -r -A my_dict=([a]='A' [b]='B')
+```
+
+Reminder that `local` is reserved to be used inside of `functions`, not in the script root level (use `typeset`). 
+
+</details>
+
+
+
+# debug logging of variables after declaration
+  
+<details>
+<summary>*see more...*</summary>
+
+* Re-read ai instructions about zsh. 
+* `slog_var_se_d` is deprecated and replaced by `slog_var1_se_d`
+  * There should be a section about calling `slog_var_se_d` after each variable initialization or value change. 
+    * EX: `slog_var_se_d "platforms" "$platforms"`
+  * Let's replace that with `slog_var1_se_d`. 
+    * There are a couple of differences:
+    * The `var1` in `slog_var1_se_d` means "one argument". IE. it has only 1 mandatory argument and that is the variable *name* (a single positional argument, string format).
+      * Depending on the variable type, the value will be formatted and printed accordingly. 
+        * EX: arrays are logged over manu lines with one index/element per line
+        * EX: associative arrays (dicts) are logged over manu lines with one key/value pair per line. Lines are sorted by key in lex ordering
+    * `slog_var_se_d` is deprecated and should not be used anymore
+* Please update any files under `instrutions` accordingly
+
+</details>
+
 
 
 
 
 # zsh_boilerplate
 
+<details>
+<summary>*see more...*</summary>
+
 We need to update AI instructions regarding some ZSH conventions. 
 To be clear Im talking about the files under `instructions`. Please read them now. 
-
 
 The main focus of this change to instructions is based around a new scripting utilities library: `.zsh_boilerplate`
 In order to best apply the changes described below, it is important that you are VERY familiar with everthing this library does. 
 I've symlinked it into this workspace here: `docs/todo/zsh/references/utilities/.zsh_boilerplate`. 
 
-* [ ] Please read .zsh_boilerplate. Read it **fully** and **recursively** (recursive `source $file` calls) so that you FULLY understand everything this script brings to the table. 
+* [x] Please read .zsh_boilerplate. Read it **fully** and **recursively** (recursive `source $file` calls) so that you FULLY understand everything this script brings to the table. 
 
+## Recursive source audit (2026-02-28)
 
+Root file reviewed:
+- `docs/todo/zsh/references/utilities/.zsh_boilerplate`
 
+Resolved source graph:
+- `.zsh_boilerplate`
+  - sources `.zsh_zparseopts`
+    - sources `.zsh_logging_utilities`
+    - conditionally sources `.zsh_debug_err` (debug level >=2 or `--trap-err` / `--debug-err`)
+    - conditionally sources `.zsh_debug_exit` (debug level >=3 or `--trap-exit` / `--debug-exit`)
+  - sources `.zsh_scripting_utilities` (via `source_once` / `source_dirs` lookup)
+    - sources `.zsh_jira_utilities`
+    - sources `.zsh_git_utilities`
+    - sources `.zsh_github_utilities`
+    - sources `.zsh_homebrew_utilities`
+    - sources `.zsh_logging_utilities`
+    - sources `.zsh_scripting_core`
+    - sources `.zsh_scripting_functions`
+    - sources `.zsh_ui_utilities`
+    - sources `.zsh_swift_utilities`
+    - sources `.zsh_xcode_utilities`
+    - sources `.zsh_file_utilities`
 
+What this brings to scripts immediately:
+- Argument parsing / common flags:
+  - `.zsh_zparseopts` and `.zsh_scripting_utilities` parse common options and set flags like `IS_DEBUG`, `IS_VERBOSE`, `IS_DRY_RUN`, plus `FLAG_*` variants.
+- Logging stack:
+  - `.zsh_logging_utilities` provides `_slog`, `slog_*`, `slog_step_*`, `slog_var*`, `slog_array*`, callstack/location helpers, command logging helpers.
+- Trap debugging:
+  - `.zsh_debug_err` + `.zsh_debug_exit` provide `trap_err` / `trap_exit` with source-target enable/disable handling.
+- Domain helpers:
+  - Jira: ticket extraction/validation/open URL helpers.
+  - Git/GitHub: branch/PR title formatting and validation helpers.
+  - Homebrew: package find/install/download helpers.
+  - Swift/Xcode: scheme/target discovery and Xcode tool helpers.
+  - UI/file/scripting core: menu/prompt helpers, file append-if-missing, numeric/array/path/mount helpers.
 
+Notable utility entrypoints (non-exhaustive):
+- `.zsh_logging_utilities`: `slog`, `slog_se`, `slog_step_se`, `slog_var_se`, `slog_array_se`, `slog_callstack_se`, `slog_source_location_se`, `slog_cmd_se`.
+- `.zsh_scripting_utilities`: `zparse_common_flags`, `parse_flag_argument`, `parse_key_value_argument`, `validate_arg`, `init_scripting_vars`, `relative_path`.
+- `.zsh_scripting_core`: `debug_command`, `is_int` / `is_num`, `calc`, `arrayFromFile`, `pickFromMenu`, mount/unmount helpers.
+- `.zsh_ui_utilities`: `present_picker`, `prompt_yes_no_question`, `prompt_to_continue*`.
+- `.zsh_file_utilities`: `append_lines_to_file_if_not_present`.
 
 I want to update our AI instructions so that this boilerplate / template is used in all zsh scripts:
 ```zsh
@@ -51,8 +227,12 @@ This will supersceded several sections of the current zsh instructions
 * header comment
 * `source .zsh_scripting_utils`
 * source_dirs, looping through arrays of config files and source dirs, etc...
-* There should be a section talking about using zparseopts to extract flag_debug, flag_help, flag_dry_run, and such. These common flag args are now handled by `.zsh_boilerplate` via `.zsh_zparseopts`
+* There should be a section talking about using zparseopts to extract flag_debug, flag_help, flag_dry_run, and such. These common flag args are now handled by `.zsh_boilerplate` via `.zsh_zparseopts`. 
+  * in other words, things like flag_debug, flag_help
 
+
+
+</details>
 
 
 # print_usage
