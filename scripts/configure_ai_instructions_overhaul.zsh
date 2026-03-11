@@ -664,29 +664,270 @@ function install_selected_instructions {
 }
 
 function run_prompt_workspace_settings {
-  slog_step_se --context info "Workspace settings configuration is complex"
-  slog_se "For now, use the legacy script or implement config selectors"
-  slog_se "Example: " --code "--prompt config-workspace:settings:theme" --default
-  return 0
+  typeset -r workspace_dir="$user_ai_dir/vscode/workspace"
+  typeset -r dot_vscode_dir="$workspace_dir/.vscode"
+  
+  if ! type jq >/dev/null 2>&1; then
+    slog_step_se --context warning "jq not found - workspace settings merge requires jq"
+    return 0
+  fi
+  
+  if [[ ! -d "$workspace_dir" ]]; then
+    slog_step_se --context info "No workspace templates directory found at: " --url "$workspace_dir" --default
+    return 0
+  fi
+  
+  setopt local_options null_glob
+  typeset -a workspace_files=("$workspace_dir"/*.code-workspace(N))
+  typeset -a config_files=("$dot_vscode_dir"/*.json(N))
+  
+  if [[ ${#workspace_files[@]} -eq 0 && ${#config_files[@]} -eq 0 ]]; then
+    slog_step_se --context info "No workspace templates found in: " --url "$workspace_dir" --default
+    return 0
+  fi
+  
+  slog_se ""
+  slog_se --bold "Workspace Templates Available:" --default
+  slog_se ""
+  
+  typeset -i idx=1
+  typeset -a all_files=()
+  
+  for file in "${workspace_files[@]}"; do
+    all_files+=("$file")
+    printf "%2d. [workspace] %s\n" "$idx" "${file:t}"
+    ((idx++))
+  done
+  
+  for file in "${config_files[@]}"; do
+    all_files+=("$file")
+    printf "%2d. [.vscode] %s\n" "$idx" "${file:t}"
+    ((idx++))
+  done
+  
+  slog_se ""
+  printf "Enter selections (e.g., '1 3', 'all', or press Enter to skip): "
+  
+  typeset user_selection=""
+  read -r user_selection
+  
+  if [[ -z "$user_selection" ]]; then
+    slog_step_se --context info "Skipping workspace template merge"
+    return 0
+  fi
+  
+  merge_workspace_templates "$user_selection" "${all_files[@]}"
 }
 
 function run_auto_workspace_settings {
-  slog_step_se --context info "Auto workspace settings not yet implemented"
-  slog_se "Use legacy script or specific config selectors"
-  return 0
+  typeset -r workspace_dir="$user_ai_dir/vscode/workspace"
+  typeset -r dot_vscode_dir="$workspace_dir/.vscode"
+  
+  if ! type jq >/dev/null 2>&1; then
+    slog_step_se --context warning "jq not found - skipping workspace settings"
+    return 0
+  fi
+  
+  if [[ ! -d "$workspace_dir" ]]; then
+    slog_step_se --context info "No workspace templates found"
+    return 0
+  fi
+  
+  setopt local_options null_glob
+  typeset -a workspace_files=("$workspace_dir"/*.code-workspace(N))
+  typeset -a config_files=("$dot_vscode_dir"/*.json(N))
+  typeset -a all_files=("${workspace_files[@]}" "${config_files[@]}")
+  
+  if [[ ${#all_files[@]} -eq 0 ]]; then
+    slog_step_se --context info "No workspace templates found"
+    return 0
+  fi
+  
+  merge_workspace_templates "all" "${all_files[@]}"
+}
+
+function merge_workspace_templates {
+  typeset -r user_selection="$1"
+  shift
+  typeset -a template_files=("$@")
+  
+  typeset -a selected_indices=()
+  if [[ "$user_selection" == "all" ]]; then
+    for ((idx=1; idx<=${#template_files[@]}; idx++)); do
+      selected_indices+=("$idx")
+    done
+  else
+    selected_indices=(${(s: :)user_selection})
+  fi
+  
+  for selection in "${selected_indices[@]}"; do
+    if [[ ! "$selection" =~ ^[0-9]+$ ]] || (( selection < 1 || selection > ${#template_files[@]} )); then
+      slog_step_se --context warning "Invalid selection: " --code "$selection" --default
+      continue
+    fi
+    
+    typeset template_file="${template_files[$selection]}"
+    typeset file_basename="${template_file:t}"
+    typeset file_extension="${template_file:e}"
+    
+    slog_step_se_d --context will "merge template: " --url "$file_basename" --default
+    
+    typeset target_file=""
+    if [[ "$file_extension" == "code-workspace" ]]; then
+      target_file="$dest_dir/${file_basename}"
+    else
+      target_file="$dest_dir/.vscode/${file_basename}"
+    fi
+    
+    if [[ ! -f "$target_file" ]]; then
+      mkdir -p "${target_file:h}"
+      cp "$template_file" "$target_file" || {
+        typeset -i exit_code=$?
+        slog_step_se --context warning --exit-code "$exit_code" "copy template: " --url "$file_basename" --default
+        continue
+      }
+      slog_step_se --context success "created: " --url "$file_basename" --default
+    else
+      typeset temp_merged="/tmp/merged_$$.json"
+      jq -s '.[0] * .[1]' "$target_file" "$template_file" > "$temp_merged" 2>/dev/null || {
+        typeset -i exit_code=$?
+        slog_step_se --context warning --exit-code "$exit_code" "merge template: " --url "$file_basename" --default
+        rm -f "$temp_merged"
+        continue
+      }
+      mv "$temp_merged" "$target_file"
+      slog_step_se --context success "merged: " --url "$file_basename" --default
+    fi
+  done
 }
 
 function run_prompt_user_settings {
-  slog_step_se --context info "User settings configuration is complex"
-  slog_se "For now, use the legacy script or implement config selectors"
-  slog_se "Example: " --code "--prompt config-user:settings:theme" --default
-  return 0
+  typeset -r user_templates_dir="$user_ai_dir/vscode/user"
+  typeset -r code_user_dir="$HOME/Library/Application Support/Code/User"
+  
+  if ! type jq >/dev/null 2>&1; then
+    slog_step_se --context warning "jq not found - user settings merge requires jq"
+    return 0
+  fi
+  
+  if [[ ! -d "$user_templates_dir" ]]; then
+    slog_step_se --context info "No user settings templates found at: " --url "$user_templates_dir" --default
+    return 0
+  fi
+  
+  if [[ ! -d "$code_user_dir" ]]; then
+    slog_step_se --context warning "VS Code user settings directory not found: " --url "$code_user_dir" --default
+    return 0
+  fi
+  
+  setopt local_options null_glob
+  typeset -a user_files=("$user_templates_dir"/*.json(N))
+  
+  if [[ ${#user_files[@]} -eq 0 ]]; then
+    slog_step_se --context info "No user settings templates to merge"
+    return 0
+  fi
+  
+  slog_se ""
+  slog_se --bold "User Settings Templates Available:" --default
+  slog_se ""
+  
+  typeset -i idx=1
+  for file in "${user_files[@]}"; do
+    printf "%2d. %s\n" "$idx" "${file:t}"
+    ((idx++))
+  done
+  
+  slog_se ""
+  printf "Enter selections (e.g., '1 3', 'all', or press Enter to skip): "
+  
+  typeset user_selection=""
+  read -r user_selection
+  
+  if [[ -z "$user_selection" ]]; then
+    slog_step_se --context info "Skipping user settings merge"
+    return 0
+  fi
+  
+  merge_user_templates "$user_selection" "$code_user_dir" "${user_files[@]}"
 }
 
 function run_auto_user_settings {
-  slog_step_se --context info "Auto user settings not yet implemented"
-  slog_se "Use legacy script or specific config selectors"
-  return 0
+  typeset -r user_templates_dir="$user_ai_dir/vscode/user"
+  typeset -r code_user_dir="$HOME/Library/Application Support/Code/User"
+  
+  if ! type jq >/dev/null 2>&1; then
+    slog_step_se --context warning "jq not found - skipping user settings"
+    return 0
+  fi
+  
+  if [[ ! -d "$user_templates_dir" ]]; then
+    slog_step_se --context info "No user settings templates found"
+    return 0
+  fi
+  
+  if [[ ! -d "$code_user_dir" ]]; then
+    slog_step_se --context warning "VS Code user settings directory not found"
+    return 0
+  fi
+  
+  setopt local_options null_glob
+  typeset -a user_files=("$user_templates_dir"/*.json(N))
+  
+  if [[ ${#user_files[@]} -eq 0 ]]; then
+    slog_step_se --context info "No user settings templates found"
+    return 0
+  fi
+  
+  merge_user_templates "all" "$code_user_dir" "${user_files[@]}"
+}
+
+function merge_user_templates {
+  typeset -r user_selection="$1"
+  typeset -r code_user_dir="$2"
+  shift 2
+  typeset -a template_files=("$@")
+  
+  typeset -a selected_indices=()
+  if [[ "$user_selection" == "all" ]]; then
+    for ((idx=1; idx<=${#template_files[@]}; idx++)); do
+      selected_indices+=("$idx")
+    done
+  else
+    selected_indices=(${(s: :)user_selection})
+  fi
+  
+  for selection in "${selected_indices[@]}"; do
+    if [[ ! "$selection" =~ ^[0-9]+$ ]] || (( selection < 1 || selection > ${#template_files[@]} )); then
+      slog_step_se --context warning "Invalid selection: " --code "$selection" --default
+      continue
+    fi
+    
+    typeset template_file="${template_files[$selection]}"
+    typeset file_basename="${template_file:t}"
+    typeset target_file="$code_user_dir/$file_basename"
+    
+    slog_step_se_d --context will "merge user template: " --url "$file_basename" --default
+    
+    if [[ ! -f "$target_file" ]]; then
+      cp "$template_file" "$target_file" || {
+        typeset -i exit_code=$?
+        slog_step_se --context warning --exit-code "$exit_code" "copy template: " --url "$file_basename" --default
+        continue
+      }
+      slog_step_se --context success "created: " --url "$file_basename" --default
+    else
+      typeset temp_merged="/tmp/merged_$$.json"
+      jq -s '.[0] * .[1]' "$target_file" "$template_file" > "$temp_merged" 2>/dev/null || {
+        typeset -i exit_code=$?
+        slog_step_se --context warning --exit-code "$exit_code" "merge template: " --url "$file_basename" --default
+        rm -f "$temp_merged"
+        continue
+      }
+      mv "$temp_merged" "$target_file"
+      slog_step_se --context success "merged: " --url "$file_basename" --default
+    fi
+  done
 }
 
 function run_prompt_dev_link {
@@ -764,14 +1005,87 @@ function run_auto_dev_link {
 }
 
 function run_prompt_dev_vscode {
-  slog_step_se --context info "VS Code workspace integration not yet implemented"
-  slog_se "This would add the repository to a VS Code workspace file"
-  return 0
+  slog_step_se_d --context will "add dev repository folder to VS Code workspace"
+  
+  typeset -r link_path="$dest_dir/ai"
+  
+  if [[ ! -L "$link_path" && ! -d "$link_path" ]]; then
+    slog_step_se --context warning "Development folder not found at: " --url "$link_path" --default
+    slog_se "Run " --code "--prompt dev-link" --default " first to create the symlink"
+    return 0
+  fi
+  
+  setopt local_options null_glob
+  typeset -a workspace_files=("$dest_dir"/*.code-workspace(N))
+  
+  if [[ ${#workspace_files[@]} -eq 0 ]]; then
+    slog_step_se --context info "No VS Code workspace file found in: " --url "$dest_dir" --default
+    return 0
+  fi
+  
+  typeset workspace_file="${workspace_files[1]}"
+  slog_se "Workspace file: " --url "${workspace_file:t}" --default
+  slog_se ""
+  printf "Add dev folder to workspace? (y/N): "
+  
+  typeset response=""
+  read -r response
+  
+  if [[ ! "$response" =~ ^[Yy]$ ]]; then
+    slog_step_se --context info "Skipping dev folder addition"
+    return 0
+  fi
+  
+  add_dev_folder_to_workspace "$workspace_file" "$link_path"
 }
 
 function run_auto_dev_vscode {
-  slog_step_se --context info "Auto VS Code integration not yet implemented"
-  return 0
+  slog_step_se_d --context will "add dev repository folder to VS Code workspace (auto mode)"
+  
+  typeset -r link_path="$dest_dir/ai"
+  
+  if [[ ! -L "$link_path" && ! -d "$link_path" ]]; then
+    slog_step_se --context info "Development folder not found, skipping"
+    return 0
+  fi
+  
+  setopt local_options null_glob
+  typeset -a workspace_files=("$dest_dir"/*.code-workspace(N))
+  
+  if [[ ${#workspace_files[@]} -eq 0 ]]; then
+    slog_step_se --context info "No VS Code workspace file found"
+    return 0
+  fi
+  
+  typeset workspace_file="${workspace_files[1]}"
+  add_dev_folder_to_workspace "$workspace_file" "$link_path"
+}
+
+function add_dev_folder_to_workspace {
+  typeset -r workspace_file="$1"
+  typeset -r dev_path="$2"
+  
+  if ! type jq >/dev/null 2>&1; then
+    slog_step_se --context warning "jq not found - cannot modify workspace file"
+    return 0
+  fi
+  
+  typeset temp_workspace="/tmp/workspace_$$.json"
+  
+  if jq -e '.folders[] | select(.path == "ai")' "$workspace_file" >/dev/null 2>&1; then
+    slog_step_se --context info "Dev folder already in workspace"
+    return 0
+  fi
+  
+  jq '.folders += [{"path": "ai"}]' "$workspace_file" > "$temp_workspace" || {
+    typeset -i exit_code=$?
+    slog_step_se --context warning --exit-code "$exit_code" "add dev folder to workspace"
+    rm -f "$temp_workspace"
+    return 0
+  }
+  
+  mv "$temp_workspace" "$workspace_file"
+  slog_step_se --context success "added dev folder to workspace: " --url "${workspace_file:t}" --default
 }
 
 function run_prompt_regenerate_main {
@@ -798,14 +1112,117 @@ function run_auto_regenerate_main {
 }
 
 function run_prompt_mcp_xcode {
-  slog_step_se --context info "Xcode MCP server installation not yet implemented"
-  slog_se "This would configure MCP server in .vscode/mcp.json"
-  return 0
+  if is_xcode_mcp_installed; then
+    slog_step_se --context info "Xcode MCP Server already installed"
+    return 0
+  fi
+  
+  slog_se ""
+  slog_se --bold "Xcode MCP Server Installation" --default
+  slog_se "This will install:"
+  slog_se "  • Xcode MCP workspace template"
+  slog_se "  • Swift workspace template"
+  slog_se "  • Xcode MCP server configuration (.vscode/mcp.json)"
+  slog_se ""
+  printf "Install Xcode MCP Server? (y/N): "
+  
+  typeset response=""
+  read -r response
+  
+  if [[ ! "$response" =~ ^[Yy]$ ]]; then
+    slog_step_se --context info "Skipping Xcode MCP installation"
+    return 0
+  fi
+  
+  install_xcode_mcp_templates
 }
 
 function run_auto_mcp_xcode {
-  slog_step_se --context info "Auto Xcode MCP installation not yet implemented"
-  return 0
+  if is_xcode_mcp_installed; then
+    slog_step_se --context info "Xcode MCP Server already installed"
+    return 0
+  fi
+  
+  install_xcode_mcp_templates
+}
+
+function is_xcode_mcp_installed {
+  typeset -r mcp_file="$dest_dir/.vscode/mcp.json"
+  
+  if [[ ! -f "$mcp_file" ]]; then
+    return 1
+  fi
+  
+  if type jq >/dev/null 2>&1; then
+    if jq -e '.mcpServers."xcode-mcp-server"' "$mcp_file" >/dev/null 2>&1; then
+      return 0
+    fi
+  else
+    if grep -q "xcode-mcp-server" "$mcp_file"; then
+      return 0
+    fi
+  fi
+  
+  return 1
+}
+
+function install_xcode_mcp_templates {
+  typeset -r workspace_dir="$user_ai_dir/vscode/workspace"
+  typeset success_count=0
+  
+  typeset -a templates=(
+    "$workspace_dir/xcode-mcpserver__workspace.code-workspace"
+    "$workspace_dir/swift__workspace.code-workspace"
+    "$workspace_dir/.vscode/xcode-mcpserver__mcp.json"
+  )
+  
+  for template in "${templates[@]}"; do
+    if [[ ! -f "$template" ]]; then
+      slog_step_se --context warning "Template not found: " --url "${template:t}" --default
+      continue
+    fi
+    
+    typeset file_basename="${template:t}"
+    typeset file_extension="${template:e}"
+    typeset target_file=""
+    
+    if [[ "$file_extension" == "code-workspace" ]]; then
+      target_file="$dest_dir/${file_basename}"
+    else
+      target_file="$dest_dir/.vscode/${file_basename}"
+    fi
+    
+    mkdir -p "${target_file:h}"
+    
+    if [[ ! -f "$target_file" ]]; then
+      cp "$template" "$target_file" || {
+        typeset -i exit_code=$?
+        slog_step_se --context warning --exit-code "$exit_code" "install template: " --url "$file_basename" --default
+        continue
+      }
+      ((success_count++))
+      slog_step_se --context success "installed: " --url "$file_basename" --default
+    else
+      if type jq >/dev/null 2>&1 && [[ "$file_extension" == "json" ]]; then
+        typeset temp_merged="/tmp/merged_$$.json"
+        jq -s '.[0] * .[1]' "$target_file" "$template" > "$temp_merged" 2>/dev/null || {
+          typeset -i exit_code=$?
+          slog_step_se --context warning --exit-code "$exit_code" "merge template: " --url "$file_basename" --default
+          rm -f "$temp_merged"
+          continue
+        }
+        mv "$temp_merged" "$target_file"
+        ((success_count++))
+        slog_step_se --context success "merged: " --url "$file_basename" --default
+      else
+        slog_step_se --context info "template already exists: " --url "$file_basename" --default
+      fi
+    fi
+  done
+  
+  if (( success_count > 0 )); then
+    slog_step_se --context success "Xcode MCP Server installation complete"
+  fi
 }
 
 function run_prompt_config_selector {
