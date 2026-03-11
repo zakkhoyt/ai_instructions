@@ -1,0 +1,1 @@
+/Users/zakkhoyt/.ai/instructions/zsh/zsh-compatibility-notes.instructions.md

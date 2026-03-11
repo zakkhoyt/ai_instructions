@@ -5,11 +5,11 @@ This repository uses AI instruction files to maintain coding standards and best 
 ## Project Overview
 
 <!-- AI_INSTRUCTIONS_PROJECT_ANALYSIS_START -->
-**Detected Languages:** Zsh
+**Detected Languages:** <!-- AUTO-GENERATED -->
 
-**Detected Frameworks:** (not detected)
+**Detected Frameworks:** <!-- AUTO-GENERATED -->
 
-**Build Tools:** (not detected)
+**Build Tools:** <!-- AUTO-GENERATED -->
 <!-- AI_INSTRUCTIONS_PROJECT_ANALYSIS_END -->
 
 ## Active Instruction Files
@@ -20,16 +20,7 @@ The following instruction files are active in this repository and define coding 
 <!-- This section is automatically updated by configure_ai_instructions.zsh -->
 <!-- Do not manually edit between these markers -->
 
-- [Agent Chat Response Conventions](.github/instructions/agent-chat-response-conventions.instructions.md)
-- [Agent Swift Terminal Conventions](.github/instructions/agent-swift-terminal-conventions.instructions.md)
-- [Agent Terminal Conventions](.github/instructions/agent-terminal-conventions.instructions.md)
-- [Git Branching](.github/instructions/git-branching.instructions.md)
-- [Markdown Conventions](.github/instructions/markdown-conventions.instructions.md)
-- [Python Conventions](.github/instructions/python-conventions.instructions.md)
-- [Python Git Branching](.github/instructions/python-git-branching.instructions.md)
-- [Swift Conventions](.github/instructions/swift-conventions.instructions.md)
-- [Userscript Conventions](.github/instructions/userscript-conventions.instructions.md)
-- [Zsh Conventions](.github/instructions/zsh-conventions.instructions.md)
+- [Example Instruction](.github/instructions/example.instructions.md)
 
 <!-- AI_INSTRUCTIONS_REGENERATE_END -->
 
