@@ -409,3 +409,4 @@ pip-selfcheck.json
 # A symbolic link to docs in hatch-baby/environment-toolbox
 docs/presentation
 
+.ai

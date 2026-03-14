@@ -161,7 +161,7 @@ Immediately after header comments, source `.zsh_boilerplate`:
 
 # ---- ---- ----     Source Utilities     ---- ---- ----
 
-source "$HOME/.zsh_home/utilities/.zsh_boilerplate" "$0" "$@"
+source "$HOME/.zsh_home/utilities/.zsh_boilerplate"
 ```
 
 ### What You Get From Boilerplate
@@ -1876,7 +1876,7 @@ Some directories use different logging functions:
 
 ```zsh
 # Stage 0 (required): bootstrap common behavior
-source "$HOME/.zsh_home/utilities/.zsh_boilerplate" "$0" "$@"
+source "$HOME/.zsh_home/utilities/.zsh_boilerplate"
 
 # Stage 1-2 already handled by boilerplate:
 # - common flags like --help, -d/--debug, --dry-run, --verbose

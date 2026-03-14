@@ -2,6 +2,10 @@
   "folders": [
     {
       "path": "."
+    },
+    {
+      "path": "../Library/Application Support/Code/User",
+      "name": "VSCode User Dir"
     }
   ],
   "settings": {
@@ -125,6 +129,20 @@
     },
     "chat.tools.edits.autoApprove": {},
     "chat.tools.eligibleForAutoApproval": {},
-    "explorer.fileNesting.enabled": true
+    "explorer.fileNesting.enabled": true,
+    // "files.watcherExclude": {
+    //   "**/Library/Application Support/Code/User/**": true
+    // },
+    // "files.exclude": {
+    //   "workspaceStorage": true
+    // },
+    // "search.exclude": {
+    //   "**/Library/Application Support/Code/User/workspaceStorage/**": true
+    //   // "**/node_modules": true,
+
+    //   // "**/bower_components": true,
+    //   // "**/*.code-search": true,
+    //   // "**/.ruby-lsp": true
+    // }
   }
 }
