@@ -304,6 +304,30 @@ That adds something like the following to your `$HOME/.claude.json` file:
   * Name, homepage, descriptoin, what it's useful for, a few of the most useful commands
 
 
+
+## Possible config files
+* List all possible config file paths (where mpc server config data is stored). 
+  * for each service (claude, copilot, etc...), 
+    * And for each interface which that service can be used (command line, dedicated GUI app, grouped GUI app (like VSCode, or VSCode extensions. Or copilot via Xcode IDE))
+      * And for each supported scope supported by config files
+
+What i mean by this is:
+* Some AI services ship with thier own GUI app (claude, chatgpt, etc..)
+* Some AI services ship as a command line application (claude cli, copilot cli)
+* SOme AI services are accessible through additional interfaces
+  * claude can be used via `claude cli`, `claude app`, via `vscode's copilot` interface, through `GitHub Copilot for Xcode` (app extension), etc..
+* Additionally some of these support defining settings at different scope levels (User vs workspace vs folder)
+
+I want you to create a list in `ai/mcp/MCP_SERVERS.md` that contins all possible config file locations (full permutation). 
+Express this as a table or set of tables. 
+* use only official documentation for source of truth (no guessing, no treating *.md files as truth)
+
+
+* Please include all AI platforms  mentioned in this repo as well as all officially supported interfaces (cli, app, app extensions, etc...) on a normal macOS computer
+
+
+
+
 ## Configuration Files
 * For each AI service (claude cli, claude desktop, copilot cli, vscode, etc...), put to together some configuration files. Under `docs/ai/mcp/configs/templates`
   * A user level configurations file with every server represented with comments, json, but missing the auth token (links where to create it though)
@@ -314,13 +338,6 @@ That adds something like the following to your `$HOME/.claude.json` file:
 * Then create the same variants but **WITH** the minded auth tokens populated. Under `docs/ai/mcp/configs/tokens`
   * A user level configurations file with every server represented with comments, json, but WITH the tokens (links where to create it though)
   * A folder/repo level configurations file with every server represented with comments, json, but WITH the tokens (links where to create it though) 
-
-
-
-
-
-
-
 
 
 

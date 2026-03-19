@@ -1,0 +1,171 @@
+// VSCode / GitHub Copilot — User-scope MCP configuration
+// Location: ~/Library/Application Support/Code/User/mcp.json
+// Open via: Command Palette → "MCP: Open User Configuration"
+//
+// Docs: https://code.visualstudio.com/docs/copilot/chat/mcp-servers
+//
+// NOTE: VSCode uses "servers" (not "mcpServers") as the top-level key.
+// Auth tokens are NOT included here. See:
+//   configs/env_vars/vscode_user_mcp.json  — uses ${ENV_VAR} references
+//   configs/tokens/vscode_user_mcp.json    — has real tokens (gitignore!)
+
+{
+  "servers": {
+
+    // ─────────────────────────────────────────────────────────────────
+    // XcodeBuildMCP — Xcode/iOS build, test, simulator automation
+    // GitHub: https://github.com/getsentry/XcodeBuildMCP
+    // npm:    https://www.npmjs.com/package/xcodebuildmcp
+    // Auth:   None required
+    // ─────────────────────────────────────────────────────────────────
+    "XcodeBuildMCP": {
+      "command": "npx",
+      "args": ["-y", "xcodebuildmcp@latest", "mcp"],
+      "env": {
+        // Enable all workflows (recommended for Hatch iOS projects):
+        "XCODEBUILDMCP_ENABLED_WORKFLOWS": "project-discovery,swift-package,simulator,device,macos,doctor,ui-testing",
+        // Disable incremental builds (more reliable):
+        "INCREMENTAL_BUILDS_ENABLED": "false"
+        // Optional: enable debug logging:
+        // "NODE_ENV": "development",
+        // "DEBUG": "*"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Apple Docs MCP — Apple developer documentation + WWDC sessions
+    // GitHub: https://github.com/kimsungwhee/apple-docs-mcp
+    // Auth:   None required (data bundled in package)
+    // ─────────────────────────────────────────────────────────────────
+    "apple-docs": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@kimsungwhee/apple-docs-mcp"]
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // App Store Connect MCP — App Store, TestFlight, IAP, reviews, subs
+    // GitHub: https://github.com/cristianoaredes/mcp-apple-store
+    // Auth:   App Store Connect API Key (.p8 file) — does not expire
+    //         Keys: https://appstoreconnect.apple.com/access/api
+    //
+    // SETUP: Clone repo and build first:
+    //   git clone https://github.com/cristianoaredes/mcp-apple-store.git ~/code/other/mcp/mcp-apple-store
+    //   cd ~/code/other/mcp/mcp-apple-store && npm install && npm run build
+    // ─────────────────────────────────────────────────────────────────
+    "apple-store": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["code/other/mcp/mcp-apple-store/dist/index.js"],
+      "env": {
+        "APP_STORE_ISSUER_ID": "<YOUR_ASC_ISSUER_ID>",
+        "APP_STORE_KEY_ID": "<YOUR_ASC_KEY_ID>",
+        "APP_STORE_PRIVATE_KEY_PATH": "<PATH_TO_AUTHKEY.P8>",
+        "APP_BUNDLE_ID": "<YOUR_BUNDLE_ID>",
+        "APP_APPLE_ID": "<YOUR_APP_APPLE_ID>",
+        "APP_STORE_ENVIRONMENT": "Sandbox",
+        "LOG_LEVEL": "info"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Atlassian MCP (official Rovo MCP) — Jira + Confluence
+    // Docs:  https://support.atlassian.com/atlassian-rovo-mcp-server/
+    // Auth:  Basic Auth with API token (preferred — lasts 1 year)
+    //        Create token: https://id.atlassian.com/manage-profile/security/api-tokens
+    //        Encode: echo -n "email:token" | base64
+    //
+    // IMPORTANT: Use /v1/mcp for API token auth; /v1/sse for OAuth
+    // ─────────────────────────────────────────────────────────────────
+    "atlassian-rovo-mcp": {
+      "type": "http",
+      "url": "https://mcp.atlassian.com/v1/mcp",
+      "headers": {
+        // Replace with your base64-encoded "email:api_token":
+        // echo -n "you@hatch.co:YOUR_API_TOKEN" | base64
+        "Authorization": "Basic <BASE64_EMAIL_COLON_API_TOKEN>"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // mcp-atlassian (3rd-party sooperset) — Jira + Confluence via Docker
+    // GitHub: https://github.com/sooperset/mcp-atlassian
+    // Auth:   API tokens via .env file (preferred — lasts 1 year)
+    //         Create token: https://id.atlassian.com/manage-profile/security/api-tokens
+    //         .env file: $HOME/.hatch/config/vscode/mcp-atlassian.env
+    //
+    // NOTE: Docker must be running.
+    // ─────────────────────────────────────────────────────────────────
+    // "mcp-atlassian": {
+    //   "command": "docker",
+    //   "args": [
+    //     "run", "--rm", "-i",
+    //     "--env-file", "<PATH_TO_MCP_ATLASSIAN_ENV_FILE>",
+    //     "ghcr.io/sooperset/mcp-atlassian:latest",
+    //     "--transport", "stdio"
+    //   ],
+    //   "type": "stdio"
+    // },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Bugsee MCP — crash reports and bug tracking
+    // Docs:  https://docs.bugsee.com/mcp-server-api/overview
+    // Auth:  Token embedded in URL (long-lived)
+    //        Create token: https://app.bugsee.com/#/settings/user/integrations
+    //
+    // SECURITY: The URL contains your token — treat it as a secret.
+    // Do not commit this config file with a real token.
+    // ─────────────────────────────────────────────────────────────────
+    "bugsee": {
+      "type": "http",
+      "url": "https://api.bugsee.com/mcp/<YOUR_BUGSEE_MCP_TOKEN>"
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // GitHub MCP Server — repos, PRs, issues, code search
+    // GitHub: https://github.com/github/github-mcp-server
+    // Auth:   GitHub Copilot subscription (OAuth — managed by Copilot extension)
+    //         For PAT: https://github.com/settings/tokens
+    // ─────────────────────────────────────────────────────────────────
+    "io.github.github/github-mcp-server": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "gallery": "https://api.mcp.github.com",
+      "version": "0.33.0"
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Slack MCP (korotovsky) — search Slack, read channels/threads
+    // GitHub: https://github.com/korotovsky/slack-mcp-server
+    // Auth:   XOXP token (long-lived user token)
+    //         See: https://github.com/korotovsky/slack-mcp-server/blob/master/docs/01-authentication-setup.md
+    //         Token URL: https://app.slack.com/app-settings/T03TR3R94/A0AMLQF741Y/oauth
+    // ─────────────────────────────────────────────────────────────────
+    "slack": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "slack-mcp-server@latest", "--transport", "stdio"],
+      "env": {
+        // Set SLACK_MCP_XOXP_TOKEN in ~/.zshrc and reference it:
+        // "SLACK_MCP_XOXP_TOKEN": "${HATCH_SLACK_MPC_OAUTH_TOKEN}"
+        "SLACK_MCP_XOXP_TOKEN": "<YOUR_SLACK_XOXP_TOKEN>"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Figma MCP — design inspection, components, assets
+    // Docs:  https://www.figma.com/developers
+    // Auth:  Personal Access Token (create at figma.com/developers)
+    //         https://www.figma.com/developers/api#access-tokens
+    // ─────────────────────────────────────────────────────────────────
+    // "figma": {
+    //   "type": "http",
+    //   "url": "https://mcp.figma.com/mcp",
+    //   "headers": {
+    //     "Authorization": "Bearer <YOUR_FIGMA_PERSONAL_ACCESS_TOKEN>"
+    //   }
+    // }
+
+  },
+  "inputs": []
+}

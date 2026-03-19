@@ -1,0 +1,4 @@
+# IMPORTANT: This directory contains real API tokens.
+# ALL files in this directory are gitignored EXCEPT this .gitignore file.
+*
+!.gitignore

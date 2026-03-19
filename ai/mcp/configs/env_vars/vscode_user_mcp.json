@@ -1,0 +1,107 @@
+// VSCode / GitHub Copilot — User-scope MCP configuration (env var variant)
+// Location: ~/Library/Application Support/Code/User/mcp.json
+//
+// This variant references environment variables instead of inline tokens.
+// Set the variables in ~/.zshrc before launching VSCode from terminal,
+// OR use the VSCode ${env:VAR_NAME} syntax where supported.
+//
+// See configs/env_vars/.env.example for required variables.
+// See configs/tokens/vscode_user_mcp.json for the version with real tokens.
+
+{
+  "servers": {
+
+    // ─────────────────────────────────────────────────────────────────
+    // XcodeBuildMCP — no auth required
+    // ─────────────────────────────────────────────────────────────────
+    "XcodeBuildMCP": {
+      "command": "npx",
+      "args": ["-y", "xcodebuildmcp@latest", "mcp"],
+      "env": {
+        "XCODEBUILDMCP_ENABLED_WORKFLOWS": "project-discovery,swift-package,simulator,device,macos,doctor,ui-testing",
+        "INCREMENTAL_BUILDS_ENABLED": "false"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Apple Docs MCP — no auth required
+    // ─────────────────────────────────────────────────────────────────
+    "apple-docs": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@kimsungwhee/apple-docs-mcp"]
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // App Store Connect MCP — env vars for all credentials
+    // Set in ~/.zshrc: export APPLE_ASC_MCP_ISSUER_ID="..." etc.
+    // Keys: https://appstoreconnect.apple.com/access/api
+    // ─────────────────────────────────────────────────────────────────
+    "apple-store": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["code/other/mcp/mcp-apple-store/dist/index.js"],
+      "env": {
+        "APP_STORE_ISSUER_ID": "${APPLE_ASC_MCP_ISSUER_ID}",
+        "APP_STORE_KEY_ID": "${APPLE_ASC_MCP_KEY_ID}",
+        "APP_STORE_PRIVATE_KEY_PATH": "${APPLE_ASC_MCP_AUTH_KEY_PATH}",
+        "APP_BUNDLE_ID": "${APPLE_ASC_MCP_BUNDLE_ID}",
+        "APP_APPLE_ID": "${APPLE_ASC_MCP_APPLE_ID}",
+        "APP_STORE_ENVIRONMENT": "${APPLE_ASC_MCP_STORE_ENVIRONMENT}",
+        "LOG_LEVEL": "${APPLE_ASC_MCP_LOG_LEVEL}"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Atlassian MCP (official) — API token via env var
+    // Set in ~/.zshrc: export ATLASSIAN_MCP_CLASSIC_BASIC_AUTH="$(echo -n email:token | base64)"
+    // Create token: https://id.atlassian.com/manage-profile/security/api-tokens
+    // ─────────────────────────────────────────────────────────────────
+    "atlassian-rovo-mcp": {
+      "type": "http",
+      "url": "https://mcp.atlassian.com/v1/mcp",
+      "headers": {
+        "Authorization": "Basic ${ATLASSIAN_MCP_CLASSIC_BASIC_AUTH}"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Bugsee MCP — token-in-URL via env var
+    // Set in ~/.zshrc: export BUGSEE_MCP_TOKEN="your-uuid-token"
+    // Create token: https://app.bugsee.com/#/settings/user/integrations
+    //
+    // NOTE: VSCode does not support ${env:VAR} in URL strings natively.
+    // If this does not work, use the tokens/ variant with the literal URL.
+    // ─────────────────────────────────────────────────────────────────
+    "bugsee": {
+      "type": "http",
+      "url": "https://api.bugsee.com/mcp/${BUGSEE_MCP_TOKEN}"
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // GitHub MCP — OAuth via Copilot (auth automatic)
+    // ─────────────────────────────────────────────────────────────────
+    "io.github.github/github-mcp-server": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "gallery": "https://api.mcp.github.com",
+      "version": "0.33.0"
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Slack MCP (korotovsky) — XOXP token via env var
+    // Set in ~/.zshrc: export HATCH_SLACK_MPC_OAUTH_TOKEN="xoxp-..."
+    // Auth setup: https://github.com/korotovsky/slack-mcp-server/blob/master/docs/01-authentication-setup.md
+    // ─────────────────────────────────────────────────────────────────
+    "slack": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "slack-mcp-server@latest", "--transport", "stdio"],
+      "env": {
+        "SLACK_MCP_XOXP_TOKEN": "${HATCH_SLACK_MPC_OAUTH_TOKEN}"
+      }
+    }
+
+  },
+  "inputs": []
+}

@@ -1,0 +1,90 @@
+// Claude Desktop — User-scope MCP configuration (env var variant)
+// Location: ~/Library/Application Support/Claude/claude_desktop_config.json
+//
+// This variant references environment variables instead of inline tokens.
+// Claude Desktop inherits env vars from the shell that launched it IF launched
+// from terminal. If launched from Dock/Launchpad, env vars from ~/.zshrc may
+// not be available. In that case, use the wrapper script approach or the
+// tokens/ variant.
+//
+// See configs/env_vars/.env.example for required variables.
+
+{
+  "mcpServers": {
+
+    // XcodeBuildMCP — no auth required
+    "XcodeBuildMCP": {
+      "command": "npx",
+      "args": ["-y", "xcodebuildmcp@latest", "mcp"],
+      "env": {
+        "XCODEBUILDMCP_ENABLED_WORKFLOWS": "project-discovery,swift-package,simulator,device,macos,doctor,ui-testing",
+        "INCREMENTAL_BUILDS_ENABLED": "false"
+      }
+    },
+
+    // Apple Docs MCP — no auth required
+    "apple-docs": {
+      "command": "npx",
+      "args": ["-y", "@kimsungwhee/apple-docs-mcp"]
+    },
+
+    // Atlassian (official) — Basic Auth from env var
+    // Set in ~/.zshrc: export ATLASSIAN_MCP_CLASSIC_BASIC_AUTH="$(echo -n email:token | base64)"
+    "atlassian-rovo-mcp": {
+      "url": "https://mcp.atlassian.com/v1/mcp",
+      "headers": {
+        "Authorization": "Basic ${ATLASSIAN_MCP_CLASSIC_BASIC_AUTH}"
+      }
+    },
+
+    // App Store Connect MCP — all credentials from env vars
+    // Set in ~/.zshrc: export APPLE_ASC_MCP_ISSUER_ID="..." etc.
+    "apple-store": {
+      "command": "node",
+      "args": ["${HOME}/code/other/mcp/mcp-apple-store/dist/index.js"],
+      "env": {
+        "APP_STORE_ISSUER_ID": "${APPLE_ASC_MCP_ISSUER_ID}",
+        "APP_STORE_KEY_ID": "${APPLE_ASC_MCP_KEY_ID}",
+        "APP_STORE_PRIVATE_KEY_PATH": "${APPLE_ASC_MCP_AUTH_KEY_PATH}",
+        "APP_BUNDLE_ID": "${APPLE_ASC_MCP_BUNDLE_ID}",
+        "APP_APPLE_ID": "${APPLE_ASC_MCP_APPLE_ID}",
+        "APP_STORE_ENVIRONMENT": "${APPLE_ASC_MCP_STORE_ENVIRONMENT}",
+        "LOG_LEVEL": "${APPLE_ASC_MCP_LOG_LEVEL}"
+      }
+    },
+
+    // mcp-atlassian 3rd-party — wrapper script injects env vars from shell
+    // The wrapper script sources $HOME/.hatch/config/.zsh_hatch_jira
+    "mcp-atlassian": {
+      "command": "${HOME}/.hatch/scripts/mcp_atlassian_wrapper.zsh",
+      "args": []
+    },
+
+    // Bugsee — token from env var
+    // Set in ~/.zshrc: export BUGSEE_MCP_TOKEN="your-uuid-token"
+    "bugsee": {
+      "url": "https://api.bugsee.com/mcp/${BUGSEE_MCP_TOKEN}"
+    },
+
+    // GitHub — PAT from env var
+    // Set in ~/.zshrc: export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_..."
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+
+    // Slack (korotovsky) — XOXP token from env var
+    // Set in ~/.zshrc: export SLACK_MCP_XOXP_TOKEN="xoxp-..."
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "slack-mcp-server@latest", "--transport", "stdio"],
+      "env": {
+        "SLACK_MCP_XOXP_TOKEN": "${SLACK_MCP_XOXP_TOKEN}"
+      }
+    }
+
+  }
+}

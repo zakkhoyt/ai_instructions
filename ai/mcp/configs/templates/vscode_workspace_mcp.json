@@ -1,0 +1,94 @@
+// VSCode / GitHub Copilot — Workspace-scope MCP configuration
+// Location: .vscode/mcp.json (in repo root)
+// Committed to git: YES (but do NOT include real tokens — use env_vars variant instead)
+//
+// Docs: https://code.visualstudio.com/docs/copilot/chat/mcp-servers
+//
+// NOTE: VSCode uses "servers" (not "mcpServers") as the top-level key.
+// This file is intentionally minimal — include only servers relevant to this workspace.
+// For full configs with auth tokens, see configs/tokens/vscode_workspace_mcp.json
+
+{
+  "servers": {
+
+    // ─────────────────────────────────────────────────────────────────
+    // XcodeBuildMCP — Xcode/iOS build, test, simulator automation
+    // GitHub: https://github.com/getsentry/XcodeBuildMCP
+    // Auth:   None required
+    // ─────────────────────────────────────────────────────────────────
+    "XcodeBuildMCP": {
+      "command": "npx",
+      "args": ["-y", "xcodebuildmcp@latest", "mcp"],
+      "env": {
+        // Tailor to project type. Options:
+        //   project-discovery, swift-package, simulator, device,
+        //   macos, doctor, ui-testing, xcodebuild, scaffolding,
+        //   log-capture, app-management, simulator-config, video-recording
+        "XCODEBUILDMCP_ENABLED_WORKFLOWS": "project-discovery,swift-package,simulator,device,macos,doctor,ui-testing",
+        "INCREMENTAL_BUILDS_ENABLED": "false"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Apple Docs MCP — Apple developer documentation + WWDC sessions
+    // GitHub: https://github.com/kimsungwhee/apple-docs-mcp
+    // Auth:   None required
+    // ─────────────────────────────────────────────────────────────────
+    "apple-docs": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@kimsungwhee/apple-docs-mcp"]
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // App Store Connect MCP — App Store, TestFlight, IAP, reviews, subs
+    // GitHub: https://github.com/cristianoaredes/mcp-apple-store
+    // Auth:   App Store Connect API Key (.p8 file) — does not expire
+    // ─────────────────────────────────────────────────────────────────
+    "apple-store": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["code/other/mcp/mcp-apple-store/dist/index.js"],
+      "env": {
+        "APP_STORE_ISSUER_ID": "<YOUR_ASC_ISSUER_ID>",
+        "APP_STORE_KEY_ID": "<YOUR_ASC_KEY_ID>",
+        "APP_STORE_PRIVATE_KEY_PATH": "<PATH_TO_AUTHKEY.P8>",
+        "APP_BUNDLE_ID": "<YOUR_BUNDLE_ID>",
+        "APP_APPLE_ID": "<YOUR_APP_APPLE_ID>",
+        "APP_STORE_ENVIRONMENT": "Sandbox"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Atlassian MCP (official Rovo MCP) — Jira + Confluence
+    // Auth:  API token via Basic Auth (lasts 1 year)
+    //        Create: https://id.atlassian.com/manage-profile/security/api-tokens
+    //        Encode: echo -n "email:token" | base64
+    //
+    // SECURITY: Do not commit real tokens. Use env var reference.
+    // ─────────────────────────────────────────────────────────────────
+    "atlassian-rovo-mcp": {
+      "type": "http",
+      "url": "https://mcp.atlassian.com/v1/mcp",
+      "headers": {
+        // Use environment variable (set in ~/.zshrc):
+        // "Authorization": "Basic ${ATLASSIAN_MCP_CLASSIC_BASIC_AUTH}"
+        "Authorization": "Basic <BASE64_EMAIL_COLON_API_TOKEN>"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Bugsee MCP — crash reports and bug tracking
+    // Auth:  Token in URL (long-lived)
+    //        Create: https://app.bugsee.com/#/settings/user/integrations
+    //
+    // SECURITY: Replace placeholder — do not commit real token.
+    // ─────────────────────────────────────────────────────────────────
+    "bugsee": {
+      "type": "http",
+      "url": "https://api.bugsee.com/mcp/<YOUR_BUGSEE_MCP_TOKEN>"
+    }
+
+  },
+  "inputs": []
+}

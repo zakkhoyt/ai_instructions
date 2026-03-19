@@ -1,0 +1,132 @@
+// Cursor — MCP configuration
+// User (global) location: ~/.cursor/mcp.json
+// Project location:       .cursor/mcp.json (in project root)
+//
+// Docs: https://docs.cursor.com/context/model-context-protocol
+//
+// NOTE: Cursor uses "mcpServers" as the top-level key.
+// Auth tokens are NOT included here. See:
+//   configs/env_vars/  — uses environment variable references
+//   configs/tokens/    — has real tokens (gitignore!)
+
+{
+  "mcpServers": {
+
+    // ─────────────────────────────────────────────────────────────────
+    // XcodeBuildMCP — Xcode/iOS build, test, simulator automation
+    // GitHub: https://github.com/getsentry/XcodeBuildMCP
+    // Auth:   None required
+    //
+    // NOTE: Cursor config uses /bin/zsh -lc to load shell environment.
+    // ─────────────────────────────────────────────────────────────────
+    "XcodeBuildMCP": {
+      "command": "/bin/zsh",
+      "args": [
+        "-lc",
+        "exec npx -y xcodebuildmcp@latest mcp"
+      ],
+      "env": {
+        "XCODEBUILDMCP_ENABLED_WORKFLOWS": "project-discovery,swift-package,simulator,device,macos,doctor,ui-testing",
+        "INCREMENTAL_BUILDS_ENABLED": "false"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Apple Docs MCP
+    // GitHub: https://github.com/kimsungwhee/apple-docs-mcp
+    // Auth:   None required
+    // ─────────────────────────────────────────────────────────────────
+    "apple-docs": {
+      "command": "npx",
+      "args": ["-y", "@kimsungwhee/apple-docs-mcp"]
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // App Store Connect MCP — App Store, TestFlight, IAP, reviews, subs
+    // GitHub: https://github.com/cristianoaredes/mcp-apple-store
+    // Auth:   App Store Connect API Key (.p8 file) — does not expire
+    // ─────────────────────────────────────────────────────────────────
+    "apple-store": {
+      "command": "/bin/zsh",
+      "args": [
+        "-lc",
+        "node \"$HOME/code/other/mcp/mcp-apple-store/dist/index.js\""
+      ],
+      "env": {
+        "APP_STORE_ISSUER_ID": "<YOUR_ASC_ISSUER_ID>",
+        "APP_STORE_KEY_ID": "<YOUR_ASC_KEY_ID>",
+        "APP_STORE_PRIVATE_KEY_PATH": "<PATH_TO_AUTHKEY.P8>",
+        "APP_BUNDLE_ID": "<YOUR_BUNDLE_ID>",
+        "APP_APPLE_ID": "<YOUR_APP_APPLE_ID>",
+        "APP_STORE_ENVIRONMENT": "Sandbox"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Atlassian MCP (official Rovo MCP) — Jira + Confluence
+    // Auth:  API token via Basic Auth (lasts 1 year)
+    //        Create: https://id.atlassian.com/manage-profile/security/api-tokens
+    //        Encode: echo -n "email:token" | base64
+    // ─────────────────────────────────────────────────────────────────
+    "atlassian-rovo-mcp": {
+      "url": "https://mcp.atlassian.com/v1/mcp",
+      "headers": {
+        "Authorization": "Basic <BASE64_EMAIL_COLON_API_TOKEN>"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // mcp-atlassian (3rd-party sooperset) — Jira + Confluence via uvx
+    // GitHub: https://github.com/sooperset/mcp-atlassian
+    // Auth:   API token (lasts 1 year)
+    //         Create: https://id.atlassian.com/manage-profile/security/api-tokens
+    // ─────────────────────────────────────────────────────────────────
+    // "mcp-atlassian": {
+    //   "command": "uvx",
+    //   "args": [
+    //     "mcp-atlassian",
+    //     "--jira-url", "https://hatchbaby.atlassian.net",
+    //     "--jira-username", "<you>@hatch.co",
+    //     "--jira-api-token", "<YOUR_JIRA_API_TOKEN>"
+    //   ]
+    // },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Bugsee MCP — crash reports and bug tracking
+    // Auth:  Token in URL (long-lived)
+    //        Create: https://app.bugsee.com/#/settings/user/integrations
+    //
+    // SECURITY: Replace placeholder — do not commit real token.
+    // ─────────────────────────────────────────────────────────────────
+    "bugsee": {
+      "url": "https://api.bugsee.com/mcp/<YOUR_BUGSEE_MCP_TOKEN>"
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // GitHub MCP — repos, PRs, issues, code search
+    // Auth:  PAT — create at https://github.com/settings/tokens
+    //        Scopes needed: repo, read:org, read:user
+    // ─────────────────────────────────────────────────────────────────
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_GITHUB_PAT>"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────
+    // Slack MCP (korotovsky) — search Slack, read threads
+    // GitHub: https://github.com/korotovsky/slack-mcp-server
+    // Auth:   XOXP token (long-lived)
+    // ─────────────────────────────────────────────────────────────────
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "slack-mcp-server@latest", "--transport", "stdio"],
+      "env": {
+        "SLACK_MCP_XOXP_TOKEN": "<YOUR_SLACK_XOXP_TOKEN>"
+      }
+    }
+
+  }
+}
