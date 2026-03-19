@@ -1,48 +1,65 @@
-# Windsurf (Cascade) — AI Customization Cheatsheet
+# Windsurf (Codeium) — Custom Rules Cheatsheet
 
-## Memories & Rules Overview
+## Official Documentation
 
-- [Cascade Memories](https://docs.windsurf.com/windsurf/cascade/memories)
-  - Workspace rules: `.windsurf/rules/*.md`
-  - Global rules file: `~/.codeium/windsurf/memories/global_rules.md` (no frontmatter, always on)
-  - Character limit: 12,000 per workspace rule file; 6,000 for global rules
+- [Welcome to Windsurf Docs](https://docs.windsurf.com/)
+- [AGENTS.md support](https://docs.windsurf.com/windsurf/cascade/agents-md)
+- [Cascade Memories / Rules](https://docs.windsurf.com/windsurf/cascade/memories)
+- [Windsurf Rules Directory](https://windsurf.com/editor/directory)
 
-## Rule Activation Modes (`trigger` field)
+## File Types and Paths
 
-| `trigger` value  | Behavior                                                         |
-| ---------------- | ---------------------------------------------------------------- |
-| `always_on`      | Always applied (no globs needed)                                 |
-| `model_decision` | Agent decides based on `description`                             |
-| `glob`           | Applied when Cascade reads/edits files matching `globs`          |
-| `manual`         | User must `@mention` the rule explicitly in Cascade input        |
+| File               | Path                                              | Format                       | Scope                                            |
+| ------------------ | ------------------------------------------------- | ---------------------------- | ------------------------------------------------ |
+| Workspace rules    | `.windsurf/rules/*.md`                            | Markdown + YAML frontmatter  | Per trigger type (see below)                     |
+| Legacy             | `.windsurfrules`                                  | Plain markdown               | Always on (workspace)                            |
+| Global rules       | `~/.codeium/windsurf/memories/global_rules.md`    | Plain markdown               | All workspaces                                   |
+| AGENTS.md (root)   | `AGENTS.md`                                       | Plain markdown               | `always_on` equivalent (no config needed)        |
+| AGENTS.md (subdir) | `<subdir>/AGENTS.md`                              | Plain markdown               | Auto-glob for `<subdir>/**`                      |
 
-## Frontmatter Keys
-
-| Key           | Type   | Required when           | Description                              |
-| ------------- | ------ | ----------------------- | ---------------------------------------- |
-| `trigger`     | string | Always                  | Activation mode (see table above)        |
-| `globs`       | string | `trigger: glob`         | Glob pattern, e.g. `**/*.test.ts`        |
-| `description` | string | `trigger: model_decision` | Brief description for agent to read    |
-
-## Rules Directory
-
-- [Windsurf Rules Directory](https://windsurf.com/editor/directory) — curated rule templates
-
-## Key Frontmatter Syntax (`.windsurf/rules/*.md`)
+## `.windsurf/rules/*.md` Frontmatter
 
 ```yaml
 ---
-trigger: glob
-globs: "**/*.test.ts"
+trigger: always_on          # see trigger values below
+globs: "**/*.test.ts"       # required when trigger: glob
 ---
 ```
 
 ```yaml
 ---
-trigger: always_on
+trigger: model_decision
+description: "Apply when editing React components"
 ---
 ```
 
-> [!NOTE]
-> `global_rules.md` and `AGENTS.md` at root do **not** use frontmatter — they are always on.
-> Unknown frontmatter keys: behavior not officially documented.
+## Trigger Values
+
+| Value            | Behavior                                                                |
+| ---------------- | ----------------------------------------------------------------------- |
+| `always_on`      | Full content in system prompt every message                             |
+| `model_decision` | Model sees description only; loads full content when relevant           |
+| `glob`           | Activates when files matching `globs:` are accessed                     |
+| `manual`         | Only when `@rule-name` typed in Cascade input                           |
+
+## Priority (Highest → Lowest)
+
+1. System (enterprise managed)
+2. Global (`~/.codeium/windsurf/memories/global_rules.md`)
+3. Workspace (`.windsurf/rules/`)
+
+## Character Limits
+
+| Scope                            | Limit                                                              |
+| -------------------------------- | ------------------------------------------------------------------ |
+| Global rules                     | 6,000 characters                                                   |
+| Per workspace rule file          | 12,000 characters                                                  |
+| Global + workspace combined      | 12,000 characters (global takes priority if exceeded)              |
+
+## Notes
+
+- AGENTS.md at repo root = `always_on`; AGENTS.md in subdirectory = auto-glob for that dir
+- AGENTS.md requires **no frontmatter and no configuration** — Windsurf auto-discovers it
+- `.windsurfrules` is the legacy flat-file equivalent (still works, no frontmatter)
+- `global_rules.md` has no frontmatter and is always applied
+- Unknown frontmatter keys: behavior not officially documented

@@ -1,47 +1,77 @@
-# CodeRabbit — AI Customization Cheatsheet
+# CodeRabbit — Custom Instructions Cheatsheet
 
-## Configuration Overview
+## Official Documentation
 
 - [Configure CodeRabbit](https://docs.coderabbit.ai/configure-coderabbit/)
-- [Configuration Reference](https://docs.coderabbit.ai/reference/configuration)
+- [Add custom review instructions](https://docs.coderabbit.ai/guides/review-instructions)
+- [Code guidelines (knowledge base)](https://docs.coderabbit.ai/knowledge-base/code-guidelines)
+- [Full configuration reference](https://docs.coderabbit.ai/reference/configuration)
+- [JSON schema](https://coderabbit.ai/integrations/schema.v2.json)
 
-## Review Instructions
+## File Types and Paths
 
-- [Add Custom Review Instructions](https://docs.coderabbit.ai/guides/review-instructions)
-  - All instruction configuration lives in `.coderabbit.yaml`
-  - **No per-file frontmatter** — CodeRabbit does not use individual instruction files
+| File         | Path                                                            | Format                       | Scope                           |
+| ------------ | --------------------------------------------------------------- | ---------------------------- | ------------------------------- |
+| Config       | `.coderabbit.yaml`                                              | YAML (no frontmatter)        | Repository-wide                 |
+| Guidelines   | Files listed in `knowledge_base.code_guidelines.filePatterns`  | Plain markdown               | Auto-loaded during reviews      |
 
-## Path-Based Review Instructions
-
-- [Path-Based Review Instructions](https://docs.coderabbit.ai/configuration/path-instructions)
+## `.coderabbit.yaml` Key Structure
 
 ```yaml
-# .coderabbit.yaml
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: "en-US"
+tone_instructions: "Be concise and direct"   # max 250 chars
+
 reviews:
-  path_instructions:
+  profile: "chill"          # "chill" | "assertive"
+  path_filters:             # include/exclude files from review scope
+    - "!dist/**"
+    - "!node_modules/**"
+  path_instructions:        # glob-scoped review instructions
     - path: "src/controllers/**"
       instructions: |
-        - Focus on authentication, authorization, and input validation.
-        - Flag any direct database queries that bypass the ORM layer.
+        - Verify auth and input validation.
     - path: "**/*.test.ts"
-      instructions: |
-        - Ensure all tests have descriptive names.
-        - Check for missing edge cases.
+      instructions: "Ensure descriptive test names."
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:           # extends defaults; does NOT replace them
+      - "**/CODING_STANDARDS.md"
+  learnings:
+    scope: "auto"           # "local" | "global" | "auto"
 ```
+
+## Auto-Detected Instruction Files
+
+CodeRabbit automatically reads these files as coding guidelines (zero config needed):
+
+| Pattern                                                  | Source tool    |
+| -------------------------------------------------------- | -------------- |
+| `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` | GitHub Copilot |
+| `**/CLAUDE.md`                                           | Claude Code    |
+| `**/AGENTS.md`, `**/AGENT.md`                            | OpenAI Codex / universal standard |
+| `**/.cursorrules`, `**/.cursor/rules/*`                  | Cursor         |
+| `**/.windsurfrules`                                      | Windsurf       |
+| `**/GEMINI.md`                                           | Gemini CLI     |
+| `**/.clinerules/*`                                       | Cline          |
 
 ## AST-Based Instructions
 
 - [AST-Based Path Instructions](https://docs.coderabbit.ai/configuration/ast-grep-instructions)
   - Structural code pattern rules using `ast-grep`
 
-## Code Guidelines (External Rule File Auto-Detection)
-
-- [Code Guidelines](https://www.coderabbit.ai/blog/code-guidelines-bring-your-coding-rules-to-coderabbit)
-  - CodeRabbit **automatically scans** `.cursorrules`, `.copilot-instructions`, and other coding standards files as context enrichment
-  - This means Copilot/Cursor rule files in the repo are picked up by CodeRabbit automatically
-
-## Key Difference from Other Tools
+## Key Differences from Other Tools
 
 > [!IMPORTANT]
 > CodeRabbit has **no per-file instruction format**. Glob scoping is expressed via `.coderabbit.yaml` under `reviews.path_instructions[].path`, not in individual markdown files.
-> CodeRabbit uses minimatch syntax for glob patterns.
+> CodeRabbit uses minimatch glob syntax for glob patterns.
+
+## Notes
+
+- **Do NOT** put guideline filenames in `path_instructions` — that tells CodeRabbit to _review_ those files as changed code
+- Use `knowledge_base.code_guidelines.filePatterns` to register additional guideline files
+- `path_instructions` uses minimatch glob syntax; `!` prefix = exclusion
+- Scope is repository-level only; no per-user file-based config (web UI dashboard for org-level)
