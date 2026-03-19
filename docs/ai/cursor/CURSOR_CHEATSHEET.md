@@ -1,47 +1,44 @@
-# Cursor — Custom Rules Cheatsheet
+# Cursor — AI Customization Cheatsheet
 
-## Official Documentation
+## Rules Overview
 
-- [Rules — Cursor Docs](https://cursor.com/docs/context/rules)
-- [docs.cursor.com/context/rules](https://docs.cursor.com/context/rules)
+- [Rules | Cursor Docs](https://cursor.com/docs/context/rules)
+  - Location: `.cursor/rules/*.mdc`
+  - File extension: `.mdc` (preferred) or `.md`
+  - Legacy: `.cursorrules` at project root (deprecated, migrate to `.cursor/rules/`)
 
-## File Types and Paths
+## Frontmatter Keys (`.mdc` files)
 
-| File | Path | Format | Scope |
-| ---- | ---- | ------ | ----- |
-| Project rules | `.cursor/rules/*.mdc` | Markdown + YAML frontmatter | Per rule type (see below) |
-| Project rules (alt) | `.cursor/rules/*.md` | Markdown + YAML frontmatter | Per rule type |
-| Legacy (deprecated) | `.cursorrules` | Plain markdown | Always loaded (repo-wide) |
-| User rules | Cursor Settings → Rules (UI) | Plain text | All projects on this machine |
-| Team rules | Dashboard (Enterprise) | Managed | Org-wide |
+| Key           | Type    | Description                                              |
+| ------------- | ------- | -------------------------------------------------------- |
+| `description` | string  | What the rule does; used by agent to decide if relevant  |
+| `globs`       | string  | Glob pattern(s) for file-scoped activation               |
+| `alwaysApply` | boolean | If `true`, applies to every session unconditionally      |
 
-## `.mdc` Frontmatter Schema
+## Rule Activation Modes
+
+Controlled via the `type` dropdown in Cursor Settings (maps to frontmatter):
+
+- **Always**: `alwaysApply: true` — applies every session
+- **Auto Attached**: `globs: "**/*.ts"` — applies to matching files
+- **Agent Requested**: `description:` only, `alwaysApply: false` — agent decides
+- **Manual**: no auto-trigger, added explicitly by user
+
+## Community Resources
+
+- [Deep Dive into Cursor Rules (>0.45)](https://forum.cursor.com/t/a-deep-dive-into-cursor-rules-0-45/60721)
+- [My Take on Cursor Rules](https://forum.cursor.com/t/my-take-on-cursor-rules/67535)
+
+## Key Frontmatter Syntax (`.cursor/rules/*.mdc`)
 
 ```yaml
 ---
-description: "When and why to apply this rule"   # required for Agent Requested type
-globs: "**/*.ts, src/components/**"              # string or array; triggers Auto Attached
-alwaysApply: false                               # true = Always type
+description: Standards for frontend components
+globs: "src/components/**/*.tsx"
+alwaysApply: false
 ---
 ```
 
-## Four Rule Types
-
-| Type | `alwaysApply` | `globs` | `description` | Trigger |
-| ---- | ------------- | ------- | ------------- | ------- |
-| **Always** | `true` | — | optional | Every chat session |
-| **Auto Attached** | `false` | set | optional | Matching file in context |
-| **Agent Requested** | `false` | — | **required** | AI decides based on description |
-| **Manual** | `false` | — | — | Only when `@rule-name` typed |
-
-## Priority (Highest → Lowest)
-
-1. Team (Dashboard/Enterprise)
-2. Project (`.cursor/rules/`)
-3. User (Settings UI)
-
-## Notes
-
-- `.cursorrules` (root file) is still functional but officially deprecated — migrate to `.cursor/rules/*.mdc`
-- `globs` uses standard glob patterns (e.g., `**/*.py`, `src/**`)
-- No documented character limits per rule file
+> [!NOTE]
+> Unknown frontmatter keys: behavior not officially documented.
+> `globs` accepts a string (comma-separated or single pattern); array format also seen in practice.

@@ -1,49 +1,44 @@
-# OpenAI Codex CLI — Custom Instructions Cheatsheet
+# OpenAI Codex — AI Customization Cheatsheet
 
-## Official Documentation
+## AGENTS.md Overview
 
-- [Custom instructions with AGENTS.md](https://developers.openai.com/codex/guides/agents-md)
-- [openai/codex — docs/agents_md.md](https://github.com/openai/codex/blob/main/docs/agents_md.md)
-- [openai/agents.md spec](https://github.com/openai/agents.md)
-- [CLI reference](https://developers.openai.com/codex/cli/reference)
+- [Custom Instructions with AGENTS.md](https://developers.openai.com/codex/guides/agents-md)
+- [AGENTS.md Spec (GitHub)](https://github.com/openai/codex/blob/main/docs/agents_md.md)
+- [AGENTS.md Community Spec](https://agents.md/)
+  - Open format stewarded by the **Agentic AI Foundation** (Linux Foundation)
+  - Also adopted by: Amp, Jules (Google), Cursor, Factory
 
-## File Types and Paths
+## File Format
 
-| File | Path | Format | Scope |
-| ---- | ---- | ------ | ----- |
-| Global instructions | `~/.codex/AGENTS.md` | Plain markdown | All projects |
-| Global override | `~/.codex/AGENTS.override.md` | Plain markdown | All projects (highest priority) |
-| Project instructions | `<git-root>/AGENTS.md` | Plain markdown | Entire repo |
-| Subdirectory instructions | `<subdir>/AGENTS.md` | Plain markdown | That dir and descendants |
-| Subdirectory override | `<subdir>/AGENTS.override.md` | Plain markdown | That dir (higher priority) |
+- Pure markdown — **no YAML frontmatter**, no glob scoping syntax
+- Scoping is **directory-based only** (proximity wins)
+- Filename: `AGENTS.md` (standard), `AGENTS.override.md` (temporary override)
 
-## Format
+## File Discovery & Precedence
 
-Plain Markdown — **no frontmatter**. Any heading structure is valid. Content is injected as user-role messages prefixed with:
+1. Global: `~/.codex/AGENTS.md` (or `AGENTS.override.md`)
+2. Project: walks from git root → current working directory, one file per dir
+3. Files concatenated root → cwd; later (closer) files override earlier guidance
+4. Max combined size: 32 KiB (configurable via `project_doc_max_bytes`)
 
-```
-# AGENTS.md instructions for <directory>
-```
-
-## Discovery Hierarchy
-
-1. `~/.codex/AGENTS.override.md` (global, highest)
-2. `~/.codex/AGENTS.md` (global)
-3. `<git-root>/AGENTS.md` → walk down to CWD, loading each directory's file
-4. `AGENTS.override.md` beats `AGENTS.md` at the same level
-5. Deeper (closer to CWD) files take precedence for conflicting instructions
-
-## Configuration (`~/.codex/config.toml`)
+## Custom Fallback Filenames
 
 ```toml
+# ~/.codex/config.toml
 project_doc_fallback_filenames = ["TEAM_GUIDE.md", ".agents.md"]
-project_doc_max_bytes = 65536    # default: 32 KiB
 ```
 
-## Notes
+## Skills
 
-- No frontmatter — plain markdown only
-- Scoping is **directory-based**, not glob-based
-- Combined size cap: 32 KiB (configurable)
-- Explicit CLI/system prompts override any `AGENTS.md` content
-- Google Jules (web agent) also reads `AGENTS.md` at repo root
+- [Agent Skills](https://developers.openai.com/codex/skills)
+
+## Advanced Configuration
+
+- [Advanced Configuration](https://developers.openai.com/codex/config-advanced)
+
+## Key Difference from Other Tools
+
+> [!IMPORTANT]
+> `AGENTS.md` has **no frontmatter and no glob scoping**. Scoping is purely by directory placement.
+> A file named `src/AGENTS.md` applies to everything under `src/`.
+> This format is intentionally simple and cross-tool compatible.
