@@ -9,13 +9,15 @@
 
 ## File Types and Paths
 
-| File                     | Path                       | Format          | Scope                              |
-| ------------------------ | -------------------------- | --------------- | ---------------------------------- |
-| Global instructions      | `~/.codex/AGENTS.md`       | Plain markdown  | All projects                       |
-| Global override          | `~/.codex/AGENTS.override.md` | Plain markdown | All projects (highest priority)   |
-| Project instructions     | `<git-root>/AGENTS.md`     | Plain markdown  | Entire repo                        |
-| Subdirectory instructions | `<subdir>/AGENTS.md`      | Plain markdown  | That dir and descendants           |
-| Subdirectory override    | `<subdir>/AGENTS.override.md` | Plain markdown | That dir (higher priority)        |
+| File                     | Path                           | Format          | Scope                              |
+| ------------------------ | ------------------------------ | --------------- | ---------------------------------- |
+| Global instructions      | `~/.codex/AGENTS.md`           | Plain markdown  | All projects                       |
+| Global override          | `~/.codex/AGENTS.override.md`  | Plain markdown  | All projects (highest priority)    |
+| Project instructions     | `<git-root>/AGENTS.md`         | Plain markdown  | Entire repo                        |
+| Subdirectory instructions | `<subdir>/AGENTS.md`          | Plain markdown  | That dir and descendants           |
+| Subdirectory override    | `<subdir>/AGENTS.override.md`  | Plain markdown  | That dir (higher priority)         |
+| User rules               | `~/.codex/rules/default.rules` | Starlark        | Sandbox execution permissions (all projects) |
+| Project rules            | `./codex/rules/*.rules`        | Starlark        | Sandbox execution permissions (this project) |
 
 ## Format
 
@@ -32,6 +34,39 @@ Plain Markdown — **no frontmatter**. Any heading structure is valid. Content i
 3. `<git-root>/AGENTS.md` → walk down to CWD, loading each directory's file
 4. `AGENTS.override.md` beats `AGENTS.md` at the same level
 5. Deeper (closer to CWD) files take precedence for conflicting instructions
+
+## Rules Files (Sandbox Execution Permissions)
+
+- [Rules](https://developers.openai.com/codex/rules)
+  - Controls which external commands Codex is allowed to execute in the sandbox
+  - **Distinct from `AGENTS.md`** — rules = execution permissions; AGENTS.md = agent instructions
+
+### File Format & Location
+
+| File                          | Path                          | Format    | Scope                          |
+| ----------------------------- | ----------------------------- | --------- | ------------------------------ |
+| User default rules            | `~/.codex/rules/default.rules` | Starlark  | All projects on this machine   |
+| Team/project rules            | `./codex/rules/*.rules`        | Starlark  | Project-level; scanned at startup |
+
+Starlark is a Python-like language designed for safe, sandboxed execution (no side effects).
+
+### `prefix_rule()` Syntax
+
+```python
+prefix_rule(
+    pattern=["gh", "pr", ["view", "list"]],  # required; list of args to match; inner list = alternatives
+    decision="allow",                          # "allow" | "prompt" | "forbidden" (default: "allow")
+    justification="Read-only GitHub PR ops",   # optional; human-readable explanation
+    match=["gh pr view 123"],                  # optional; example commands that should match
+    not_match=["gh pr merge 123"],             # optional; example commands that should NOT match
+)
+```
+
+### Testing Rules
+
+```zsh
+codex execpolicy check --rules ~/.codex/rules/default.rules -- gh pr view 123
+```
 
 ## Configuration (`~/.codex/config.toml`)
 
