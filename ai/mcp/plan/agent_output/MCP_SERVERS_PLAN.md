@@ -37,8 +37,8 @@ Sources mined:
 ## Output Files
 
 ### Phase 1 — Mining
-- [x] `ai/mcp/plan/MCP_SERVERS_PLAN.md` — This plan (tracking checkboxes)
-- [x] `ai/mcp/plan/MCP_SERVERS_MINING.md` — Raw mining results, one section per server
+- [x] `ai/mcp/plan/agent_output/MCP_SERVERS_PLAN.md` — This plan (tracking checkboxes)
+- [x] `ai/mcp/plan/agent_output/MCP_SERVERS_MINING.md` — Raw mining results, one section per server
 
 ### Phase 2 — Individual Server Docs
 
@@ -125,6 +125,71 @@ Each `ai/mcp/servers/*.md` file follows this structure:
 ```
 
 **Auth bias rule**: API token / long-lived auth **first**; OAuth as secondary with expiry note.
+
+---
+
+## Config File Comment Format
+
+Every server entry in all generated config files under `ai/mcp/configs/` must include a
+comment block immediately above the server JSON key. The format is:
+
+```jsonc
+// # About
+// <server-id> - <one-line description>
+//
+// # References
+// * [<Homepage label>](<homepage url>)
+// * [<Auth/token page label>](<auth url>)              ← include if auth is required
+// * [<Env vars / configuration page label>](<url>)     ← include if env vars are documented
+//
+// # Installation
+// <prose> or None required.
+//
+// ```zsh
+// <install commands if a local tool install is needed>
+// ```
+//
+// # Authorization
+// 1) <Step one title>
+//   * <detail>
+//   * <detail>
+// 2) <Step two title>
+//   * <detail>
+```
+
+### Rules for each section
+
+- **`# About`**: one line — `<server-id> - <description>`. Match the exact key used in the JSON.
+- **`# References`**: 2–4 bullets maximum. Required bullets:
+  - Homepage / repo
+  - Auth/token management page (omit if no auth)
+  - Env vars / configuration page (omit if none exists)
+- **`# Installation`**: write `None required.` for remote HTTP servers or auto-installed npm packages.
+  Include a `zsh` code fence for any tool that requires a manual local install (e.g. `brew install`, `git clone`, `npm run build`).
+- **`# Authorization`**: numbered steps with nested bullets. If no auth, write `None required.`
+- **All URLs** must use markdown link syntax: `[Link Text](https://url)`. No bare URLs.
+- **All comments** use `//` JSONC line comment syntax. Each line is prefixed with `// `.
+
+### Inline comments inside JSON bodies
+
+Within a server's JSON body (inside `"env": {}`, `"args": []`, etc.), inline comments are
+permitted only for the following purposes:
+
+| Purpose | Convention | Example |
+| ------- | ---------- | ------- |
+| Optional env vars | `// Optional:` label + commented-out key/value | `// "WEBHOOK_PORT": "3000"` |
+| Common configuration variants | Brief label + commented-out key/value | `// For HatchSleep: "XCODEBUILDMCP_ENABLED_WORKFLOWS": "..."` |
+| Env var substitution hint (templates/ tier) | One-line note pointing to `env_vars/` tier | `// To use env var substitution instead (see env_vars/ tier):` |
+
+Do **not** include commented-out disabled alternate server blocks inside the JSON body of
+config templates. Those belong only in the live personal config (e.g. `~/Library/.../mcp.json`).
+
+### Canonical reference file
+
+`ai/mcp/configs/templates/.gitignored/configs/vscode/user/mcp.json` is the annotated
+VSCode User config that serves as the canonical example of this format. When regenerating
+any config file under `ai/mcp/configs/`, use this file as the comment style reference
+and cross-check all server entries against it.
 
 ---
 
