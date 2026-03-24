@@ -16,21 +16,29 @@ Sources mined:
 
 ## Servers Identified
 
-| Server Name           | Source                                    | Transport | Auth                  |
-| --------------------- | ----------------------------------------- | --------- | --------------------- |
-| XcodeBuildMCP         | npm `xcodebuildmcp@latest`                | stdio     | None                  |
-| GitHub MCP Server     | `api.githubcopilot.com/mcp/`              | HTTP      | OAuth / GH PAT        |
-| Atlassian (official)  | `mcp.atlassian.com/v1/mcp`               | HTTP      | Basic Auth (API token)|
-| mcp-atlassian (3p)    | Docker `ghcr.io/sooperset/...`            | stdio     | API token (1 yr)      |
-| Bugsee MCP            | `api.bugsee.com/mcp/{token}`              | HTTP      | Token-in-URL          |
-| Apple Docs MCP        | npm `@kimsungwhee/apple-docs-mcp`         | stdio     | None                  |
-| Figma MCP             | `mcp.figma.com/mcp`                       | HTTP      | Personal Access Token |
-| Slack MCP (korotovsky)| npm `slack-mcp-server@latest`             | stdio     | XOXP token            |
-| Intercom MCP          | `mcp.intercom.com/mcp`                    | HTTP      | OAuth                 |
-| Gmail MCP             | `gmail.mcp.claude.com/mcp`               | HTTP      | Anthropic-managed     |
-| Google Calendar MCP   | `gcal.mcp.claude.com/mcp`                | HTTP      | Anthropic-managed     |
-| Granola MCP           | `mcp.granola.ai/mcp`                      | HTTP      | OAuth                 |
-| Statsig MCP           | TBD                                       | TBD       | TBD                   |
+| Server Name                | Source                                          | Transport | Auth                       |
+| -------------------------- | ----------------------------------------------- | --------- | -------------------------- |
+| XcodeBuildMCP              | npm `xcodebuildmcp@latest`                      | stdio     | None                       |
+| GitHub MCP Server          | `api.githubcopilot.com/mcp/`                    | HTTP      | OAuth / GH PAT             |
+| Atlassian (official)       | `mcp.atlassian.com/v1/mcp`                      | HTTP      | Basic Auth (API token)     |
+| mcp-atlassian (3p)         | Docker `ghcr.io/sooperset/...`                  | stdio     | API token (1 yr)           |
+| Bugsee MCP                 | `api.bugsee.com/mcp/{token}`                    | HTTP      | Token-in-URL               |
+| Apple Docs MCP             | npm `@kimsungwhee/apple-docs-mcp`               | stdio     | None                       |
+| App Store Connect MCP      | git clone `cristianoaredes/mcp-apple-store`     | stdio     | App Store Connect API key  |
+| Figma MCP                  | `mcp.figma.com/mcp`                             | HTTP      | Personal Access Token      |
+| Slack MCP (korotovsky)     | npm `slack-mcp-server@latest`                   | stdio     | XOXP token                 |
+| Intercom MCP               | `mcp.intercom.com/mcp`                          | HTTP      | OAuth                      |
+| Gmail MCP                  | `gmail.mcp.claude.com/mcp`                      | HTTP      | Anthropic-managed          |
+| Google Calendar MCP        | `gcal.mcp.claude.com/mcp`                       | HTTP      | Anthropic-managed          |
+| Granola MCP                | `mcp.granola.ai/mcp`                            | HTTP      | OAuth                      |
+| Statsig MCP                | npm `statsig-mcp` (GeLi2001/statsig-mcp)        | stdio     | Console API key            |
+| iTerm MCP                  | npm `iterm-mcp` (ferrislucas/iterm-mcp)         | stdio     | None (macOS + iTerm2 only) |
+| LLDB MCP                   | git clone `stass/lldb-mcp` + pip install        | stdio     | None (macOS + Xcode only)  |
+| Siri Shortcuts MCP         | npm `mcp-server-siri-shortcuts` (dvcrn)         | stdio     | None (macOS only)          |
+| Playwright MCP             | npm `@executeautomation/playwright-mcp-server`  | stdio     | None                       |
+| Web Search MCP             | git clone `mrkrsl/web-search-mcp` + build       | stdio     | None (no API keys needed)  |
+| GitHub Actions MCP         | **ARCHIVED** — merged into github/github-mcp-server | stdio | N/A (use github server)   |
+| GitHub Projects MCP        | pip/uvx `github-projects-mcp` (redducklabs)    | stdio     | GitHub PAT (project scopes)|
 
 ---
 
@@ -56,8 +64,15 @@ Under `docs/mcp/servers/`:
 - [x] `GMAIL_MCP.md` (stub)
 - [x] `GOOGLE_CALENDAR_MCP.md` (stub)
 - [x] `GRANOLA_MCP.md` (stub)
-- [x] `STATSIG_MCP.md` (stub — MCP availability unconfirmed)
+- [x] `STATSIG_MCP.md` (full doc — GeLi2001/statsig-mcp community server + official Statsig docs)
 - [x] `APP_STORE_CONNECT_MCP.md` (full doc — added after scrape round 2)
+- [x] `ITERM_MCP.md` (full doc — ferrislucas/iterm-mcp, no auth, macOS + iTerm2)
+- [x] `LLDB_MCP.md` (full doc — stass/lldb-mcp, no auth, git clone + pip install)
+- [x] `SIRI_SHORTCUTS_MCP.md` (full doc — dvcrn, no auth, macOS only)
+- [x] `PLAYWRIGHT_MCP.md` (full doc — executeautomation, no auth)
+- [x] `WEB_SEARCH_MCP.md` (full doc — mrkrsl, no auth, manual build)
+- [x] `GITHUB_ACTIONS_MCP.md` (archived notice — redirects to official github server)
+- [x] `GITHUB_PROJECTS_MCP.md` (full doc — redducklabs, GitHub PAT required)
 
 ### Phase 3 — Overview
 
@@ -249,8 +264,62 @@ and cross-check all server entries against it.
 | `GMAIL_MCP.md` full doc                         | Low      | Stub — Anthropic-managed OAuth                                                                                     |
 | `GOOGLE_CALENDAR_MCP.md` full doc               | Low      | Stub — Anthropic-managed OAuth                                                                                     |
 | `GRANOLA_MCP.md` full doc                       | Low      | Stub — OAuth, pending official docs                                                                                |
-| `STATSIG_MCP.md` full doc                       | Low      | Stub — MCP availability unconfirmed as of March 2026                                                               |
 | Populate `configs/tokens/`                      | User     | Templates exist; user must fill in real tokens                                                                     |
+| Auth classification per server                  | High     | See Phase 5 — assign None / Personal / Team-wide to each server after trials                                       |
+| Team-wide tokens in LastPass                    | High     | See Phase 5 — after classification, store team-wide tokens in shared LastPass note for Hatch dev team             |
+| Update docs with LastPass retrieval links        | High     | See Phase 5 — add LastPass links to comment blocks in config files and server docs                                 |
+| Test and enable new no-auth servers             | Medium   | iterm-mcp, siri-shortcuts, playwright added to templates; test and enable in personal live config                  |
+| Trial remaining new servers                     | Medium   | lldb-mcp, web-search-mcp, github-projects-mcp, statsig-mcp — require setup or auth                                |
+
+---
+
+## Phase 5 — Auth Classification & Team Token Sharing
+
+### Auth Categories
+
+Each server falls into one of three categories:
+
+| Category      | Description                                                      | Storage Plan                                      |
+| ------------- | ---------------------------------------------------------------- | ------------------------------------------------- |
+| **None**      | No auth required                                                 | No token management needed                        |
+| **Personal**  | Per-user token (each engineer uses their own)                    | Each engineer manages their own token             |
+| **Team-wide** | Shared token that works for the whole team (service account etc.)| Store in LastPass shared note for Hatch dev team  |
+
+### Current Classification (update after trials)
+
+| Server                | Auth Category | Notes                                                         |
+| --------------------- | ------------- | ------------------------------------------------------------- |
+| `XcodeBuildMCP`       | None          | No auth                                                       |
+| `apple-docs`          | None          | No auth                                                       |
+| `iterm`               | None          | No auth (macOS + iTerm2 only)                                 |
+| `siri-shortcuts`      | None          | No auth (macOS only)                                          |
+| `playwright`          | None          | No auth                                                       |
+| `web-search`          | None          | No auth (no API keys needed)                                  |
+| `lldb`                | None          | No auth (macOS + Xcode only)                                  |
+| `apple-store`         | Personal      | App Store Connect API key (.p8) — per-engineer or team shared |
+| `atlassian-rovo-mcp`  | Personal      | Atlassian API token (1 yr) — per-engineer                     |
+| `mcp-atlassian`       | Personal      | Atlassian API token (1 yr) — per-engineer                     |
+| `github`              | Personal      | GitHub PAT — per-engineer                                     |
+| `slack`               | Personal      | XOXP token — per-engineer                                     |
+| `statsig`             | Personal      | Console API key — per-engineer (or team shared — TBD)         |
+| `github-projects`     | Personal      | GitHub PAT with project scopes — per-engineer                 |
+| `bugsee`              | TBD           | Token-in-URL — may be team-wide if service account exists     |
+| `figma`               | TBD           | PAT — likely personal, but could be team token                |
+| `intercom`            | TBD           | OAuth — likely personal                                       |
+
+### Action Items
+
+- [ ] After trialing all servers, finalize the classification table above
+- [ ] For servers classified **Team-wide**: create a LastPass note in the Hatch dev team folder
+  - Note name: `Hatch Dev — MCP Server Tokens`
+  - Include: server name, token value, expiry, how to rotate
+  - Share note with entire Hatch dev team
+- [ ] Update server docs (`docs/mcp/servers/*.md`) for team-wide servers:
+  - Add a "Team Token" section noting where to retrieve the shared token
+  - Include a LastPass link in the Authentication section
+- [ ] Update config file comment blocks for team-wide servers:
+  - Add a `# Team Token` note with LastPass retrieval link under `# Authorization`
+  - Example: `// Team token: retrieve from LastPass note "Hatch Dev — MCP Server Tokens"`
 
 ---
 

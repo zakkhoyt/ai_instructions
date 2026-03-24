@@ -232,6 +232,61 @@
         // "SLACK_MCP_XOXP_TOKEN": "${HATCH_SLACK_MPC_OAUTH_TOKEN}"
         "SLACK_MCP_XOXP_TOKEN": "<YOUR_SLACK_XOXP_TOKEN>"
       }
+    },
+
+    // # About
+    // iterm - Run terminal commands in iTerm2 and read terminal output from any AI agent. macOS + iTerm2 only.
+    //
+    // # References
+    // * [GitHub: ferrislucas/iterm-mcp](https://github.com/ferrislucas/iterm-mcp)
+    // * [npm: iterm-mcp](https://www.npmjs.com/package/iterm-mcp)
+    //
+    // # Installation
+    // Installed automatically via `npx` on first run. Requires iTerm2 on macOS.
+    //
+    // # Authorization
+    // None required.
+    "iterm": {
+      "command": "/bin/zsh",
+      "args": ["-lc", "npx -y iterm-mcp"]
+    },
+
+    // # About
+    // siri-shortcuts - Run any macOS Siri Shortcut from your AI agent. macOS only.
+    //
+    // # References
+    // * [GitHub: dvcrn/mcp-server-siri-shortcuts](https://github.com/dvcrn/mcp-server-siri-shortcuts)
+    // * [npm: mcp-server-siri-shortcuts](https://www.npmjs.com/package/mcp-server-siri-shortcuts)
+    //
+    // # Installation
+    // Installed automatically via `npx` on first run. Requires macOS Shortcuts app.
+    //
+    // # Authorization
+    // None required.
+    "siri-shortcuts": {
+      "command": "/bin/zsh",
+      "args": ["-lc", "npx -y mcp-server-siri-shortcuts"]
+    },
+
+    // # About
+    // playwright - Browser automation with Playwright: navigate pages, click, fill forms, take screenshots, and run end-to-end tests from your AI agent.
+    //
+    // # References
+    // * [GitHub: executeautomation/mcp-playwright](https://github.com/executeautomation/mcp-playwright)
+    // * [npm: @executeautomation/playwright-mcp-server](https://www.npmjs.com/package/@executeautomation/playwright-mcp-server)
+    //
+    // # Installation
+    // Installed automatically via `npx` on first run. Install Playwright browsers first:
+    //
+    // ```zsh
+    // npx playwright install
+    // ```
+    //
+    // # Authorization
+    // None required.
+    "playwright": {
+      "command": "/bin/zsh",
+      "args": ["-lc", "npx -y @executeautomation/playwright-mcp-server"]
     }
 
   }
