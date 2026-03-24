@@ -27,7 +27,14 @@ The [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) is an open 
 | `gmail`                   | [GMAIL_MCP.md](servers/GMAIL_MCP.md)                            | HTTP      | Anthropic-managed                 | Gmail (via Claude.ai integrations)                 |
 | `google-calendar`         | [GOOGLE_CALENDAR_MCP.md](servers/GOOGLE_CALENDAR_MCP.md)        | HTTP      | Anthropic-managed                 | Calendar (via Claude.ai integrations)              |
 | `granola`                 | [GRANOLA_MCP.md](servers/GRANOLA_MCP.md)                        | HTTP      | OAuth                             | Meeting notes and transcripts                      |
-| `statsig`                 | [STATSIG_MCP.md](servers/STATSIG_MCP.md)                        | TBD       | TBD                               | Feature flags, experiments (planned)               |
+| `statsig`                 | [STATSIG_MCP.md](servers/STATSIG_MCP.md)                        | stdio     | Console API key                   | Feature gates, experiments, dynamic configs        |
+| `iterm`                   | [ITERM_MCP.md](servers/ITERM_MCP.md)                            | stdio     | None                              | Run iTerm2 terminal commands from AI (macOS only)  |
+| `siri-shortcuts`          | [SIRI_SHORTCUTS_MCP.md](servers/SIRI_SHORTCUTS_MCP.md)          | stdio     | None                              | Trigger Siri Shortcuts from AI (macOS only)        |
+| `playwright`              | [PLAYWRIGHT_MCP.md](servers/PLAYWRIGHT_MCP.md)                  | stdio     | None                              | Browser automation for testing and web tasks       |
+| `web-search`              | [WEB_SEARCH_MCP.md](servers/WEB_SEARCH_MCP.md)                  | stdio     | None                              | Web search without API keys (manual build req'd)   |
+| `lldb`                    | [LLDB_MCP.md](servers/LLDB_MCP.md)                              | stdio     | None                              | Debug Swift/ObjC/C++ apps via LLDB (macOS only)    |
+| `github-actions`          | [GITHUB_ACTIONS_MCP.md](servers/GITHUB_ACTIONS_MCP.md)          | stdio     | GitHub PAT (archived — use github)| **Archived** — use official `github` server instead|
+| `github-projects`         | [GITHUB_PROJECTS_MCP.md](servers/GITHUB_PROJECTS_MCP.md)        | stdio     | GitHub PAT (project scopes)       | Query GitHub Projects v2 boards                    |
 
 ---
 
@@ -121,6 +128,34 @@ export SLACK_MCP_XOXP_TOKEN="xoxp-..."  # Add to ~/.zshrc
 
 ---
 
+### 7. `playwright` — Browser Automation
+
+Zero-auth. Full Playwright browser control — navigate, click, screenshot, test.
+
+```shell
+# Install Playwright browsers first (one-time):
+npx playwright install
+
+# Add to Claude Code (user scope):
+claude mcp add --scope user --transport stdio playwright -- npx -y @executeautomation/playwright-mcp-server
+```
+
+→ [Full docs](servers/PLAYWRIGHT_MCP.md)
+
+---
+
+### 8. `iterm` — iTerm2 Terminal Control
+
+Zero-auth. Run shell commands in iTerm2 and read terminal output from your AI agent. macOS only.
+
+```shell
+claude mcp add --scope user --transport stdio iterm -- npx -y iterm-mcp
+```
+
+→ [Full docs](servers/ITERM_MCP.md)
+
+---
+
 ## Config File Locations by AI Platform
 
 See [MCP_SERVERS.md](MCP_SERVERS.md) for the full table of config file paths by platform, interface, and scope.
@@ -141,7 +176,7 @@ Quick reference:
 
 ## Config Templates
 
-Complete config files are under `ai/mcp/configs/`:
+Complete config files are under `docs/mcp/configs/`:
 
 | Directory              | Contents                                              |
 | ---------------------- | ----------------------------------------------------- |
