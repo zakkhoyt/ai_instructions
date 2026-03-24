@@ -7,20 +7,19 @@
 ## Directory Map
 
 ```
-ai/mcp/
 ├── README.md                          ← You are here
 ├── MCP_SERVERS.md                     ← Config file location table (all platforms × scopes)
 ├── MCP_SERVERS_HATCH.md               ← Summary table + quick-start for Hatch team
 │
 ├── servers/                           ← Per-server documentation
-│   ├── XCODEBUILDMCP.md
-│   ├── APP_STORE_CONNECT_MCP.md
-│   ├── APPLE_DOCS_MCP.md
+│   ├── XCODEBUILDMCP.md               - Xcode on the command line
+│   ├── APP_STORE_CONNECT_MCP.md       - 3rd-party interface for AppStoreConnect and Apple Developer Portal
+│   ├── APPLE_DOCS_MCP.md              ← Retrieve Apple Documentation, WWDC articles, videos, etc...
 │   ├── ATLASSIAN_MCP.md               ← Official Atlassian Rovo MCP
 │   ├── MCP_ATLASSIAN.md               ← 3rd-party sooperset mcp-atlassian
-│   ├── BUGSEE_MCP.md
-│   ├── GITHUB_MCP.md
-│   ├── SLACK_MCP.md
+│   ├── BUGSEE_MCP.md                  - Create, Fetch, Comment on, etc.... Bugsee reports
+│   ├── GITHUB_MCP.md                  - GitHub MCP server. 
+│   ├── SLACK_MCP.md                   - MCP server to access Slack user posts, public posts, create posts, canvases, search, etc...
 │   ├── FIGMA_MCP.md                   ← stub
 │   ├── INTERCOM_MCP.md                ← stub
 │   ├── GMAIL_MCP.md                   ← stub
@@ -28,61 +27,36 @@ ai/mcp/
 │   ├── GRANOLA_MCP.md                 ← stub
 │   └── STATSIG_MCP.md                 ← stub
 │
-├── configs/                           ← Platform config files (3 tiers)
-│   │
-│   ├── templates/                     ← Tier 1: Placeholder values — safe to commit
-│   │   ├── vscode_user_mcp.json
-│   │   ├── vscode_workspace_mcp.json
-│   │   ├── claude_desktop_config.json
-│   │   ├── claude_code_mcp.json
-│   │   ├── cursor_mcp.json
-│   │   └── .gitignored/               ← Personal copies (gitignored)
-│   │       └── zakkhoyt/
-│   │           ├── vscode_user_mcp.json
-│   │           ├── vscode_workspace_mcp.json
-│   │           ├── claude_desktop_config.json
-│   │           ├── claude_code_mcp.json
-│   │           └── cursor_mcp.json
-│   │
-│   ├── env_vars/                      ← Tier 2: Env var syntax — safe to commit
-│   │   ├── .env.example               ← All required variable names (no values)
-│   │   ├── vscode_user_mcp.json       ← Uses ${VAR} syntax
-│   │   ├── vscode_workspace_mcp.json
-│   │   ├── claude_desktop_config.json
-│   │   ├── claude_code_mcp.json
-│   │   ├── cursor_mcp.json
-│   │   ├── zsh/                       ← zsh-sourced variants
-│   │   │   ├── mcp.env                ← Shell export file; source in ~/.zshrc
-│   │   │   ├── vscode_user_mcp.json
-│   │   │   ├── vscode_workspace_mcp.json
-│   │   │   ├── claude_desktop_config.json
-│   │   │   ├── claude_code_mcp.json
-│   │   │   └── cursor_mcp.json
-│   │   └── .gitignored/               ← Personal copies (gitignored)
-│   │       └── zakkhoyt/
-│   │           ├── configs/           ← Real tokens hardcoded — copy directly to platform
-│   │           │   ├── vscode_user_mcp.json
-│   │           │   ├── vscode_workspace_mcp.json
-│   │           │   ├── claude_desktop_config.json
-│   │           │   ├── claude_code_mcp.json
-│   │           │   └── cursor_mcp.json
-│   │           └── env_var_configs/   ← Env var syntax + populated .env — pair together
-│   │               ├── .env           ← Populated with real values
-│   │               ├── vscode_user_mcp.json
-│   │               ├── vscode_workspace_mcp.json
-│   │               ├── claude_desktop_config.json
-│   │               ├── claude_code_mcp.json
-│   │               └── cursor_mcp.json
-│   │
-│   └── tokens/                        ← Tier 3: Inline tokens — gitignored, user-populated
-│       └── README.md
-│
-└── plan/                              ← Planning and research artifacts
-    ├── MCP_SERVERS_SCRATCHPAD.md
-    ├── MCP_SERVERS_FOLLOWUP_SCRATCHPAD.md
-    └── agent_output/
-        ├── MCP_SERVERS_PLAN.md        ← Tracked implementation plan with checkboxes
-        └── MCP_SERVERS_MINING.md      ← Raw research notes per server
+└── configs/                           ← Platform config files (3 tiers)
+    │
+    ├── templates/                     ← Tier 1: Placeholder values — safe to commit
+    │   ├── vscode_user_mcp.json
+    │   ├── vscode_workspace_mcp.json
+    │   ├── claude_desktop_config.json
+    │   ├── claude_code_mcp.json
+    │   ├── cursor_mcp.json
+    │   └── .gitignored/               ← Personal copies (gitignored)
+    │       └── zakkhoyt/
+    │           ├── vscode_user_mcp.json
+    │           ├── vscode_workspace_mcp.json
+    │           ├── claude_desktop_config.json
+    │           ├── claude_code_mcp.json
+    │           └── cursor_mcp.json
+    │
+    └── env_vars/                      ← Tier 2: Env var syntax — safe to commit
+        ├── .env.example               ← All required variable names (no values)
+        ├── vscode_user_mcp.json       ← Uses ${VAR} syntax
+        ├── vscode_workspace_mcp.json
+        ├── claude_desktop_config.json
+        ├── claude_code_mcp.json
+        ├── cursor_mcp.json
+        └── zsh/                       ← zsh-sourced variants
+            ├── mcp.env                ← Shell export file; source in ~/.zshrc
+            ├── vscode_user_mcp.json
+            ├── vscode_workspace_mcp.json
+            ├── claude_desktop_config.json
+            ├── claude_code_mcp.json
+            └── cursor_mcp.json
 ```
 
 ---

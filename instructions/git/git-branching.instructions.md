@@ -452,3 +452,24 @@ username=$(git config user.name | tr ' ' '_' | tr '[:upper:]' '[:lower:]')
 2. **Create branch**: `git checkout -b username/category/topic`
 3. **Apply stash**: `git stash pop`
 4. **Commit and push**: Create PR immediately
+
+### PR Creation Fails: No Commits Between Branches
+
+**Problem**: GitHub rejects PR creation when the new branch is identical to the base branch (zero commits difference). Common when branching ahead to reserve a PR slot before actual work begins.
+
+**Solution**: Create an empty commit to establish a divergence point, then push and create the PR:
+
+```zsh
+git commit --allow-empty -m "chore: initialize branch
+
+Empty commit to allow PR creation before any changes land.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+git push
+gh pr create --draft --assignee @me --title "..."
+```
+
+**When to use**:
+- Creating a follow-up branch from an in-progress branch (before the base is merged)
+- Reserving a PR slot for planned work that hasn't started yet
+- Stacking PRs so reviewers can see the full chain early
