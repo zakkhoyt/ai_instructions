@@ -1,0 +1,204 @@
+{
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Debug ansi-app (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "ansi-app",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug ansi-app (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Release ansi-app (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "ansi-app",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release ansi-app (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Debug iicon (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "iicon",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug iicon (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Release iicon (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "iicon",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release iicon (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Debug arg_parser (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "arg_parser",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug arg_parser (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Release arg_parser (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "arg_parser",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release arg_parser (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Debug ascii_table (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "ascii_table",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug ascii_table (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Release ascii_table (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "ascii_table",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release ascii_table (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Debug echo_pretty (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "echo_pretty",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug echo_pretty (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Release echo_pretty (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "echo_pretty",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release echo_pretty (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Debug hatch_log (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "hatch_log",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug hatch_log (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Release hatch_log (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "hatch_log",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release hatch_log (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Debug swift-package-grapher (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "swift-package-grapher",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug swift-package-grapher (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Release swift-package-grapher (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "swift-package-grapher",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release swift-package-grapher (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Debug zing (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "zing",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug zing (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Release zing (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "zing",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release zing (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Debug swiftyshell-example (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "swiftyshell-example",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug swiftyshell-example (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Release swiftyshell-example (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "swiftyshell-example",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release swiftyshell-example (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Debug HatchTerminalApp (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "HatchTerminalApp",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug HatchTerminalApp (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:san-francisco}/docs/ideas/zsh_for_swift_programmers/references/HatchTerminal",
+      "name": "Release HatchTerminalApp (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)",
+      "target": "HatchTerminalApp",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release HatchTerminalApp (docs/ideas/zsh_for_swift_programmers/references/HatchTerminal)"
+    }
+  ]
+}

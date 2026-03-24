@@ -1,0 +1,238 @@
+// Cursor — MCP configuration
+// User (global) location: ~/.cursor/mcp.json
+// Project location:       .cursor/mcp.json (in project root)
+//
+// Docs: https://docs.cursor.com/context/model-context-protocol
+//
+// NOTE: Cursor uses "mcpServers" as the top-level key.
+// Auth tokens are NOT included here. See:
+//   configs/env_vars/  — uses environment variable references
+//   configs/tokens/    — has real tokens (gitignore!)
+
+{
+  "mcpServers": {
+
+    // # About
+    // XcodeBuildMCP - MCP server providing 61+ tools for Xcode and Swift development automation (build, test, simulator control, device interaction, UI automation, project scaffolding)
+    //
+    // # References
+    // * [GitHub: getsentry/XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP)
+    // * [npm: xcodebuildmcp](https://www.npmjs.com/package/xcodebuildmcp)
+    // * [GitHub: getsentry/XcodeBuildMCP - Configuration / Environment Variables](https://github.com/getsentry/XcodeBuildMCP#configuration)
+    //
+    // # Installation
+    // Installed automatically via `npx` on first run. Requires Xcode and Apple Developer Tools.
+    //
+    // # Authorization
+    // None required.
+    "XcodeBuildMCP": {
+      "command": "/bin/zsh",
+      "args": [
+        "-lc",
+        "exec npx -y xcodebuildmcp@latest mcp"
+      ],
+      "env": {
+        "XCODEBUILDMCP_ENABLED_WORKFLOWS": "project-discovery,swift-package,simulator,device,macos,doctor,ui-testing",
+        "INCREMENTAL_BUILDS_ENABLED": "false"
+        // Optional:
+        // "NODE_ENV": "development",
+        // "DEBUG": "*",
+        // "XCODEBUILDMCP_DYNAMIC_TOOLS": "false",  // set "true" for dynamic tool loading
+        // For SPM-only projects use instead:
+        // "XCODEBUILDMCP_ENABLED_WORKFLOWS": "swift-package,simulator,project-discovery,doctor",
+      }
+    },
+
+    // # About
+    // apple-docs - Access Apple developer documentation, frameworks, APIs, and 1,260+ WWDC sessions (2012–2025) offline via MCP. Covers iOS, macOS, watchOS, tvOS, visionOS.
+    //
+    // # References
+    // * [GitHub: kimsungwhee/apple-docs-mcp](https://github.com/kimsungwhee/apple-docs-mcp)
+    // * [npm: @kimsungwhee/apple-docs-mcp](https://www.npmjs.com/package/@kimsungwhee/apple-docs-mcp)
+    // * [GitHub: kimsungwhee/apple-docs-mcp - Environment Variables](https://github.com/kimsungwhee/apple-docs-mcp#environment-variables)
+    //
+    // # Installation
+    // Installed automatically via `npx` on first run. No additional setup required.
+    //
+    // # Authorization
+    // None required.
+    "apple-docs": {
+      "command": "npx",
+      "args": ["-y", "@kimsungwhee/apple-docs-mcp"]
+    },
+
+    // # About
+    // apple-store - App Store Connect MCP server with 83+ tools for managing IAP, TestFlight, reviews, provisioning profiles, certificates, and app submissions.
+    //
+    // # References
+    // * [GitHub: cristianoaredes/mcp-apple-store](https://github.com/cristianoaredes/mcp-apple-store)
+    // * [App Store Connect: API Keys](https://appstoreconnect.apple.com/access/integrations/api)
+    // * [GitHub: cristianoaredes/mcp-apple-store - Environment Variables](https://github.com/cristianoaredes/mcp-apple-store#environment-variables)
+    //
+    // # Installation
+    // Must be cloned and built locally. No npm package available.
+    //
+    // ```zsh
+    // git clone https://github.com/cristianoaredes/mcp-apple-store
+    // cd mcp-apple-store
+    // npm install && npm run build
+    // ```
+    //
+    // # Authorization
+    // 1) Create an App Store Connect API Key
+    //   * [App Store Connect: Users and Access → Integrations → API Keys](https://appstoreconnect.apple.com/access/integrations/api)
+    //   * Create a key with the appropriate role (e.g. App Manager or Developer)
+    //   * Download the `.p8` file — it can only be downloaded once
+    // 2) Note the Issuer ID and Key ID shown on the API Keys page
+    // 3) Set the env vars pointing to your `.p8` file and app identifiers
+    "apple-store": {
+      "command": "/bin/zsh",
+      "args": [
+        "-lc",
+        "node \"$HOME/code/other/mcp/mcp-apple-store/dist/index.js\""
+      ],
+      "env": {
+        "APP_STORE_ISSUER_ID": "<YOUR_ASC_ISSUER_ID>",
+        "APP_STORE_KEY_ID": "<YOUR_ASC_KEY_ID>",
+        "APP_STORE_PRIVATE_KEY_PATH": "<PATH_TO_AUTHKEY.P8>",
+        "APP_BUNDLE_ID": "<YOUR_BUNDLE_ID>",
+        "APP_APPLE_ID": "<YOUR_APP_APPLE_ID>",
+        "APP_STORE_ENVIRONMENT": "Sandbox",
+        "LOG_LEVEL": "info"
+        // Optional:
+        // "APPLE_ROOT_CERT_PATH": "./keys/AppleRootCA-G3.cer",
+        // "WEBHOOK_PORT": "3000",
+        // "WEBHOOK_PATH": "/webhooks/apple"
+      }
+    },
+
+    // # About
+    // atlassian-rovo-mcp - Official Atlassian MCP server for Jira and Confluence via the Rovo MCP Server. Supports creating/editing issues, searching, commenting, and more.
+    //
+    // # References
+    // * [Atlassian: Rovo MCP Server - Getting Started](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/)
+    // * [Atlassian: Rovo MCP Server - Configuring Authentication via API Token](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/configuring-authentication-via-api-token/)
+    // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+    //
+    // # Installation
+    // None required. Remote HTTP server hosted by Atlassian.
+    //
+    // # Authorization
+    // 1) Create a (Scoped) Atlassian User API Token for the `Rovo MCP Server` app
+    //   * [Atlassian: Create API Token (pre-configured for Rovo MCP)](https://id.atlassian.com/manage-profile/security/api-tokens?autofillToken=&expiryDays=max&appId=mcp&selectedScopes=all)
+    //   * On the token creation page: select app `Rovo MCP Server`, set expiry to max (1 year)
+    //   * **Note: tokens scoped to the `Jira` app will NOT work — must use `Rovo MCP Server`**
+    // 2) Create a Basic Authorization hash
+    //   * Combine `user.email:api_token` and base64-encode:
+    //   * `echo -n "${ATLASSIAN_USER_EMAIL}:${ATLASSIAN_AUTH_TOKEN}" | base64 | pbcopy`
+    // 3) Paste the hash as the `Authorization: Basic <hash>` header value
+    "atlassian-rovo-mcp": {
+      "url": "https://mcp.atlassian.com/v1/mcp",
+      "headers": {
+        // Replace with your base64-encoded "email:api_token":
+        // echo -n "you@example.com:YOUR_API_TOKEN" | base64
+        "Authorization": "Basic <BASE64_EMAIL_COLON_API_TOKEN>"
+      }
+    },
+
+    // # About
+    // mcp-atlassian - 3rd-party Atlassian MCP server by sooperset. 72 tools covering Jira and Confluence. Runs via uvx (no Docker required). Uses a scoped Atlassian API token.
+    //
+    // # References
+    // * [GitHub: sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian)
+    // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+    // * [GitHub: sooperset/mcp-atlassian - Configuration / Environment Variables](https://github.com/sooperset/mcp-atlassian#configuration)
+    //
+    // # Installation
+    //
+    // ```zsh
+    // brew install uv
+    // ```
+    //
+    // # Authorization
+    // 1) Create an Atlassian API Token (standard, not scoped)
+    //   * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+    //   * Create token with any name, note the value
+    // 2) Create an env file at `~/.hatch/config/vscode/mcp-atlassian.env`
+    //   * Contents: `JIRA_URL`, `JIRA_USERNAME` (email), `JIRA_API_TOKEN`
+    "mcp-atlassian": {
+      "command": "/bin/zsh",
+      "args": [
+        "-lc",
+        "exec /opt/homebrew/bin/uvx mcp-atlassian --env-file <PATH_TO_MCP_ATLASSIAN_ENV_FILE> --transport stdio"
+      ]
+    },
+
+    // # About
+    // bugsee - Crash reporting and bug tracking MCP server for Bugsee. Auth token is embedded in the MCP URL (token-in-URL pattern). No headers required.
+    //
+    // # References
+    // * [Bugsee: MCP Server Documentation](https://docs.bugsee.com/mcp-server-api/overview)
+    // * [Bugsee: User Integrations / Auth Tokens](https://app.bugsee.com/#/settings/user/integrations)
+    //
+    // # Installation
+    // None required. Remote HTTP server hosted by Bugsee.
+    //
+    // # Authorization
+    // 1) Generate a Bugsee MCP Auth Token
+    //   * [Bugsee: User Integrations](https://app.bugsee.com/#/settings/user/integrations)
+    //   * Click `Generate Token` and copy the UUID
+    // 2) Replace `<YOUR_BUGSEE_MCP_TOKEN>` in the URL with your token UUID
+    "bugsee": {
+      "url": "https://api.bugsee.com/mcp/<YOUR_BUGSEE_MCP_TOKEN>"
+    },
+
+    // # About
+    // github - Official GitHub MCP server for repositories, PRs, issues, code search, and GitHub Actions. Runs locally via npx for non-VSCode clients.
+    //
+    // # References
+    // * [GitHub: github/github-mcp-server](https://github.com/github/github-mcp-server)
+    // * [GitHub: MCP Server - Authentication](https://github.com/github/github-mcp-server#authentication)
+    // * [GitHub: Create a Personal Access Token](https://github.com/settings/tokens)
+    // * [GitHub: MCP Server - Configuration / Environment Variables](https://github.com/github/github-mcp-server#configuration)
+    //
+    // # Installation
+    // Installed automatically via `npx` on first run.
+    //
+    // # Authorization
+    // 1) Create a GitHub Personal Access Token (PAT)
+    //   * [GitHub: Create a PAT](https://github.com/settings/tokens)
+    //   * Required scopes: `repo`, `read:org`, `read:user`
+    // 2) Set as `GITHUB_PERSONAL_ACCESS_TOKEN` env var
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_GITHUB_PAT>"
+      }
+    },
+
+    // # About
+    // slack - MCP server for reading and searching Slack channels, threads, and user profiles. Uses an XOXP user OAuth token for authentication.
+    //
+    // # References
+    // * [GitHub: korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server)
+    // * [korotovsky/slack-mcp-server: Authentication Setup](https://github.com/korotovsky/slack-mcp-server/blob/master/docs/01-authentication-setup.md)
+    // * [Slack App Settings - OAuth & Permissions](https://app.slack.com/app-settings/)
+    // * [GitHub: korotovsky/slack-mcp-server - Environment Variables](https://github.com/korotovsky/slack-mcp-server#environment-variables)
+    //
+    // # Installation
+    // Installed automatically via `npx` on first run.
+    //
+    // # Authorization
+    // 1) Obtain a Slack XOXP User OAuth Token
+    //   * Visit your Slack app's OAuth & Permissions page
+    //   * Copy the `xoxp-...` token from the OAuth Tokens section
+    // 2) Set as `SLACK_MCP_XOXP_TOKEN` env var
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "slack-mcp-server@latest", "--transport", "stdio"],
+      "env": {
+        // To use env var substitution instead (see env_vars/ tier):
+        // "SLACK_MCP_XOXP_TOKEN": "${HATCH_SLACK_MPC_OAUTH_TOKEN}"
+        "SLACK_MCP_XOXP_TOKEN": "<YOUR_SLACK_XOXP_TOKEN>"
+      }
+    }
+
+  }
+}
