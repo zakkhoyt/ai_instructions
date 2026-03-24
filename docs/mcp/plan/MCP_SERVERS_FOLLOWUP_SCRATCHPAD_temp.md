@@ -8,7 +8,7 @@ pass. See `agent_output/MCP_SERVERS_PLAN.md` for the master plan and checklist.
 
 ## Spec: Comment Format Applies to All Platform Examples (2026-03-23)
 
-Every config code block in `ai/mcp/servers/*.md` must include a `# About / # References /
+Every config code block in `docs/mcp/servers/*.md` must include a `# About / # References /
 # Installation / # Authorization` comment block — not just the VSCode section. This applies to
 every platform example (Claude Code, Claude Desktop, Cursor, VSCode User, VSCode Workspace) and
 to every auth variant (API token vs OAuth when both are shown).
@@ -20,8 +20,8 @@ tailored comment block whose `# Authorization` steps match that specific variant
 
 ## Outstanding: Env Vars Coverage Gap
 
-`ai/mcp/configs/env_vars/` currently only contains 3 files (`vscode_user_mcp.json`,
-`vscode_workspace_mcp.json`, `claude_desktop_config.json`) while `ai/mcp/configs/templates/`
+`docs/mcp/configs/env_vars/` currently only contains 3 files (`vscode_user_mcp.json`,
+`vscode_workspace_mcp.json`, `claude_desktop_config.json`) while `docs/mcp/configs/templates/`
 has 5. Missing: `claude_code_mcp.json` and `cursor_mcp.json`.
 
 ### Required research before generating
@@ -38,7 +38,7 @@ For each AI platform, document:
 Create a `zsh/` subdirectory under `env_vars/` for shell-based env var injection:
 
 ```
-ai/mcp/configs/env_vars/zsh/
+docs/mcp/configs/env_vars/zsh/
 ├── mcp.env                    # Shell export file — source in ~/.zshrc
 ├── vscode_user_mcp.json       # VSCode config relying on zsh-sourced vars
 ├── vscode_workspace_mcp.json
@@ -58,21 +58,21 @@ they assume the vars are already in the shell environment.
 ### Rule
 
 No real tokens, keys, hashes, or org-specific identifiers may appear in any committed file
-under `ai/mcp/**` — **except** files inside a `.gitignored/` directory or files covered by
+under `docs/mcp/**` — **except** files inside a `.gitignored/` directory or files covered by
 `.gitignore`.
 
 Applies to:
-- `ai/mcp/configs/templates/*.json`
-- `ai/mcp/configs/env_vars/*.json`
-- `ai/mcp/configs/env_vars/.env.example`
-- `ai/mcp/servers/*.md`
-- `ai/mcp/plan/**/*.md`
+- `docs/mcp/configs/templates/*.json`
+- `docs/mcp/configs/env_vars/*.json`
+- `docs/mcp/configs/env_vars/.env.example`
+- `docs/mcp/servers/*.md`
+- `docs/mcp/plan/**/*.md`
 
 ### Personal variants with real tokens
 
 Create two gitignored directories for personal (populated) config copies:
 
-**`ai/mcp/configs/templates/.gitignored/zakkhoyt/`**
+**`docs/mcp/configs/templates/.gitignored/zakkhoyt/`**
 ```
 claude_code_mcp.json
 claude_desktop_config.json
@@ -81,7 +81,7 @@ vscode_user_mcp.json
 vscode_workspace_mcp.json
 ```
 
-**`ai/mcp/configs/env_vars/.gitignored/zakkhoyt/`**
+**`docs/mcp/configs/env_vars/.gitignored/zakkhoyt/`**
 ```
 .env                           # Real tokens (copied + filled from .env.example)
 vscode_user_mcp.json
@@ -96,7 +96,7 @@ from git via `.gitignore` patterns covering `**/.gitignored/**`.
 
 ## Follow-up: Docs Sync Back to Notes (low priority)
 
-Once docs under `ai/mcp/servers/` are stable, evaluate syncing back to
+Once docs under `docs/mcp/servers/` are stable, evaluate syncing back to
 `~/Documents/notes/ai/mcp/` (reverse direction). Discuss before executing — the notes directory
 is a personal scratchpad and the sync direction/strategy needs agreement.
 
@@ -105,7 +105,7 @@ is a personal scratchpad and the sync direction/strategy needs agreement.
 ## Follow-up: Testing MCP Configs (low priority)
 
 Copy config files to a small test repo and iterate through each server with live commands to
-verify they work. Update each `ai/mcp/servers/*.md` with a `## Testing` section including
+verify they work. Update each `docs/mcp/servers/*.md` with a `## Testing` section including
 which commands were tried and results.
 
 ---

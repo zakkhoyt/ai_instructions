@@ -141,7 +141,7 @@ Quick reference:
 
 ## Config Templates
 
-Complete config files are under `ai/mcp/configs/`:
+Complete config files are under `docs/mcp/configs/`:
 
 | Directory              | Contents                                              |
 | ---------------------- | ----------------------------------------------------- |
