@@ -93,10 +93,23 @@ Under `ai/mcp/servers/`:
 - [ ] `vscode_workspace_mcp.json`
 
 #### `ai/mcp/configs/env_vars/.gitignored/zakkhoyt/` (personal use — real tokens — gitignored)
-- [ ] `.env` — populated from `.env.example`
-- [ ] `vscode_user_mcp.json`
-- [ ] `vscode_workspace_mcp.json`
-- [ ] `claude_desktop_config.json`
+
+Two subdirs are required. Both must be regenerated together when updating personal configs.
+
+##### `configs/` — hardcoded tokens, no env vars, copy directly to platform location
+- [x] `vscode_user_mcp.json`
+- [x] `vscode_workspace_mcp.json`
+- [x] `claude_desktop_config.json`
+- [x] `claude_code_mcp.json`
+- [x] `cursor_mcp.json`
+
+##### `env_var_configs/` — platform env var syntax + populated `.env`; source `.env` before use
+- [x] `.env` — populated with real values (all `<FILL_IN>` replaced except `APPLE_ASC_MCP_APPLE_ID`)
+- [x] `vscode_user_mcp.json`
+- [x] `vscode_workspace_mcp.json`
+- [x] `claude_desktop_config.json`
+- [x] `claude_code_mcp.json`
+- [x] `cursor_mcp.json`
 
 #### `ai/mcp/configs/tokens/` (actual tokens populated — gitignored)
 - [ ] `vscode_user_mcp.json` — **user to populate**
