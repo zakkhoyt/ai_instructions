@@ -27,7 +27,7 @@
 App Store Connect API Keys do not expire on a fixed schedule — they remain valid until you revoke them. This makes them the preferred auth method over OAuth.
 
 **How to create an API Key:**
-1. Go to [App Store Connect → Users and Access → Integrations → API Keys](https://appstoreconnect.apple.com/access/api)
+1. Go to [App Store Connect → Users and Access → Integrations → API Keys](https://appstoreconnect.apple.com/access/integrations/api)
 2. Click the `+` button, give the key a name (e.g., `mcp-agent`)
 3. Choose a role appropriate for your use (see permissions table below)
 4. Click **Generate** — download the `.p8` file immediately (cannot be re-downloaded)
@@ -150,9 +150,31 @@ File: `~/Library/Application Support/Code/User/mcp.json`
 ```jsonc
 {
   "servers": {
-    // App Store Connect MCP — local node process, JWT auth via .p8 key
-    // GitHub: https://github.com/cristianoaredes/mcp-apple-store
-    // Key: https://appstoreconnect.apple.com/access/api
+    // # About
+    // apple-store - App Store Connect MCP server with 83+ tools for managing IAP, TestFlight,
+    // reviews, provisioning profiles, certificates, and app submissions.
+    //
+    // # References
+    // * [GitHub: cristianoaredes/mcp-apple-store](https://github.com/cristianoaredes/mcp-apple-store)
+    // * [App Store Connect: API Keys](https://appstoreconnect.apple.com/access/integrations/api)
+    // * [GitHub: cristianoaredes/mcp-apple-store - Environment Variables](https://github.com/cristianoaredes/mcp-apple-store#environment-variables)
+    //
+    // # Installation
+    // Must be cloned and built locally. No npm package is available.
+    //
+    // ```zsh
+    // git clone https://github.com/cristianoaredes/mcp-apple-store
+    // cd mcp-apple-store
+    // npm install && npm run build
+    // ```
+    //
+    // # Authorization
+    // 1) Create an App Store Connect API Key
+    //   * [App Store Connect: Users and Access → Integrations → API Keys](https://appstoreconnect.apple.com/access/integrations/api)
+    //   * Create a key with the appropriate role (e.g. App Manager or Developer)
+    //   * Download the `.p8` file — it can only be downloaded once
+    // 2) Note the Issuer ID and Key ID shown on the API Keys page
+    // 3) Set the env vars below pointing to your `.p8` file and app identifiers
     "apple-store": {
       "type": "stdio",
       "command": "node",
@@ -183,8 +205,33 @@ File: `.vscode/mcp.json`
 
 ```jsonc
 {
+  // # About
+  // apple-store - App Store Connect MCP server with 83+ tools for managing IAP, TestFlight,
+  // reviews, provisioning profiles, and submissions. Uses App Store Connect API Key for auth.
+  // Requires local clone and build.
+  //
+  // # References
+  // * [GitHub: cristianoaredes/mcp-apple-store](https://github.com/cristianoaredes/mcp-apple-store)
+  // * [App Store Connect: API Keys](https://appstoreconnect.apple.com/access/integrations/api)
+  // * [GitHub: cristianoaredes/mcp-apple-store - Environment Variables](https://github.com/cristianoaredes/mcp-apple-store#environment-variables)
+  //
+  // # Installation
+  // Must be cloned and built locally. No npm package is available.
+  //
+  // ```zsh
+  // git clone https://github.com/cristianoaredes/mcp-apple-store
+  // cd mcp-apple-store
+  // npm install && npm run build
+  // ```
+  //
+  // # Authorization
+  // 1) Create an App Store Connect API Key
+  //   * [App Store Connect: Users and Access → Integrations → API Keys](https://appstoreconnect.apple.com/access/integrations/api)
+  //   * Create a key with the appropriate role (e.g. App Manager or Developer)
+  //   * Download the `.p8` file — it can only be downloaded once
+  // 2) Note the Issuer ID and Key ID shown on the API Keys page
+  // 3) Set the APPLE_ASC_MCP_* env vars in `~/.zshrc` pointing to your `.p8` file
   "servers": {
-    // App Store Connect MCP — env vars must be set in shell before launching VSCode
     "apple-store": {
       "type": "stdio",
       "command": "node",
@@ -211,8 +258,33 @@ claude mcp add --scope user --transport stdio apple-store -- \
 
 Resulting entry in `~/.claude.json`:
 
-```json
+```jsonc
 {
+  // # About
+  // apple-store - App Store Connect MCP server. Uses /bin/zsh -lc wrapper for PATH
+  // resolution. App Store Connect API Key for auth.
+  //
+  // # References
+  // * [GitHub: cristianoaredes/mcp-apple-store](https://github.com/cristianoaredes/mcp-apple-store)
+  // * [App Store Connect: API Keys](https://appstoreconnect.apple.com/access/integrations/api)
+  // * [GitHub: cristianoaredes/mcp-apple-store - Environment Variables](https://github.com/cristianoaredes/mcp-apple-store#environment-variables)
+  //
+  // # Installation
+  // Must be cloned and built locally. No npm package is available.
+  //
+  // ```zsh
+  // git clone https://github.com/cristianoaredes/mcp-apple-store
+  // cd mcp-apple-store
+  // npm install && npm run build
+  // ```
+  //
+  // # Authorization
+  // 1) Create an App Store Connect API Key
+  //   * [App Store Connect: Users and Access → Integrations → API Keys](https://appstoreconnect.apple.com/access/integrations/api)
+  //   * Create a key with the appropriate role (e.g. App Manager or Developer)
+  //   * Download the `.p8` file — it can only be downloaded once
+  // 2) Note the Issuer ID and Key ID shown on the API Keys page
+  // 3) Set APPLE_ASC_MCP_* env vars in `~/.zshrc`; Claude Code inherits shell env
   "mcpServers": {
     "apple-store": {
       "type": "stdio",
@@ -236,8 +308,33 @@ Resulting entry in `~/.claude.json`:
 
 File: `.mcp.json` in repo root
 
-```json
+```jsonc
 {
+  // # About
+  // apple-store - App Store Connect MCP server. Uses /bin/zsh -lc wrapper for PATH
+  // resolution. App Store Connect API Key for auth.
+  //
+  // # References
+  // * [GitHub: cristianoaredes/mcp-apple-store](https://github.com/cristianoaredes/mcp-apple-store)
+  // * [App Store Connect: API Keys](https://appstoreconnect.apple.com/access/integrations/api)
+  // * [GitHub: cristianoaredes/mcp-apple-store - Environment Variables](https://github.com/cristianoaredes/mcp-apple-store#environment-variables)
+  //
+  // # Installation
+  // Must be cloned and built locally. No npm package is available.
+  //
+  // ```zsh
+  // git clone https://github.com/cristianoaredes/mcp-apple-store
+  // cd mcp-apple-store
+  // npm install && npm run build
+  // ```
+  //
+  // # Authorization
+  // 1) Create an App Store Connect API Key
+  //   * [App Store Connect: Users and Access → Integrations → API Keys](https://appstoreconnect.apple.com/access/integrations/api)
+  //   * Create a key with the appropriate role (e.g. App Manager or Developer)
+  //   * Download the `.p8` file — it can only be downloaded once
+  // 2) Note the Issuer ID and Key ID shown on the API Keys page
+  // 3) Set APPLE_ASC_MCP_* env vars in `~/.zshrc`; Claude Code inherits shell env
   "mcpServers": {
     "apple-store": {
       "type": "stdio",
@@ -263,10 +360,33 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 ```jsonc
 {
+  // # About
+  // apple-store - App Store Connect MCP server. Uses absolute path for node binary.
+  // Requires terminal launch to inherit APPLE_ASC_MCP_* env vars.
+  //
+  // # References
+  // * [GitHub: cristianoaredes/mcp-apple-store](https://github.com/cristianoaredes/mcp-apple-store)
+  // * [App Store Connect: API Keys](https://appstoreconnect.apple.com/access/integrations/api)
+  // * [GitHub: cristianoaredes/mcp-apple-store - Environment Variables](https://github.com/cristianoaredes/mcp-apple-store#environment-variables)
+  //
+  // # Installation
+  // Must be cloned and built locally. No npm package is available.
+  //
+  // ```zsh
+  // git clone https://github.com/cristianoaredes/mcp-apple-store
+  // cd mcp-apple-store
+  // npm install && npm run build
+  // ```
+  //
+  // # Authorization
+  // 1) Create an App Store Connect API Key
+  //   * [App Store Connect: Users and Access → Integrations → API Keys](https://appstoreconnect.apple.com/access/integrations/api)
+  //   * Create a key with the appropriate role (e.g. App Manager or Developer)
+  //   * Download the `.p8` file — it can only be downloaded once
+  // 2) Note the Issuer ID and Key ID shown on the API Keys page
+  // 3) Set APPLE_ASC_MCP_* env vars in `~/.zshrc`
+  //   * Launch Claude Desktop from terminal to inherit APPLE_ASC_MCP_* vars
   "mcpServers": {
-    // App Store Connect MCP
-    // Note: Launch Claude Desktop from terminal to inherit env vars:
-    //   open -a "Claude" from a zsh session that has APPLE_ASC_MCP_* set
     "apple-store": {
       "command": "node",
       "args": ["/Users/zakkhoyt/code/other/mcp/mcp-apple-store/dist/index.js"],
@@ -288,8 +408,33 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 Global: `~/.cursor/mcp.json` — or project: `.cursor/mcp.json`
 
-```json
+```jsonc
 {
+  // # About
+  // apple-store - App Store Connect MCP server. Uses /bin/zsh -lc wrapper for PATH
+  // resolution in Cursor. App Store Connect API Key for auth.
+  //
+  // # References
+  // * [GitHub: cristianoaredes/mcp-apple-store](https://github.com/cristianoaredes/mcp-apple-store)
+  // * [App Store Connect: API Keys](https://appstoreconnect.apple.com/access/integrations/api)
+  // * [GitHub: cristianoaredes/mcp-apple-store - Environment Variables](https://github.com/cristianoaredes/mcp-apple-store#environment-variables)
+  //
+  // # Installation
+  // Must be cloned and built locally. No npm package is available.
+  //
+  // ```zsh
+  // git clone https://github.com/cristianoaredes/mcp-apple-store
+  // cd mcp-apple-store
+  // npm install && npm run build
+  // ```
+  //
+  // # Authorization
+  // 1) Create an App Store Connect API Key
+  //   * [App Store Connect: Users and Access → Integrations → API Keys](https://appstoreconnect.apple.com/access/integrations/api)
+  //   * Create a key with the appropriate role (e.g. App Manager or Developer)
+  //   * Download the `.p8` file — it can only be downloaded once
+  // 2) Note the Issuer ID and Key ID shown on the API Keys page
+  // 3) Set APPLE_ASC_MCP_* env vars in `~/.zshrc`
   "mcpServers": {
     "apple-store": {
       "command": "/bin/zsh",
@@ -363,7 +508,7 @@ The server has built-in rate limiting with automatic retry/exponential backoff.
 ## References
 
 - [GitHub: mcp-apple-store](https://github.com/cristianoaredes/mcp-apple-store)
-- [App Store Connect API — Keys](https://appstoreconnect.apple.com/access/api)
+- [App Store Connect API — Keys](https://appstoreconnect.apple.com/access/integrations/api)
 - [App Store Connect API Docs](https://developer.apple.com/documentation/appstoreconnectapi)
 - [App Store Server API Docs](https://developer.apple.com/documentation/appstoreserverapi)
 - [App Store Connect API roles and permissions](https://developer.apple.com/help/app-store-connect/reference/role-permissions)

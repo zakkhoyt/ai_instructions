@@ -67,10 +67,25 @@ File: `~/Library/Application Support/Code/User/mcp.json`
 ```jsonc
 {
   "servers": {
-    // GitHub MCP — Copilot OAuth (managed by GitHub)
-    // Install via: https://github.com/github/github-mcp-server
-    // Auth is handled automatically via GitHub Copilot extension
-    // Note: VSCode registers this as "io.github.github/github-mcp-server" when installed via Copilot gallery
+    // # About
+    // github-mcp-server - Official GitHub MCP server for repositories, PRs, issues, code
+    // search, and GitHub Actions. Installed via VSCode's Copilot MCP gallery.
+    //
+    // # References
+    // * [GitHub: github/github-mcp-server](https://github.com/github/github-mcp-server)
+    // * [GitHub: MCP Server - Authentication](https://github.com/github/github-mcp-server#authentication)
+    // * [GitHub: MCP Server - Configuration / Environment Variables](https://github.com/github/github-mcp-server#configuration)
+    //
+    // # Installation
+    // Install via VSCode → Command Palette → `MCP: Browse MCP Servers` (Copilot gallery).
+    // The server ID `io.github.github/github-mcp-server` is assigned automatically by VSCode.
+    //
+    // # Authorization
+    // 1) Authenticate via GitHub Copilot (OAuth — recommended for VSCode)
+    //   * VSCode/Copilot handles OAuth automatically; no manual token setup needed
+    // 2) Alternatively, use a GitHub Personal Access Token (PAT)
+    //   * [GitHub: Create a PAT](https://github.com/settings/tokens/new)
+    //   * Add as `Authorization: Bearer <token>` in headers if needed
     "io.github.github/github-mcp-server": {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/",
@@ -85,9 +100,24 @@ File: `~/Library/Application Support/Code/User/mcp.json`
 
 ```jsonc
 {
+  // # About
+  // github - GitHub MCP server via local stdio, authenticated with a GitHub Personal Access
+  // Token (PAT). No Copilot subscription required.
+  //
+  // # References
+  // * [GitHub: github/github-mcp-server](https://github.com/github/github-mcp-server)
+  // * [GitHub: Create a PAT](https://github.com/settings/tokens)
+  // * [npm: @modelcontextprotocol/server-github](https://www.npmjs.com/package/@modelcontextprotocol/server-github)
+  // * [GitHub: github-mcp-server - Configuration / Environment Variables](https://github.com/github/github-mcp-server#configuration)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run.
+  //
+  // # Authorization
+  // 1) Create a GitHub PAT at [github.com/settings/tokens](https://github.com/settings/tokens)
+  //   * Grant repo read/write permissions appropriate for your use
+  // 2) Set as `GITHUB_PERSONAL_ACCESS_TOKEN` env var in `~/.zshrc`
   "servers": {
-    // GitHub MCP — local stdio server with PAT auth
-    // PAT: https://github.com/settings/tokens
     "github": {
       "type": "stdio",
       "command": "npx",
@@ -106,8 +136,24 @@ File: `.vscode/mcp.json`
 
 ```jsonc
 {
+  // # About
+  // github - GitHub MCP server via local stdio, authenticated with a GitHub Personal Access
+  // Token (PAT). Workspace-scoped config.
+  //
+  // # References
+  // * [GitHub: github/github-mcp-server](https://github.com/github/github-mcp-server)
+  // * [GitHub: Create a PAT](https://github.com/settings/tokens)
+  // * [npm: @modelcontextprotocol/server-github](https://www.npmjs.com/package/@modelcontextprotocol/server-github)
+  // * [GitHub: github-mcp-server - Configuration / Environment Variables](https://github.com/github/github-mcp-server#configuration)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run.
+  //
+  // # Authorization
+  // 1) Create a GitHub PAT at [github.com/settings/tokens](https://github.com/settings/tokens)
+  //   * Grant repo read/write permissions appropriate for your use
+  // 2) Set as `GITHUB_PERSONAL_ACCESS_TOKEN` env var in `~/.zshrc`
   "servers": {
-    // GitHub MCP — PAT from env var
     "github": {
       "type": "stdio",
       "command": "npx",
@@ -129,8 +175,25 @@ claude mcp add --scope user --transport stdio github -- \
 
 Resulting entry in `~/.claude.json`:
 
-```json
+```jsonc
 {
+  // # About
+  // github - GitHub MCP server via stdio with PAT auth. Uses /bin/zsh -lc wrapper for
+  // PATH resolution.
+  //
+  // # References
+  // * [GitHub: github/github-mcp-server](https://github.com/github/github-mcp-server)
+  // * [GitHub: Create a PAT](https://github.com/settings/tokens)
+  // * [npm: @modelcontextprotocol/server-github](https://www.npmjs.com/package/@modelcontextprotocol/server-github)
+  // * [GitHub: github-mcp-server - Configuration / Environment Variables](https://github.com/github/github-mcp-server#configuration)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run.
+  //
+  // # Authorization
+  // 1) Create a GitHub PAT at [github.com/settings/tokens](https://github.com/settings/tokens)
+  //   * Grant repo read/write permissions appropriate for your use
+  // 2) Set as `GITHUB_PERSONAL_ACCESS_TOKEN` in `~/.zshrc`; Claude Code inherits shell env
   "mcpServers": {
     "github": {
       "type": "stdio",
@@ -148,8 +211,25 @@ Resulting entry in `~/.claude.json`:
 
 File: `.mcp.json` in repo root
 
-```json
+```jsonc
 {
+  // # About
+  // github - GitHub MCP server via stdio with PAT auth. Uses /bin/zsh -lc wrapper for
+  // PATH resolution.
+  //
+  // # References
+  // * [GitHub: github/github-mcp-server](https://github.com/github/github-mcp-server)
+  // * [GitHub: Create a PAT](https://github.com/settings/tokens)
+  // * [npm: @modelcontextprotocol/server-github](https://www.npmjs.com/package/@modelcontextprotocol/server-github)
+  // * [GitHub: github-mcp-server - Configuration / Environment Variables](https://github.com/github/github-mcp-server#configuration)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run.
+  //
+  // # Authorization
+  // 1) Create a GitHub PAT at [github.com/settings/tokens](https://github.com/settings/tokens)
+  //   * Grant repo read/write permissions appropriate for your use
+  // 2) Set as `GITHUB_PERSONAL_ACCESS_TOKEN` in `~/.zshrc`; Claude Code inherits shell env
   "mcpServers": {
     "github": {
       "type": "stdio",
@@ -169,10 +249,25 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 ```jsonc
 {
+  // # About
+  // github - GitHub MCP server via stdio with PAT auth. Requires terminal launch to
+  // inherit GITHUB_PERSONAL_ACCESS_TOKEN env var.
+  //
+  // # References
+  // * [GitHub: github/github-mcp-server](https://github.com/github/github-mcp-server)
+  // * [GitHub: Create a PAT](https://github.com/settings/tokens)
+  // * [npm: @modelcontextprotocol/server-github](https://www.npmjs.com/package/@modelcontextprotocol/server-github)
+  // * [GitHub: github-mcp-server - Configuration / Environment Variables](https://github.com/github/github-mcp-server#configuration)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run.
+  //
+  // # Authorization
+  // 1) Create a GitHub PAT at [github.com/settings/tokens](https://github.com/settings/tokens)
+  //   * Grant repo read/write permissions appropriate for your use
+  // 2) Set as `GITHUB_PERSONAL_ACCESS_TOKEN` in `~/.zshrc`
+  //   * Launch Claude Desktop from terminal to inherit GITHUB_PERSONAL_ACCESS_TOKEN
   "mcpServers": {
-    // GitHub MCP — PAT from env var
-    // PAT: https://github.com/settings/tokens
-    // Note: Launch Claude Desktop from terminal to inherit GITHUB_PERSONAL_ACCESS_TOKEN.
     "github": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"],
@@ -188,8 +283,25 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 Global: `~/.cursor/mcp.json` — or project: `.cursor/mcp.json`
 
-```json
+```jsonc
 {
+  // # About
+  // github - GitHub MCP server via stdio with PAT auth. Uses /bin/zsh -lc wrapper for
+  // PATH resolution in Cursor.
+  //
+  // # References
+  // * [GitHub: github/github-mcp-server](https://github.com/github/github-mcp-server)
+  // * [GitHub: Create a PAT](https://github.com/settings/tokens)
+  // * [npm: @modelcontextprotocol/server-github](https://www.npmjs.com/package/@modelcontextprotocol/server-github)
+  // * [GitHub: github-mcp-server - Configuration / Environment Variables](https://github.com/github/github-mcp-server#configuration)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run.
+  //
+  // # Authorization
+  // 1) Create a GitHub PAT at [github.com/settings/tokens](https://github.com/settings/tokens)
+  //   * Grant repo read/write permissions appropriate for your use
+  // 2) Set `GITHUB_PERSONAL_ACCESS_TOKEN` in `~/.zshrc`
   "mcpServers": {
     "github": {
       "command": "/bin/zsh",

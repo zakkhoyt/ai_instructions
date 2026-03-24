@@ -66,6 +66,20 @@ File: `~/Library/Application Support/Code/User/mcp.json`
 ```jsonc
 {
   "servers": {
+    // # About
+    // apple-docs - Access Apple developer documentation, frameworks, APIs, and 1,260+ WWDC sessions
+    // (2012–2025) offline via MCP. Covers iOS, macOS, watchOS, tvOS, visionOS.
+    //
+    // # References
+    // * [GitHub: kimsungwhee/apple-docs-mcp](https://github.com/kimsungwhee/apple-docs-mcp)
+    // * [npm: @kimsungwhee/apple-docs-mcp](https://www.npmjs.com/package/@kimsungwhee/apple-docs-mcp)
+    // * [GitHub: kimsungwhee/apple-docs-mcp - Environment Variables](https://github.com/kimsungwhee/apple-docs-mcp#environment-variables)
+    //
+    // # Installation
+    // Installed automatically via `npx` on first run. No additional setup required.
+    //
+    // # Authorization
+    // None required.
     "apple-docs": {
       "type": "stdio",
       "command": "npx",
@@ -81,6 +95,20 @@ File: `.vscode/mcp.json`
 
 ```jsonc
 {
+  // # About
+  // apple-docs - Access Apple developer documentation, frameworks, APIs, and 1,260+ WWDC
+  // sessions (2012–2025) offline via MCP. Workspace-scoped config.
+  //
+  // # References
+  // * [GitHub: kimsungwhee/apple-docs-mcp](https://github.com/kimsungwhee/apple-docs-mcp)
+  // * [npm: @kimsungwhee/apple-docs-mcp](https://www.npmjs.com/package/@kimsungwhee/apple-docs-mcp)
+  // * [GitHub: kimsungwhee/apple-docs-mcp - Environment Variables](https://github.com/kimsungwhee/apple-docs-mcp#environment-variables)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run. No additional setup required.
+  //
+  // # Authorization
+  // None required.
   "servers": {
     "apple-docs": {
       "type": "stdio",
@@ -101,8 +129,22 @@ claude mcp add --scope user --transport stdio apple-docs -- npx -y @kimsungwhee/
 
 Resulting entry in `~/.claude.json`:
 
-```json
+```jsonc
 {
+  // # About
+  // apple-docs - Access Apple developer documentation, frameworks, APIs, and 1,260+ WWDC
+  // sessions (2012–2025) offline via MCP. Uses /bin/zsh -lc wrapper for PATH resolution.
+  //
+  // # References
+  // * [GitHub: kimsungwhee/apple-docs-mcp](https://github.com/kimsungwhee/apple-docs-mcp)
+  // * [npm: @kimsungwhee/apple-docs-mcp](https://www.npmjs.com/package/@kimsungwhee/apple-docs-mcp)
+  // * [GitHub: kimsungwhee/apple-docs-mcp - Environment Variables](https://github.com/kimsungwhee/apple-docs-mcp#environment-variables)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run. No additional setup required.
+  //
+  // # Authorization
+  // None required.
   "mcpServers": {
     "apple-docs": {
       "type": "stdio",
@@ -117,8 +159,22 @@ Resulting entry in `~/.claude.json`:
 
 File: `.mcp.json` in repo root
 
-```json
+```jsonc
 {
+  // # About
+  // apple-docs - Access Apple developer documentation, frameworks, APIs, and 1,260+ WWDC
+  // sessions (2012–2025) offline via MCP. Uses /bin/zsh -lc wrapper for PATH resolution.
+  //
+  // # References
+  // * [GitHub: kimsungwhee/apple-docs-mcp](https://github.com/kimsungwhee/apple-docs-mcp)
+  // * [npm: @kimsungwhee/apple-docs-mcp](https://www.npmjs.com/package/@kimsungwhee/apple-docs-mcp)
+  // * [GitHub: kimsungwhee/apple-docs-mcp - Environment Variables](https://github.com/kimsungwhee/apple-docs-mcp#environment-variables)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run. No additional setup required.
+  //
+  // # Authorization
+  // None required.
   "mcpServers": {
     "apple-docs": {
       "type": "stdio",
@@ -133,8 +189,22 @@ File: `.mcp.json` in repo root
 
 File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-```json
+```jsonc
 {
+  // # About
+  // apple-docs - Access Apple developer documentation, frameworks, APIs, and 1,260+ WWDC
+  // sessions (2012–2025) offline via MCP. Claude Desktop config.
+  //
+  // # References
+  // * [GitHub: kimsungwhee/apple-docs-mcp](https://github.com/kimsungwhee/apple-docs-mcp)
+  // * [npm: @kimsungwhee/apple-docs-mcp](https://www.npmjs.com/package/@kimsungwhee/apple-docs-mcp)
+  // * [GitHub: kimsungwhee/apple-docs-mcp - Environment Variables](https://github.com/kimsungwhee/apple-docs-mcp#environment-variables)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run. No additional setup required.
+  //
+  // # Authorization
+  // None required.
   "mcpServers": {
     "apple-docs": {
       "command": "npx",
@@ -148,8 +218,22 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 Global: `~/.cursor/mcp.json` — or project: `.cursor/mcp.json`
 
-```json
+```jsonc
 {
+  // # About
+  // apple-docs - Access Apple developer documentation, frameworks, APIs, and 1,260+ WWDC
+  // sessions (2012–2025) offline via MCP. Cursor config.
+  //
+  // # References
+  // * [GitHub: kimsungwhee/apple-docs-mcp](https://github.com/kimsungwhee/apple-docs-mcp)
+  // * [npm: @kimsungwhee/apple-docs-mcp](https://www.npmjs.com/package/@kimsungwhee/apple-docs-mcp)
+  // * [GitHub: kimsungwhee/apple-docs-mcp - Environment Variables](https://github.com/kimsungwhee/apple-docs-mcp#environment-variables)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run. No additional setup required.
+  //
+  // # Authorization
+  // None required.
   "mcpServers": {
     "apple-docs": {
       "command": "npx",

@@ -11,8 +11,11 @@
 
 The official Atlassian-hosted MCP server exposes Jira and Confluence tools through the Atlassian Rovo platform. As of March 2026, it supports both API token authentication (long-lived) and OAuth 2.1 (short-lived). **Prefer API token auth** — tokens can last up to 1 year vs. OAuth's ~2-day expiry.
 
+> [!IMPORTANT]
+> **API token limitation (March 2026):** When authenticated via API token (Basic Auth), the official Rovo MCP only exposes 2 beta tools — `getTeamworkGraphContext` and `getTeamworkGraphObject` — and both fail internally with a "slauth token missing" error. Full Jira CRUD tools require a **Rovo AI subscription** or OAuth. If you need API-token-based Jira CRUD, use [`mcp-atlassian` (sooperset)](./MCP_ATLASSIAN.md) instead.
+
 **Why useful for Hatch iOS dev:**
-- Create, search, and update Jira tickets without switching to the browser.
+- Create, search, and update Jira tickets without switching to the browser (requires Rovo subscription or OAuth).
 - Query Confluence pages and spaces directly from the agent session.
 - Link PRs and code changes to Jira issues in-context.
 
@@ -73,16 +76,34 @@ File: `~/Library/Application Support/Code/User/mcp.json`
 ```jsonc
 {
   "servers": {
-    // Atlassian Rovo MCP — API token via Basic Auth
-    // Token: https://id.atlassian.com/manage-profile/security/api-tokens
-    // Encode: echo -n "email:token" | base64
+    // # About
+    // atlassian-rovo-mcp - Official Atlassian MCP server for Jira and Confluence via the
+    // Rovo MCP Server. Supports creating/editing issues, searching, commenting, and more.
+    //
+    // # References
+    // * [Atlassian: Rovo MCP Server - Getting Started](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/)
+    // * [Atlassian: Rovo MCP Server - Configuring Authentication via API Token](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/configuring-authentication-via-api-token/)
+    // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+    //
+    // # Installation
+    // None required. Remote HTTP server hosted by Atlassian.
+    //
+    // # Authorization
+    // 1) Create a (Scoped) Atlassian User API Token for the `Rovo MCP Server` app
+    //   * [Atlassian: Create API Token (pre-configured for Rovo MCP)](https://id.atlassian.com/manage-profile/security/api-tokens?autofillToken=&expiryDays=max&appId=mcp&selectedScopes=all)
+    //   * On the token creation page: select app `Rovo MCP Server`, set expiry to max (1 year)
+    //   * Note: tokens scoped to the `Jira` app will NOT work — must use `Rovo MCP Server`
+    // 2) Create a Basic Authorization hash
+    //   * Combine `user.email:api_token` and base64-encode:
+    //   * `echo -n "${ATLASSIAN_USER_EMAIL}:${ATLASSIAN_AUTH_TOKEN}" | base64 | pbcopy`
+    // 3) Paste the hash as the `Authorization: Basic <hash>` header value below
     "atlassian-rovo-mcp": {
       "type": "http",
       "url": "https://mcp.atlassian.com/v1/mcp",
       "headers": {
         // Prefer env var to avoid embedding token in config:
         // "Authorization": "Basic ${ATLASSIAN_MCP_CLASSIC_BASIC_AUTH}"
-        "Authorization": "Basic <BASE64_EMAIL_COLON_API_TOKEN>"
+        "Authorization": "Basic <YOUR_BASIC_AUTH_HASH>"
       }
     }
   }
@@ -95,10 +116,28 @@ File: `.vscode/mcp.json`
 
 ```jsonc
 {
+  // # About
+  // atlassian-rovo-mcp - Official Atlassian MCP server for Jira and Confluence via the
+  // Rovo MCP Server. Workspace-scoped config; auth token stored as env var.
+  //
+  // # References
+  // * [Atlassian: Rovo MCP Server - Getting Started](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/)
+  // * [Atlassian: Rovo MCP Server - Configuring Authentication via API Token](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/configuring-authentication-via-api-token/)
+  // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  //
+  // # Installation
+  // None required. Remote HTTP server hosted by Atlassian.
+  //
+  // # Authorization
+  // 1) Create a (Scoped) Atlassian User API Token for the `Rovo MCP Server` app
+  //   * [Atlassian: Create API Token (pre-configured for Rovo MCP)](https://id.atlassian.com/manage-profile/security/api-tokens?autofillToken=&expiryDays=max&appId=mcp&selectedScopes=all)
+  //   * On the token creation page: select app `Rovo MCP Server`, set expiry to max (1 year)
+  //   * Note: tokens scoped to the `Jira` app will NOT work — must use `Rovo MCP Server`
+  // 2) Create a Basic Authorization hash
+  //   * Combine `user.email:api_token` and base64-encode:
+  //   * `echo -n "${ATLASSIAN_USER_EMAIL}:${ATLASSIAN_AUTH_TOKEN}" | base64 | pbcopy`
+  // 3) Store the hash as `ATLASSIAN_MCP_CLASSIC_BASIC_AUTH` in `~/.zshrc`
   "servers": {
-    // Atlassian Rovo MCP — API token via Basic Auth
-    // Token: https://id.atlassian.com/manage-profile/security/api-tokens
-    // Encode: echo -n "email:token" | base64
     "atlassian-rovo-mcp": {
       "type": "http",
       "url": "https://mcp.atlassian.com/v1/mcp",
@@ -124,8 +163,29 @@ claude mcp add --scope user --transport stdio atlassian-rovo-mcp -- \
 
 Resulting entry in `~/.claude.json`:
 
-```json
+```jsonc
 {
+  // # About
+  // atlassian-rovo-mcp - Official Atlassian MCP server for Jira and Confluence. Uses
+  // mcp-remote proxy to bridge HTTP MCP to stdio transport for Claude Code.
+  //
+  // # References
+  // * [Atlassian: Rovo MCP Server - Getting Started](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/)
+  // * [Atlassian: Rovo MCP Server - Configuring Authentication via API Token](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/configuring-authentication-via-api-token/)
+  // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // * [npm: mcp-remote](https://www.npmjs.com/package/mcp-remote)
+  //
+  // # Installation
+  // `npx mcp-remote` proxies HTTP MCP to stdio. Installed automatically via npx.
+  //
+  // # Authorization
+  // 1) Create a (Scoped) Atlassian User API Token for the `Rovo MCP Server` app
+  //   * [Atlassian: Create API Token (pre-configured for Rovo MCP)](https://id.atlassian.com/manage-profile/security/api-tokens?autofillToken=&expiryDays=max&appId=mcp&selectedScopes=all)
+  //   * On the token creation page: select app `Rovo MCP Server`, set expiry to max (1 year)
+  //   * Note: tokens scoped to the `Jira` app will NOT work — must use `Rovo MCP Server`
+  // 2) Create a Basic Authorization hash
+  //   * `echo -n "${ATLASSIAN_USER_EMAIL}:${ATLASSIAN_AUTH_TOKEN}" | base64 | pbcopy`
+  // 3) Set as `ATLASSIAN_MCP_CLASSIC_BASIC_AUTH` in `~/.zshrc`; Claude Code inherits shell env
   "mcpServers": {
     "atlassian-rovo-mcp": {
       "type": "stdio",
@@ -143,8 +203,29 @@ Resulting entry in `~/.claude.json`:
 
 File: `.mcp.json` in repo root
 
-```json
+```jsonc
 {
+  // # About
+  // atlassian-rovo-mcp - Official Atlassian MCP server for Jira and Confluence. Uses
+  // mcp-remote proxy to bridge HTTP MCP to stdio transport for Claude Code.
+  //
+  // # References
+  // * [Atlassian: Rovo MCP Server - Getting Started](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/)
+  // * [Atlassian: Rovo MCP Server - Configuring Authentication via API Token](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/configuring-authentication-via-api-token/)
+  // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // * [npm: mcp-remote](https://www.npmjs.com/package/mcp-remote)
+  //
+  // # Installation
+  // `npx mcp-remote` proxies HTTP MCP to stdio. Installed automatically via npx.
+  //
+  // # Authorization
+  // 1) Create a (Scoped) Atlassian User API Token for the `Rovo MCP Server` app
+  //   * [Atlassian: Create API Token (pre-configured for Rovo MCP)](https://id.atlassian.com/manage-profile/security/api-tokens?autofillToken=&expiryDays=max&appId=mcp&selectedScopes=all)
+  //   * On the token creation page: select app `Rovo MCP Server`, set expiry to max (1 year)
+  //   * Note: tokens scoped to the `Jira` app will NOT work — must use `Rovo MCP Server`
+  // 2) Create a Basic Authorization hash
+  //   * `echo -n "${ATLASSIAN_USER_EMAIL}:${ATLASSIAN_AUTH_TOKEN}" | base64 | pbcopy`
+  // 3) Set as `ATLASSIAN_MCP_CLASSIC_BASIC_AUTH` in `~/.zshrc`; Claude Code inherits shell env
   "mcpServers": {
     "atlassian-rovo-mcp": {
       "type": "stdio",
@@ -164,11 +245,29 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 ```jsonc
 {
+  // # About
+  // atlassian-rovo-mcp - Official Atlassian MCP server for Jira and Confluence. Uses
+  // mcp-remote proxy to bridge HTTP MCP to stdio transport for Claude Desktop.
+  //
+  // # References
+  // * [Atlassian: Rovo MCP Server - Getting Started](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/)
+  // * [Atlassian: Rovo MCP Server - Configuring Authentication via API Token](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/configuring-authentication-via-api-token/)
+  // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // * [npm: mcp-remote](https://www.npmjs.com/package/mcp-remote)
+  //
+  // # Installation
+  // `npx mcp-remote` proxies HTTP MCP to stdio. Installed automatically via npx.
+  //
+  // # Authorization
+  // 1) Create a (Scoped) Atlassian User API Token for the `Rovo MCP Server` app
+  //   * [Atlassian: Create API Token (pre-configured for Rovo MCP)](https://id.atlassian.com/manage-profile/security/api-tokens?autofillToken=&expiryDays=max&appId=mcp&selectedScopes=all)
+  //   * On the token creation page: select app `Rovo MCP Server`, set expiry to max (1 year)
+  //   * Note: tokens scoped to the `Jira` app will NOT work — must use `Rovo MCP Server`
+  // 2) Create a Basic Authorization hash
+  //   * `echo -n "${ATLASSIAN_USER_EMAIL}:${ATLASSIAN_AUTH_TOKEN}" | base64 | pbcopy`
+  // 3) Set as `ATLASSIAN_MCP_CLASSIC_BASIC_AUTH` in `~/.zshrc`
+  //   * Launch Claude Desktop from terminal to inherit env var, or hardcode the base64 value
   "mcpServers": {
-    // Atlassian Rovo MCP — API token via Basic Auth
-    // Token: https://id.atlassian.com/manage-profile/security/api-tokens
-    // Note: Claude Desktop inherits env vars only if launched from terminal.
-    //       If launched from Dock/Launchpad, hardcode the base64 value here.
     "atlassian-rovo-mcp": {
       "command": "npx",
       "args": [
@@ -187,8 +286,30 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 Global: `~/.cursor/mcp.json` — or project: `.cursor/mcp.json`
 
-```json
+```jsonc
 {
+  // # About
+  // atlassian-rovo-mcp - Official Atlassian MCP server for Jira and Confluence. Uses
+  // mcp-remote proxy via /bin/zsh -lc wrapper for PATH resolution in Cursor.
+  //
+  // # References
+  // * [Atlassian: Rovo MCP Server - Getting Started](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/)
+  // * [Atlassian: Rovo MCP Server - Configuring Authentication via API Token](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/configuring-authentication-via-api-token/)
+  // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // * [npm: mcp-remote](https://www.npmjs.com/package/mcp-remote)
+  //
+  // # Installation
+  // `npx mcp-remote` proxies HTTP MCP to stdio. Installed automatically via npx.
+  // Requires /bin/zsh -lc wrapper for PATH resolution in Cursor.
+  //
+  // # Authorization
+  // 1) Create a (Scoped) Atlassian User API Token for the `Rovo MCP Server` app
+  //   * [Atlassian: Create API Token (pre-configured for Rovo MCP)](https://id.atlassian.com/manage-profile/security/api-tokens?autofillToken=&expiryDays=max&appId=mcp&selectedScopes=all)
+  //   * On the token creation page: select app `Rovo MCP Server`, set expiry to max (1 year)
+  //   * Note: tokens scoped to the `Jira` app will NOT work — must use `Rovo MCP Server`
+  // 2) Create a Basic Authorization hash
+  //   * `echo -n "${ATLASSIAN_USER_EMAIL}:${ATLASSIAN_AUTH_TOKEN}" | base64 | pbcopy`
+  // 3) Set as `ATLASSIAN_MCP_CLASSIC_BASIC_AUTH` in `~/.zshrc`
   "mcpServers": {
     "atlassian-rovo-mcp": {
       "command": "/bin/zsh",
@@ -207,8 +328,21 @@ For platforms that handle OAuth natively (e.g., VSCode Copilot via gallery insta
 
 ```jsonc
 {
+  // # About
+  // atlassian-rovo-mcp - Official Atlassian MCP server (OAuth variant). Browser auth
+  // required every ~2 days when token expires. Not recommended for daily use.
+  //
+  // # References
+  // * [Atlassian: Rovo MCP Server - Getting Started](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/)
+  // * [Atlassian: Rovo MCP Server - OAuth Authentication](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/configuring-authentication-via-oauth/)
+  //
+  // # Installation
+  // None required. Remote SSE server hosted by Atlassian.
+  //
+  // # Authorization
+  // 1) No pre-configuration required — OAuth triggers a browser popup on first connect.
+  // 2) Re-authenticate every ~2 days when the token expires.
   "servers": {
-    // OAuth variant — browser auth required every ~2 days
     "atlassian-rovo-mcp": {
       "type": "http",
       "url": "https://mcp.atlassian.com/v1/sse"

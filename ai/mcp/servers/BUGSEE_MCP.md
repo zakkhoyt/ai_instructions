@@ -6,7 +6,8 @@
 ## Overview
 
 - **Homepage**: [bugsee.com](https://bugsee.com)
-- **MCP documentation**: [docs.bugsee.com/mcp](https://docs.bugsee.com/mcp)
+- **MCP documentation**: [docs.bugsee.com/mcp-server-api/overview](https://docs.bugsee.com/mcp-server-api/overview)
+- **Blog posts**: [bugsee.com/blog](https://bugsee.com/blog)
 - **Token management**: [app.bugsee.com → Settings → User → Integrations](https://app.bugsee.com/#/settings/user/integrations)
 - **MCP URL**: `https://api.bugsee.com/mcp/{YOUR_TOKEN_UUID}`
 
@@ -65,11 +66,25 @@ File: `~/Library/Application Support/Code/User/mcp.json`
 ```jsonc
 {
   "servers": {
-    // Bugsee MCP — token embedded in URL
-    // Token: https://app.bugsee.com/#/settings/user/integrations
+    // # About
+    // bugsee - Crash reporting and bug tracking MCP server for Bugsee. Auth token is
+    // embedded in the MCP URL (token-in-URL pattern). No headers required.
+    //
+    // # References
+    // * [Bugsee: MCP Server Documentation](https://docs.bugsee.com/mcp-server-api/overview)
+    // * [Bugsee: User Integrations / Auth Tokens](https://app.bugsee.com/#/settings/user/integrations)
+    //
+    // # Installation
+    // None required. Remote HTTP server hosted by Bugsee.
+    //
+    // # Authorization
+    // 1) Generate a Bugsee MCP Auth Token
+    //   * [Bugsee: User Integrations](https://app.bugsee.com/#/settings/user/integrations)
+    //   * Click `Generate Token` and copy the UUID
+    // 2) Replace `<YOUR_BUGSEE_MCP_TOKEN>` in the URL below with your token UUID
     "bugsee": {
       "type": "http",
-      "url": "https://api.bugsee.com/mcp/${BUGSEE_MCP_TOKEN}"
+      "url": "https://api.bugsee.com/mcp/<YOUR_BUGSEE_MCP_TOKEN>"
     }
   }
 }
@@ -81,9 +96,23 @@ File: `.vscode/mcp.json`
 
 ```jsonc
 {
+  // # About
+  // bugsee - Crash reporting and bug tracking MCP server for Bugsee. Auth token embedded
+  // in URL via env var (token-in-URL pattern). Workspace-scoped config.
+  //
+  // # References
+  // * [Bugsee: MCP Server Documentation](https://docs.bugsee.com/mcp-server-api/overview)
+  // * [Bugsee: User Integrations / Auth Tokens](https://app.bugsee.com/#/settings/user/integrations)
+  //
+  // # Installation
+  // None required. Remote HTTP server hosted by Bugsee.
+  //
+  // # Authorization
+  // 1) Generate a Bugsee MCP Auth Token
+  //   * [Bugsee: User Integrations](https://app.bugsee.com/#/settings/user/integrations)
+  //   * Click `Generate Token` and copy the UUID
+  // 2) Set as `BUGSEE_MCP_TOKEN` in `~/.zshrc`
   "servers": {
-    // Bugsee MCP — token from env var
-    // Token: https://app.bugsee.com/#/settings/user/integrations
     "bugsee": {
       "type": "http",
       "url": "https://api.bugsee.com/mcp/${BUGSEE_MCP_TOKEN}"
@@ -103,8 +132,25 @@ claude mcp add --scope user --transport stdio bugsee -- \
 
 Resulting entry in `~/.claude.json`:
 
-```json
+```jsonc
 {
+  // # About
+  // bugsee - Bugsee crash/bug tracking via mcp-remote proxy for stdio transport.
+  // Token embedded in URL from shell env var.
+  //
+  // # References
+  // * [Bugsee: MCP Server Documentation](https://docs.bugsee.com/mcp-server-api/overview)
+  // * [Bugsee: User Integrations / Auth Tokens](https://app.bugsee.com/#/settings/user/integrations)
+  // * [npm: mcp-remote](https://www.npmjs.com/package/mcp-remote)
+  //
+  // # Installation
+  // `npx mcp-remote` proxies HTTP MCP to stdio. Installed automatically via npx.
+  //
+  // # Authorization
+  // 1) Generate a Bugsee MCP Auth Token
+  //   * [Bugsee: User Integrations](https://app.bugsee.com/#/settings/user/integrations)
+  //   * Click `Generate Token` and copy the UUID
+  // 2) Set as `BUGSEE_MCP_TOKEN` in `~/.zshrc`; Claude Code inherits shell env
   "mcpServers": {
     "bugsee": {
       "type": "stdio",
@@ -119,8 +165,25 @@ Resulting entry in `~/.claude.json`:
 
 File: `.mcp.json` in repo root
 
-```json
+```jsonc
 {
+  // # About
+  // bugsee - Bugsee crash/bug tracking via mcp-remote proxy for stdio transport.
+  // Token embedded in URL from shell env var.
+  //
+  // # References
+  // * [Bugsee: MCP Server Documentation](https://docs.bugsee.com/mcp-server-api/overview)
+  // * [Bugsee: User Integrations / Auth Tokens](https://app.bugsee.com/#/settings/user/integrations)
+  // * [npm: mcp-remote](https://www.npmjs.com/package/mcp-remote)
+  //
+  // # Installation
+  // `npx mcp-remote` proxies HTTP MCP to stdio. Installed automatically via npx.
+  //
+  // # Authorization
+  // 1) Generate a Bugsee MCP Auth Token
+  //   * [Bugsee: User Integrations](https://app.bugsee.com/#/settings/user/integrations)
+  //   * Click `Generate Token` and copy the UUID
+  // 2) Set as `BUGSEE_MCP_TOKEN` in `~/.zshrc`; Claude Code inherits shell env
   "mcpServers": {
     "bugsee": {
       "type": "stdio",
@@ -137,11 +200,26 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 ```jsonc
 {
+  // # About
+  // bugsee - Bugsee crash/bug tracking via mcp-remote proxy for stdio transport.
+  // Token embedded in URL. Requires terminal launch to inherit BUGSEE_MCP_TOKEN.
+  //
+  // # References
+  // * [Bugsee: MCP Server Documentation](https://docs.bugsee.com/mcp-server-api/overview)
+  // * [Bugsee: User Integrations / Auth Tokens](https://app.bugsee.com/#/settings/user/integrations)
+  // * [npm: mcp-remote](https://www.npmjs.com/package/mcp-remote)
+  //
+  // # Installation
+  // `npx mcp-remote` proxies HTTP MCP to stdio. Installed automatically via npx.
+  //
+  // # Authorization
+  // 1) Generate a Bugsee MCP Auth Token
+  //   * [Bugsee: User Integrations](https://app.bugsee.com/#/settings/user/integrations)
+  //   * Click `Generate Token` and copy the UUID
+  // 2) Set as `BUGSEE_MCP_TOKEN` in `~/.zshrc`
+  //   * Launch Claude Desktop from terminal to inherit BUGSEE_MCP_TOKEN,
+  //     or hardcode the full URL with token embedded
   "mcpServers": {
-    // Bugsee MCP via mcp-remote proxy
-    // Token: https://app.bugsee.com/#/settings/user/integrations
-    // Note: Claude Desktop must be launched from terminal to inherit BUGSEE_MCP_TOKEN.
-    //       Alternatively, hardcode the full URL with token embedded.
     "bugsee": {
       "command": "npx",
       "args": [
@@ -160,8 +238,25 @@ Global: `~/.cursor/mcp.json` — or project: `.cursor/mcp.json`
 
 Cursor supports HTTP MCP natively:
 
-```json
+```jsonc
 {
+  // # About
+  // bugsee - Bugsee crash/bug tracking via mcp-remote proxy. Uses /bin/zsh -lc wrapper
+  // for PATH resolution in Cursor. Token embedded in URL from shell env var.
+  //
+  // # References
+  // * [Bugsee: MCP Server Documentation](https://docs.bugsee.com/mcp-server-api/overview)
+  // * [Bugsee: User Integrations / Auth Tokens](https://app.bugsee.com/#/settings/user/integrations)
+  // * [npm: mcp-remote](https://www.npmjs.com/package/mcp-remote)
+  //
+  // # Installation
+  // `npx mcp-remote` proxies HTTP MCP to stdio. Installed automatically via npx.
+  //
+  // # Authorization
+  // 1) Generate a Bugsee MCP Auth Token
+  //   * [Bugsee: User Integrations](https://app.bugsee.com/#/settings/user/integrations)
+  //   * Click `Generate Token` and copy the UUID
+  // 2) Set as `BUGSEE_MCP_TOKEN` in `~/.zshrc`
   "mcpServers": {
     "bugsee": {
       "command": "/bin/zsh",
@@ -193,6 +288,7 @@ Get full details for Bugsee issue NIGHTLIGHT-456 including stack trace
 
 ## References
 
-- [Bugsee MCP Documentation](https://docs.bugsee.com/mcp)
+- [Bugsee MCP Server Documentation](https://docs.bugsee.com/mcp-server-api/overview)
+- [Bugsee Blog](https://bugsee.com/blog)
 - [Bugsee: User Integrations (token management)](https://app.bugsee.com/#/settings/user/integrations)
 - [npm: mcp-remote](https://www.npmjs.com/package/mcp-remote) (HTTP-to-stdio proxy for Claude Code/Desktop)

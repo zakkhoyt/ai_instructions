@@ -57,8 +57,25 @@ File: `~/Library/Application Support/Code/User/mcp.json`
 ```jsonc
 {
   "servers": {
-    // Slack MCP (korotovsky) — XOXP user token
-    // Token: https://app.slack.com/app-settings/.../oauth
+    // # About
+    // slack - MCP server for reading and searching Slack channels, threads, and user profiles.
+    // Uses an XOXP user OAuth token for authentication.
+    //
+    // # References
+    // * [GitHub: korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server)
+    // * [korotovsky/slack-mcp-server: Authentication Setup](https://github.com/korotovsky/slack-mcp-server/blob/master/docs/01-authentication-setup.md)
+    // * [Slack App Settings - OAuth & Permissions](https://app.slack.com/app-settings/)
+    // * [GitHub: korotovsky/slack-mcp-server - Environment Variables](https://github.com/korotovsky/slack-mcp-server#environment-variables)
+    //
+    // # Installation
+    // Installed automatically via `npx` on first run.
+    //
+    // # Authorization
+    // 1) Obtain a Slack XOXP User OAuth Token
+    //   * Visit your Slack app's OAuth & Permissions page
+    //   * Copy the `xoxp-...` token from the OAuth Tokens section
+    // 2) Set the token as the `SLACK_MCP_XOXP_TOKEN` env var below
+    //   * Prefer setting via shell env rather than inline to avoid committing the token
     "slack": {
       "type": "stdio",
       "command": "npx",
@@ -77,8 +94,25 @@ File: `.vscode/mcp.json`
 
 ```jsonc
 {
+  // # About
+  // slack - MCP server for reading and searching Slack channels, threads, and user profiles.
+  // Workspace-scoped config; XOXP token sourced from env var.
+  //
+  // # References
+  // * [GitHub: korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server)
+  // * [korotovsky/slack-mcp-server: Authentication Setup](https://github.com/korotovsky/slack-mcp-server/blob/master/docs/01-authentication-setup.md)
+  // * [Slack App Settings - OAuth & Permissions](https://app.slack.com/app-settings/)
+  // * [GitHub: korotovsky/slack-mcp-server - Environment Variables](https://github.com/korotovsky/slack-mcp-server#environment-variables)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run.
+  //
+  // # Authorization
+  // 1) Obtain a Slack XOXP User OAuth Token
+  //   * Visit your Slack app's OAuth & Permissions page
+  //   * Copy the `xoxp-...` token from the OAuth Tokens section
+  // 2) Set the token as `SLACK_MCP_XOXP_TOKEN` in `~/.zshrc`
   "servers": {
-    // Slack MCP (korotovsky) — XOXP token from env var
     "slack": {
       "type": "stdio",
       "command": "npx",
@@ -100,8 +134,26 @@ claude mcp add --scope user --transport stdio slack -- \
 
 Resulting entry in `~/.claude.json`:
 
-```json
+```jsonc
 {
+  // # About
+  // slack - MCP server for reading and searching Slack channels, threads, and user profiles.
+  // Uses /bin/zsh -lc wrapper for PATH resolution. XOXP token from shell env.
+  //
+  // # References
+  // * [GitHub: korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server)
+  // * [korotovsky/slack-mcp-server: Authentication Setup](https://github.com/korotovsky/slack-mcp-server/blob/master/docs/01-authentication-setup.md)
+  // * [Slack App Settings - OAuth & Permissions](https://app.slack.com/app-settings/)
+  // * [GitHub: korotovsky/slack-mcp-server - Environment Variables](https://github.com/korotovsky/slack-mcp-server#environment-variables)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run.
+  //
+  // # Authorization
+  // 1) Obtain a Slack XOXP User OAuth Token
+  //   * Visit your Slack app's OAuth & Permissions page
+  //   * Copy the `xoxp-...` token from the OAuth Tokens section
+  // 2) Set as `SLACK_MCP_XOXP_TOKEN` in `~/.zshrc`; Claude Code inherits shell env
   "mcpServers": {
     "slack": {
       "type": "stdio",
@@ -119,8 +171,26 @@ Resulting entry in `~/.claude.json`:
 
 File: `.mcp.json` in repo root
 
-```json
+```jsonc
 {
+  // # About
+  // slack - MCP server for reading and searching Slack channels, threads, and user profiles.
+  // Uses /bin/zsh -lc wrapper for PATH resolution. XOXP token from shell env.
+  //
+  // # References
+  // * [GitHub: korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server)
+  // * [korotovsky/slack-mcp-server: Authentication Setup](https://github.com/korotovsky/slack-mcp-server/blob/master/docs/01-authentication-setup.md)
+  // * [Slack App Settings - OAuth & Permissions](https://app.slack.com/app-settings/)
+  // * [GitHub: korotovsky/slack-mcp-server - Environment Variables](https://github.com/korotovsky/slack-mcp-server#environment-variables)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run.
+  //
+  // # Authorization
+  // 1) Obtain a Slack XOXP User OAuth Token
+  //   * Visit your Slack app's OAuth & Permissions page
+  //   * Copy the `xoxp-...` token from the OAuth Tokens section
+  // 2) Set as `SLACK_MCP_XOXP_TOKEN` in `~/.zshrc`; Claude Code inherits shell env
   "mcpServers": {
     "slack": {
       "type": "stdio",
@@ -140,9 +210,26 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 ```jsonc
 {
+  // # About
+  // slack - MCP server for reading and searching Slack channels, threads, and user profiles.
+  // XOXP token from env var. Requires terminal launch to inherit SLACK_MCP_XOXP_TOKEN.
+  //
+  // # References
+  // * [GitHub: korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server)
+  // * [korotovsky/slack-mcp-server: Authentication Setup](https://github.com/korotovsky/slack-mcp-server/blob/master/docs/01-authentication-setup.md)
+  // * [Slack App Settings - OAuth & Permissions](https://app.slack.com/app-settings/)
+  // * [GitHub: korotovsky/slack-mcp-server - Environment Variables](https://github.com/korotovsky/slack-mcp-server#environment-variables)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run.
+  //
+  // # Authorization
+  // 1) Obtain a Slack XOXP User OAuth Token
+  //   * Visit your Slack app's OAuth & Permissions page
+  //   * Copy the `xoxp-...` token from the OAuth Tokens section
+  // 2) Set as `SLACK_MCP_XOXP_TOKEN` in `~/.zshrc`
+  //   * Launch Claude Desktop from terminal to inherit SLACK_MCP_XOXP_TOKEN
   "mcpServers": {
-    // Slack MCP (korotovsky) — XOXP token from env var
-    // Note: Claude Desktop must be launched from terminal to inherit SLACK_MCP_XOXP_TOKEN.
     "slack": {
       "command": "npx",
       "args": ["-y", "slack-mcp-server@latest", "--transport", "stdio"],
@@ -158,8 +245,26 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 Global: `~/.cursor/mcp.json` — or project: `.cursor/mcp.json`
 
-```json
+```jsonc
 {
+  // # About
+  // slack - MCP server for reading and searching Slack channels, threads, and user profiles.
+  // Requires /bin/zsh -lc wrapper for PATH resolution in Cursor. XOXP token from shell env.
+  //
+  // # References
+  // * [GitHub: korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server)
+  // * [korotovsky/slack-mcp-server: Authentication Setup](https://github.com/korotovsky/slack-mcp-server/blob/master/docs/01-authentication-setup.md)
+  // * [Slack App Settings - OAuth & Permissions](https://app.slack.com/app-settings/)
+  // * [GitHub: korotovsky/slack-mcp-server - Environment Variables](https://github.com/korotovsky/slack-mcp-server#environment-variables)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run.
+  //
+  // # Authorization
+  // 1) Obtain a Slack XOXP User OAuth Token
+  //   * Visit your Slack app's OAuth & Permissions page
+  //   * Copy the `xoxp-...` token from the OAuth Tokens section
+  // 2) Set as `SLACK_MCP_XOXP_TOKEN` in `~/.zshrc`
   "mcpServers": {
     "slack": {
       "command": "/bin/zsh",

@@ -11,15 +11,30 @@
 
 `mcp-atlassian` by sooperset is a third-party MCP server that exposes Jira and Confluence tools. Unlike the official Atlassian Rovo MCP, it uses standard Atlassian API tokens directly (no Basic Auth encoding required) and supports both Docker and `uvx` (Python package runner) deployment.
 
-**Why prefer this over the official Atlassian MCP:**
+**72 tools** covering full Jira CRUD and Confluence:
+
+| Category       | Tools                                                                                              |
+| -------------- | -------------------------------------------------------------------------------------------------- |
+| Jira issues    | `jira_get_issue`, `jira_create_issue`, `jira_update_issue`, `jira_delete_issue`                    |
+| Comments       | `jira_add_comment`, `jira_edit_comment`                                                            |
+| Links          | `jira_create_issue_link`, `jira_remove_issue_link`, `jira_create_remote_issue_link`                |
+| Transitions    | `jira_get_transitions`, `jira_transition_issue`                                                    |
+| Dev info       | `jira_get_issue_development_info` (PRs, builds, branches, commits)                                 |
+| Watchers/votes | `jira_get_issue_watchers`, `jira_add_watcher`, `jira_remove_watcher`                              |
+| Search         | `jira_search`, `jira_get_project_issues`                                                           |
+| Sprints/Agile  | `jira_get_sprints_from_board`, `jira_add_issues_to_sprint`                                         |
+| Confluence     | `confluence_search`, `confluence_get_page`, `confluence_create_page`, `confluence_update_page`     |
+
+**Why prefer this over the official Atlassian Rovo MCP (for API-token users):**
+- 72 full Jira CRUD + Confluence tools — the official Rovo MCP only exposes 2 beta tools (`getTeamworkGraphContext`, `getTeamworkGraphObject`) for API-token auth; full Jira CRUD via the official server requires a Rovo AI subscription or OAuth.
 - Direct API token support — no base64 encoding ceremony.
 - Tokens last up to 1 year vs. OAuth's ~2-day expiry.
-- Self-hosted via Docker or `uvx` — no reliance on Atlassian's Rovo platform availability.
-- Supports both Jira and Confluence in one server.
+- Self-hosted via `uvx` (no Docker) — no reliance on Atlassian's Rovo platform availability.
 
-**Why prefer the official Atlassian MCP:**
-- No Docker or Python toolchain required.
+**Why prefer the official Atlassian Rovo MCP:**
+- No toolchain install required (HTTP-only, no `uv`/Docker).
 - Managed by Atlassian; tracks upstream API changes automatically.
+- Required if your org mandates official Atlassian tooling.
 
 ---
 
@@ -105,36 +120,109 @@ docker run \
 
 ## Prerequisites
 
-**Docker variant:**
+> [!TIP]
+> Docker is no longer required as of 2026-03-20. `uvx mcp-atlassian` runs the server directly without a container. The uvx method is now preferred.
+
+**uvx variant (recommended — no Docker required):**
+
+```zsh
+# Install uv (provides the uvx runner)
+brew install uv
+# Confirm uvx is available
+which uvx  # /opt/homebrew/bin/uvx
+```
+
+**Docker variant (legacy — still works):**
 
 ```zsh
 # Pull the Docker image
 docker pull ghcr.io/sooperset/mcp-atlassian:latest
 ```
 
-**uvx variant (no Docker required):**
+### Token Requirement Note
 
-```zsh
-# Install uv (Python package runner)
-brew install uv
+The `JIRA_API_TOKEN` must be a standard Atlassian API token (e.g., `ATATT3x...`) created **without** the `appId=mcp` parameter. Tokens created via `?appId=mcp` are scoped to `mcp.atlassian.com` only and return HTTP 401 on the Jira REST API.
 
-# Install mcp-atlassian tool
-uv tool install mcp-atlassian
-```
+Create your token at:
+- [Atlassian: API Tokens (standard, no appId restriction)](https://id.atlassian.com/manage-profile/security/api-tokens)
+
+Use `expiryDays=max` for a 1-year token.
 
 ---
 
 ## Setup
 
-### VSCode (User scope) — Docker + .env file
+### VSCode (User scope) — uvx (recommended, no Docker required)
 
 File: `~/Library/Application Support/Code/User/mcp.json`
 
 ```jsonc
 {
   "servers": {
-    // mcp-atlassian (sooperset) — 3rd-party, API token auth via .env file
-    // Tokens: https://id.atlassian.com/manage-profile/security/api-tokens
+    // # About
+    // mcp-atlassian - 3rd-party Atlassian MCP server by sooperset. 72 tools covering Jira
+    // and Confluence. Runs via uvx (no Docker required). Uses a scoped Atlassian API token.
+    //
+    // # References
+    // * [GitHub: sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian)
+    // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+    // * [GitHub: sooperset/mcp-atlassian - Configuration / Environment Variables](https://github.com/sooperset/mcp-atlassian#configuration)
+    //
+    // # Installation
+    // Install `uv` via Homebrew (provides the `uvx` runner):
+    //
+    // ```zsh
+    // brew install uv
+    // ```
+    //
+    // # Authorization
+    // 1) Create an Atlassian API Token (standard, not scoped to appId=mcp)
+    //   * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+    //   * Create token with any name, note the value (e.g., ATATT3x...)
+    // 2) Create an env file with your Jira credentials
+    //   * Path: `~/.hatch/config/vscode/mcp-atlassian.env`
+    //   * Contents: JIRA_URL, JIRA_USERNAME (email), JIRA_API_TOKEN
+    "mcp-atlassian": {
+      "type": "stdio",
+      "command": "/opt/homebrew/bin/uvx",
+      "args": [
+        "mcp-atlassian",
+        "--env-file", "<PATH_TO_MCP_ATLASSIAN_ENV_FILE>",
+        "--transport", "stdio"
+      ]
+    }
+  }
+}
+```
+
+### VSCode (User scope) — Docker + .env file (legacy)
+
+File: `~/Library/Application Support/Code/User/mcp.json`
+
+```jsonc
+{
+  // # About
+  // mcp-atlassian - 3rd-party Atlassian MCP (sooperset). Legacy Docker variant with `.env`
+  // file auth. Prefer the uvx variant above.
+  //
+  // # References
+  // * [GitHub: sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian)
+  // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // * [GitHub: sooperset/mcp-atlassian - Configuration / Environment Variables](https://github.com/sooperset/mcp-atlassian#configuration)
+  //
+  // # Installation
+  // Requires Docker installed and image pulled:
+  //
+  // ```zsh
+  // docker pull ghcr.io/sooperset/mcp-atlassian:latest
+  // ```
+  //
+  // # Authorization
+  // 1) Create a standard Atlassian API Token (NOT scoped to appId=mcp)
+  //   * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // 2) Create env file at `~/.hatch/config/vscode/mcp-atlassian.env` with:
+  //   * JIRA_URL, JIRA_USERNAME, JIRA_API_TOKEN
+  "servers": {
     "mcp-atlassian": {
       "type": "stdio",
       "command": "docker",
@@ -157,10 +245,28 @@ File: `.vscode/mcp.json`
 
 ```jsonc
 {
+  // # About
+  // mcp-atlassian - 3rd-party Atlassian MCP (sooperset). Docker variant with workspace-local
+  // `.env` file. Add `.vscode/mcp-atlassian.env` to `.gitignore`.
+  //
+  // # References
+  // * [GitHub: sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian)
+  // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // * [GitHub: sooperset/mcp-atlassian - Configuration / Environment Variables](https://github.com/sooperset/mcp-atlassian#configuration)
+  //
+  // # Installation
+  // Requires Docker. Pull image:
+  //
+  // ```zsh
+  // docker pull ghcr.io/sooperset/mcp-atlassian:latest
+  // ```
+  //
+  // # Authorization
+  // 1) Create a standard Atlassian API Token (NOT scoped to appId=mcp)
+  //   * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // 2) Create `.vscode/mcp-atlassian.env` with JIRA_URL, JIRA_USERNAME, JIRA_API_TOKEN
+  // 3) Add `.vscode/mcp-atlassian.env` to `.gitignore`
   "servers": {
-    // mcp-atlassian (sooperset) — workspace .env file variant
-    // Add .vscode/mcp-atlassian.env to .gitignore!
-    // Tokens: https://id.atlassian.com/manage-profile/security/api-tokens
     "mcp-atlassian": {
       "type": "stdio",
       "command": "docker",
@@ -179,8 +285,25 @@ File: `.vscode/mcp.json`
 
 ```jsonc
 {
+  // # About
+  // mcp-atlassian - 3rd-party Atlassian MCP (sooperset). Wrapper script injects credentials
+  // from shell env (Docker or uvx). Wrapper at `~/.hatch/scripts/mcp_atlassian_wrapper.zsh`.
+  //
+  // # References
+  // * [GitHub: sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian)
+  // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // * [GitHub: sooperset/mcp-atlassian - Configuration / Environment Variables](https://github.com/sooperset/mcp-atlassian#configuration)
+  //
+  // # Installation
+  // Requires either Docker or `uv` (`brew install uv`).
+  // Wrapper script at `~/.hatch/scripts/mcp_atlassian_wrapper.zsh`.
+  //
+  // # Authorization
+  // 1) Create a standard Atlassian API Token (NOT scoped to appId=mcp)
+  //   * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // 2) Set JIRA_URL, JIRA_USERNAME, JIRA_API_TOKEN in the wrapper script's source file
+  //   * `~/.hatch/config/.zsh_hatch_jira`
   "servers": {
-    // mcp-atlassian via wrapper script that injects credentials from shell env
     "mcp-atlassian": {
       "type": "stdio",
       "command": "${env:HOME}/.hatch/scripts/mcp_atlassian_wrapper.zsh",
@@ -206,8 +329,25 @@ claude mcp add --scope user --transport stdio mcp-atlassian -- \
 
 Resulting entry in `~/.claude.json` (uvx variant):
 
-```json
+```jsonc
 {
+  // # About
+  // mcp-atlassian - 3rd-party Atlassian MCP (sooperset) via uvx. 72 Jira+Confluence tools.
+  // Env vars for credentials; Claude Code inherits shell env.
+  //
+  // # References
+  // * [GitHub: sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian)
+  // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // * [GitHub: sooperset/mcp-atlassian - Configuration / Environment Variables](https://github.com/sooperset/mcp-atlassian#configuration)
+  //
+  // # Installation
+  // Install `uv` via Homebrew: `brew install uv`
+  //
+  // # Authorization
+  // 1) Create a standard Atlassian API Token (NOT scoped to appId=mcp)
+  //   * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  //   * Create token with any name, note the value (e.g., ATATT3x...)
+  // 2) Set JIRA_URL, JIRA_USERNAME, JIRA_API_TOKEN in `~/.zshrc`; Claude Code inherits shell env
   "mcpServers": {
     "mcp-atlassian": {
       "type": "stdio",
@@ -227,8 +367,25 @@ Resulting entry in `~/.claude.json` (uvx variant):
 
 File: `.mcp.json` in repo root
 
-```json
+```jsonc
 {
+  // # About
+  // mcp-atlassian - 3rd-party Atlassian MCP (sooperset) via uvx. 72 Jira+Confluence tools.
+  // Env vars for credentials; Claude Code inherits shell env.
+  //
+  // # References
+  // * [GitHub: sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian)
+  // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // * [GitHub: sooperset/mcp-atlassian - Configuration / Environment Variables](https://github.com/sooperset/mcp-atlassian#configuration)
+  //
+  // # Installation
+  // Install `uv` via Homebrew: `brew install uv`
+  //
+  // # Authorization
+  // 1) Create a standard Atlassian API Token (NOT scoped to appId=mcp)
+  //   * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  //   * Create token with any name, note the value (e.g., ATATT3x...)
+  // 2) Set JIRA_URL, JIRA_USERNAME, JIRA_API_TOKEN in `~/.zshrc`; Claude Code inherits shell env
   "mcpServers": {
     "mcp-atlassian": {
       "type": "stdio",
@@ -250,10 +407,24 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 ```jsonc
 {
+  // # About
+  // mcp-atlassian - 3rd-party Atlassian MCP (sooperset) via wrapper script. Script sources
+  // Jira credentials from shell config.
+  //
+  // # References
+  // * [GitHub: sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian)
+  // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // * [GitHub: sooperset/mcp-atlassian - Configuration / Environment Variables](https://github.com/sooperset/mcp-atlassian#configuration)
+  //
+  // # Installation
+  // Requires either Docker or `uv`. Wrapper script must be created at indicated path.
+  //
+  // # Authorization
+  // 1) Create a standard Atlassian API Token (NOT scoped to appId=mcp)
+  //   * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // 2) Populate `~/.hatch/config/.zsh_hatch_jira` with JIRA_URL, JIRA_USERNAME, JIRA_API_TOKEN
+  // 3) Set path in `command` field below
   "mcpServers": {
-    // mcp-atlassian via wrapper script
-    // Wrapper sources credentials from ~/.hatch/config/.zsh_hatch_jira
-    // Tokens: https://id.atlassian.com/manage-profile/security/api-tokens
     "mcp-atlassian": {
       "command": "/Users/yourname/.hatch/scripts/mcp_atlassian_wrapper.zsh",
       "args": []
@@ -266,8 +437,24 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 Global: `~/.cursor/mcp.json` — or project: `.cursor/mcp.json`
 
-```json
+```jsonc
 {
+  // # About
+  // mcp-atlassian - 3rd-party Atlassian MCP (sooperset) via uvx with /bin/zsh -lc wrapper
+  // for PATH resolution in Cursor.
+  //
+  // # References
+  // * [GitHub: sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian)
+  // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // * [GitHub: sooperset/mcp-atlassian - Configuration / Environment Variables](https://github.com/sooperset/mcp-atlassian#configuration)
+  //
+  // # Installation
+  // Install `uv` via Homebrew: `brew install uv`
+  //
+  // # Authorization
+  // 1) Create a standard Atlassian API Token (NOT scoped to appId=mcp)
+  //   * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+  // 2) Set JIRA_URL, JIRA_USERNAME, JIRA_API_TOKEN in `~/.zshrc`
   "mcpServers": {
     "mcp-atlassian": {
       "command": "/bin/zsh",

@@ -77,6 +77,26 @@ Under `ai/mcp/servers/`:
 - [x] `vscode_workspace_mcp.json`
 - [x] `claude_desktop_config.json`
 - [x] `.env.example`
+- [ ] `claude_code_mcp.json` — **missing; needs per-platform env var research**
+- [ ] `cursor_mcp.json` — **missing; needs per-platform env var research**
+- [ ] `zsh/mcp.env` — **new: shell export file for zsh env var injection**
+- [ ] `zsh/vscode_user_mcp.json` — **new: VSCode variant that relies on zsh-sourced vars**
+- [ ] `zsh/claude_desktop_config.json` — **new: Claude Desktop variant via zsh**
+- [ ] `zsh/claude_code_mcp.json` — **new: Claude Code variant via zsh**
+- [ ] `zsh/cursor_mcp.json` — **new: Cursor variant via zsh**
+
+#### `ai/mcp/configs/templates/.gitignored/zakkhoyt/` (personal use — real tokens — gitignored)
+- [ ] `claude_code_mcp.json`
+- [ ] `claude_desktop_config.json`
+- [ ] `cursor_mcp.json`
+- [ ] `vscode_user_mcp.json`
+- [ ] `vscode_workspace_mcp.json`
+
+#### `ai/mcp/configs/env_vars/.gitignored/zakkhoyt/` (personal use — real tokens — gitignored)
+- [ ] `.env` — populated from `.env.example`
+- [ ] `vscode_user_mcp.json`
+- [ ] `vscode_workspace_mcp.json`
+- [ ] `claude_desktop_config.json`
 
 #### `ai/mcp/configs/tokens/` (actual tokens populated — gitignored)
 - [ ] `vscode_user_mcp.json` — **user to populate**
@@ -170,6 +190,14 @@ comment block immediately above the server JSON key. The format is:
 - **All URLs** must use markdown link syntax: `[Link Text](https://url)`. No bare URLs.
 - **All comments** use `//` JSONC line comment syntax. Each line is prefixed with `// `.
 
+### Comment format applies to ALL platform examples in server docs
+
+Every config example in `ai/mcp/servers/*.md` — regardless of platform (VSCode, Claude Code,
+Claude Desktop, Cursor) — must include its own comment block. If a server doc has multiple
+examples for the same platform (e.g. API token vs OAuth), each example gets its own tailored
+comment block with auth steps specific to that variant. This rule was established 2026-03-23
+and applies to all current and future server docs.
+
 ### Inline comments inside JSON bodies
 
 Within a server's JSON body (inside `"env": {}`, `"args": []`, etc.), inline comments are
@@ -195,16 +223,21 @@ and cross-check all server entries against it.
 
 ## Remaining Work
 
-| Item                             | Priority | Notes                                                              |
-| -------------------------------- | -------- | ------------------------------------------------------------------ |
-| `FIGMA_MCP.md` full doc          | Medium   | Stub only — needs full setup sections and auth details             |
-| `INTERCOM_MCP.md` full doc       | Low      | Stub — OAuth only, limited dev workflow utility                    |
-| `GMAIL_MCP.md` full doc          | Low      | Stub — Anthropic-managed OAuth                                     |
-| `GOOGLE_CALENDAR_MCP.md` full    | Low      | Stub — Anthropic-managed OAuth                                     |
-| `GRANOLA_MCP.md` full doc        | Low      | Stub — OAuth, pending official docs                                |
-| `STATSIG_MCP.md` full doc        | Low      | Stub — MCP availability unconfirmed as of March 2026               |
-| Populate `configs/tokens/`       | User     | Templates exist; user must fill in real tokens                     |
-| Update `configs/templates/`      | Medium   | Add `apple-store` to all template configs; update xcodebuildmcp args |
+| Item                                            | Priority | Notes                                                                                                              |
+| ----------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------ |
+| `env_vars/` coverage gap                        | High     | Add `claude_code_mcp.json` and `cursor_mcp.json`; research per-platform env var injection approach                |
+| `env_vars/zsh/` subdir                          | High     | Create shell-export `.env` + per-platform config variants for zsh-sourced env vars                                |
+| Per-platform env var approach research          | High     | Document how each platform (VSCode, Claude Code, Claude Desktop, Cursor) loads env vars from shell vs `.env` file |
+| Personal variants (templates `.gitignored/zakkhoyt/`)  | High     | Create real-token copies of all 5 template configs under gitignored dir                                           |
+| Personal variants (env_vars `.gitignored/zakkhoyt/`)   | High     | Create real-token `.env` + config files under gitignored dir                                                      |
+| Sensitive data audit                            | High     | Verify no real tokens/keys/hashes committed anywhere in `ai/mcp/**` outside `.gitignored/`                        |
+| `FIGMA_MCP.md` full doc                         | Medium   | Stub only — needs full setup sections and auth details                                                             |
+| `INTERCOM_MCP.md` full doc                      | Low      | Stub — OAuth only, limited dev workflow utility                                                                    |
+| `GMAIL_MCP.md` full doc                         | Low      | Stub — Anthropic-managed OAuth                                                                                     |
+| `GOOGLE_CALENDAR_MCP.md` full doc               | Low      | Stub — Anthropic-managed OAuth                                                                                     |
+| `GRANOLA_MCP.md` full doc                       | Low      | Stub — OAuth, pending official docs                                                                                |
+| `STATSIG_MCP.md` full doc                       | Low      | Stub — MCP availability unconfirmed as of March 2026                                                               |
+| Populate `configs/tokens/`                      | User     | Templates exist; user must fill in real tokens                                                                     |
 
 ---
 

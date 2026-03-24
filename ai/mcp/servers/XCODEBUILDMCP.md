@@ -93,6 +93,59 @@ File: `~/Library/Application Support/Code/User/mcp.json`
 ```jsonc
 {
   "servers": {
+    // # About
+    // XcodeBuildMCP - MCP server providing 61+ tools for Xcode and Swift development automation
+    // (build, test, simulator control, device interaction, UI automation, project scaffolding)
+    //
+    // # References
+    // * [GitHub: getsentry/XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP)
+    // * [npm: xcodebuildmcp](https://www.npmjs.com/package/xcodebuildmcp)
+    // * [GitHub: getsentry/XcodeBuildMCP - Configuration / Environment Variables](https://github.com/getsentry/XcodeBuildMCP#configuration)
+    //
+    // # Installation
+    // Installed automatically via `npx` on first run. Requires Xcode and Apple Developer Tools.
+    //
+    // # Authorization
+    // None required. Invokes local Apple toolchain binaries (`xcodebuild`, `simctl`, `devicectl`).
+    "XcodeBuildMCP": {
+      "command": "npx",
+      "args": ["-y", "xcodebuildmcp@latest", "mcp"],
+      "env": {
+        "INCREMENTAL_BUILDS_ENABLED": "false",
+        "NODE_ENV": "development",
+        // "DEBUG": "*",
+        // "XCODEBUILDMCP_SENTRY_DISABLED": "false",
+        // "XCODEBUILDMCP_DYNAMIC_TOOLS": "false",  // set "true" for dynamic tool loading
+        // Workflow sets (used when XCODEBUILDMCP_DYNAMIC_TOOLS=false):
+        // For HatchSleep type projects:
+        // "XCODEBUILDMCP_ENABLED_WORKFLOWS": "project-discovery,swift-package,simulator,device,macos,doctor,ui-testing",
+        // For SPM-only projects:
+        // "XCODEBUILDMCP_ENABLED_WORKFLOWS": "swift-package,simulator,project-discovery,doctor",
+      }
+    }
+  }
+}
+```
+
+With minimal env (simpler variant):
+
+```jsonc
+{
+  // # About
+  // XcodeBuildMCP - MCP server for Xcode and Swift development automation. Minimal env
+  // variant with dynamic tool loading enabled (XCODEBUILDMCP_DYNAMIC_TOOLS=true).
+  //
+  // # References
+  // * [GitHub: getsentry/XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP)
+  // * [npm: xcodebuildmcp](https://www.npmjs.com/package/xcodebuildmcp)
+  // * [GitHub: getsentry/XcodeBuildMCP - Configuration / Environment Variables](https://github.com/getsentry/XcodeBuildMCP#configuration)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run. Requires Xcode and Apple Developer Tools.
+  //
+  // # Authorization
+  // None required.
+  "servers": {
     "XcodeBuildMCP": {
       "command": "npx",
       "args": ["-y", "xcodebuildmcp@latest", "mcp"],
@@ -105,30 +158,26 @@ File: `~/Library/Application Support/Code/User/mcp.json`
 }
 ```
 
-With debug output enabled:
-
-```jsonc
-{
-  "servers": {
-    "XcodeBuildMCP": {
-      "command": "npx",
-      "args": ["-y", "xcodebuildmcp@latest", "mcp"],
-      "env": {
-        "INCREMENTAL_BUILDS_ENABLED": "false",
-        "NODE_ENV": "development",
-        "DEBUG": "*"
-      }
-    }
-  }
-}
-```
-
 ### VSCode (Workspace scope)
 
 File: `.vscode/mcp.json`
 
 ```jsonc
 {
+  // # About
+  // XcodeBuildMCP - MCP server for Xcode and Swift development automation. Workspace-scoped
+  // config with XCODEBUILDMCP_ENABLED_WORKFLOWS tailored to this project.
+  //
+  // # References
+  // * [GitHub: getsentry/XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP)
+  // * [npm: xcodebuildmcp](https://www.npmjs.com/package/xcodebuildmcp)
+  // * [GitHub: getsentry/XcodeBuildMCP - Configuration / Environment Variables](https://github.com/getsentry/XcodeBuildMCP#configuration)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run. Requires Xcode and Apple Developer Tools.
+  //
+  // # Authorization
+  // None required.
   "servers": {
     "XcodeBuildMCP": {
       "command": "npx",
@@ -166,8 +215,22 @@ claude mcp add --scope user --transport stdio XcodeBuildMCP -- xcodebuildmcp mcp
 
 Resulting entry in `~/.claude.json`:
 
-```json
+```jsonc
 {
+  // # About
+  // XcodeBuildMCP - MCP server for Xcode and Swift development automation. Uses
+  // /bin/zsh -lc wrapper for PATH resolution in stdio transport.
+  //
+  // # References
+  // * [GitHub: getsentry/XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP)
+  // * [npm: xcodebuildmcp](https://www.npmjs.com/package/xcodebuildmcp)
+  // * [GitHub: getsentry/XcodeBuildMCP - Configuration / Environment Variables](https://github.com/getsentry/XcodeBuildMCP#configuration)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run. Requires Xcode and Apple Developer Tools.
+  //
+  // # Authorization
+  // None required.
   "mcpServers": {
     "XcodeBuildMCP": {
       "type": "stdio",
@@ -185,8 +248,22 @@ Resulting entry in `~/.claude.json`:
 
 File: `.mcp.json` in repo root
 
-```json
+```jsonc
 {
+  // # About
+  // XcodeBuildMCP - MCP server for Xcode and Swift development automation. Uses
+  // /bin/zsh -lc wrapper for PATH resolution in stdio transport.
+  //
+  // # References
+  // * [GitHub: getsentry/XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP)
+  // * [npm: xcodebuildmcp](https://www.npmjs.com/package/xcodebuildmcp)
+  // * [GitHub: getsentry/XcodeBuildMCP - Configuration / Environment Variables](https://github.com/getsentry/XcodeBuildMCP#configuration)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run. Requires Xcode and Apple Developer Tools.
+  //
+  // # Authorization
+  // None required.
   "mcpServers": {
     "XcodeBuildMCP": {
       "type": "stdio",
@@ -205,8 +282,22 @@ File: `.mcp.json` in repo root
 
 File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-```json
+```jsonc
 {
+  // # About
+  // XcodeBuildMCP - MCP server for Xcode and Swift development automation.
+  // Claude Desktop config using npx for stdio transport.
+  //
+  // # References
+  // * [GitHub: getsentry/XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP)
+  // * [npm: xcodebuildmcp](https://www.npmjs.com/package/xcodebuildmcp)
+  // * [GitHub: getsentry/XcodeBuildMCP - Configuration / Environment Variables](https://github.com/getsentry/XcodeBuildMCP#configuration)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run. Requires Xcode and Apple Developer Tools.
+  //
+  // # Authorization
+  // None required.
   "mcpServers": {
     "XcodeBuildMCP": {
       "command": "npx",
@@ -224,8 +315,22 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 Global: `~/.cursor/mcp.json` — or project: `.cursor/mcp.json`
 
-```json
+```jsonc
 {
+  // # About
+  // XcodeBuildMCP - MCP server for Xcode and Swift development automation. Cursor config
+  // using /bin/zsh -lc wrapper for PATH resolution.
+  //
+  // # References
+  // * [GitHub: getsentry/XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP)
+  // * [npm: xcodebuildmcp](https://www.npmjs.com/package/xcodebuildmcp)
+  // * [GitHub: getsentry/XcodeBuildMCP - Configuration / Environment Variables](https://github.com/getsentry/XcodeBuildMCP#configuration)
+  //
+  // # Installation
+  // Installed automatically via `npx` on first run. Requires Xcode and Apple Developer Tools.
+  //
+  // # Authorization
+  // None required.
   "mcpServers": {
     "XcodeBuildMCP": {
       "command": "/bin/zsh",
