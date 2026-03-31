@@ -12,7 +12,7 @@
 The official Atlassian-hosted MCP server exposes Jira and Confluence tools through the Atlassian Rovo platform. As of March 2026, it supports both API token authentication (long-lived) and OAuth 2.1 (short-lived). **Prefer API token auth** — tokens can last up to 1 year vs. OAuth's ~2-day expiry.
 
 > [!IMPORTANT]
-> **API token limitation (March 2026):** When authenticated via API token (Basic Auth), the official Rovo MCP only exposes 2 beta tools — `getTeamworkGraphContext` and `getTeamworkGraphObject` — and both fail internally with a "slauth token missing" error. Full Jira CRUD tools require a **Rovo AI subscription** or OAuth. If you need API-token-based Jira CRUD, use [`mcp-atlassian` (sooperset)](./MCP_ATLASSIAN.md) instead.
+> **API token limitation (March 2026):** When authenticated via API token (Basic Auth), the official Rovo MCP only exposes 2 beta tools — `getTeamworkGraphContext` and `getTeamworkGraphObject` — and both fail internally with a "slauth token missing" error. Full Jira CRUD tools require a **Rovo AI subscription** or OAuth. If you need API-token-based Jira CRUD, use [`mcp-atlassian` (sooperset)](./mcp-atlassian.md) instead.
 
 **Why useful for Hatch iOS dev:**
 - Create, search, and update Jira tickets without switching to the browser (requires Rovo subscription or OAuth).

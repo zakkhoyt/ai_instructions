@@ -1,0 +1,55 @@
+// Claude Code — LSP (Language Server Protocol) configuration
+// Location: .claude/.lsp.json (in repository root)
+// Committed to git: YES
+//
+// This file configures Language Server Protocol servers for Claude Code's
+// code intelligence features (go-to-definition, hover, diagnostics).
+//
+// NOTE: This is separate from MCP server config (.mcp.json / mcpServers).
+// LSP servers provide *code intelligence*; MCP servers provide *tool access*.
+//
+// Docs: https://docs.anthropic.com/en/docs/claude-code/lsp
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// How to apply:
+//   Copy this file to .claude/.lsp.json in the repo root.
+//   (Already committed to the Hatch monorepo via PR #1491.)
+// ─────────────────────────────────────────────────────────────────────────────
+
+{
+  // SourceKit-LSP — Swift language intelligence for Claude Code
+  //
+  // # About
+  // sourcekit-lsp - Apple's official LSP server for Swift and C-family languages.
+  // Provides code completion, go-to-definition, hover docs, cross-module references,
+  // and diagnostics. Ships bundled with every Xcode installation.
+  //
+  // # References
+  // * [GitHub: swiftlang/sourcekit-lsp](https://github.com/swiftlang/sourcekit-lsp)
+  // * [sourcekit-lsp: Configuration File](https://github.com/swiftlang/sourcekit-lsp/blob/main/Documentation/Configuration%20File.md)
+  // * [Claude Code: LSP Plugin Docs](https://docs.anthropic.com/en/docs/claude-code/lsp)
+  //
+  // # Installation
+  // None required. `sourcekit-lsp` ships with Xcode.
+  // Verify: `xcrun --find sourcekit-lsp`
+  //
+  // # Why workspaceFolder = iOS/hatch-sleep-app
+  // The Hatch repo is a monorepo. Without this, sourcekit-lsp starts from the
+  // repo root and never discovers Nightlight.xcworkspace two levels deep,
+  // causing all cross-module imports (HatchModels, ArgumentKit, etc.) to go
+  // unresolved.
+  "sourcekit-lsp": {
+    "command": "sourcekit-lsp",
+    "args": [
+      "--scratch-path",
+      ".build/sourcekit-lsp"
+    ],
+    "extensionToLanguage": {
+      ".swift": "swift"
+    },
+    "workspaceFolder": "iOS/hatch-sleep-app",
+    "startupTimeout": 15000,
+    "restartOnCrash": true,
+    "maxRestarts": 3
+  }
+}
