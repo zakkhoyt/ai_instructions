@@ -1,12 +1,13 @@
-// Cursor — MCP configuration (env var variant)
-// User (global) location: ~/.cursor/mcp.json
-// Project location:       .cursor/mcp.json (in project root)
+// Claude Desktop — User-scope MCP configuration (env var variant)
+// Location: ~/Library/Application Support/Claude/claude_desktop_config.json
 //
-// Cursor env var variant. Uses `${env:VAR}` interpolation to pull values from
-// the shell environment. Launch Cursor from zsh terminal to inherit env vars.
+// This variant references environment variables instead of inline tokens.
+// Claude Desktop inherits env vars from the shell that launched it IF launched
+// from terminal. If launched from Dock/Launchpad, env vars from ~/.zshrc may
+// not be available. In that case, use the wrapper script approach or the
+// tokens/ variant.
 //
 // See configs/env_vars/.env.example for required variables.
-// See configs/env_vars/zsh/mcp.env for the shell export file to source in ~/.zshrc.
 
 {
   "mcpServers": {
@@ -25,11 +26,8 @@
     // # Authorization
     // None required.
     "XcodeBuildMCP": {
-      "command": "/bin/zsh",
-      "args": [
-        "-lc",
-        "exec npx -y xcodebuildmcp@latest mcp"
-      ],
+      "command": "npx",
+      "args": ["-y", "xcodebuildmcp@latest", "mcp"],
       "env": {
         "XCODEBUILDMCP_ENABLED_WORKFLOWS": "project-discovery,swift-package,simulator,device,macos,doctor,ui-testing",
         "INCREMENTAL_BUILDS_ENABLED": "false"
@@ -56,8 +54,8 @@
     // # Authorization
     // None required.
     "apple-docs": {
-      "command": "/bin/zsh",
-      "args": ["-lc", "exec npx -y @kimsungwhee/apple-docs-mcp"]
+      "command": "npx",
+      "args": ["-y", "@kimsungwhee/apple-docs-mcp"]
     },
 
     // # About
@@ -72,8 +70,8 @@
     // Must be cloned and built locally. No npm package available.
     //
     // ```zsh
-    // git clone https://github.com/cristianoaredes/mcp-apple-store
-    // cd mcp-apple-store
+    // git clone https://github.com/cristianoaredes/mcp-apple-store ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
+    // cd ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
     // npm install && npm run build
     // ```
     //
@@ -85,19 +83,17 @@
     // 2) Note the Issuer ID and Key ID shown on the API Keys page
     // 3) Set the env vars pointing to your `.p8` file and app identifiers
     "apple-store": {
-      "command": "/bin/zsh",
-      "args": [
-        "-lc",
-        "node \"$HOME/code/other/mcp/mcp-apple-store/dist/index.js\""
-      ],
+      // ⚠ Replace /Users/yourname with your actual home directory (Claude Desktop does not expand ${HOME})
+      "command": "node",
+      "args": ["/Users/yourname/.hatch/config/mpc/apple-store/code/mcp-apple-store/dist/index.js"],
       "env": {
-        "APP_STORE_ISSUER_ID": "${env:APPLE_ASC_MCP_ISSUER_ID}",
-        "APP_STORE_KEY_ID": "${env:APPLE_ASC_MCP_KEY_ID}",
-        "APP_STORE_PRIVATE_KEY_PATH": "${env:APPLE_ASC_MCP_AUTH_KEY_PATH}",
-        "APP_BUNDLE_ID": "${env:APPLE_ASC_MCP_BUNDLE_ID}",
-        "APP_APPLE_ID": "${env:APPLE_ASC_MCP_APPLE_ID}",
-        "APP_STORE_ENVIRONMENT": "${env:APPLE_ASC_MCP_STORE_ENVIRONMENT}",
-        "LOG_LEVEL": "${env:APPLE_ASC_MCP_LOG_LEVEL}"
+        "APP_STORE_ISSUER_ID": "${APPLE_ASC_MCP_ISSUER_ID}",
+        "APP_STORE_KEY_ID": "${APPLE_ASC_MCP_KEY_ID}",
+        "APP_STORE_PRIVATE_KEY_PATH": "${APPLE_ASC_MCP_AUTH_KEY_PATH}",
+        "APP_BUNDLE_ID": "${APPLE_ASC_MCP_BUNDLE_ID}",
+        "APP_APPLE_ID": "${APPLE_ASC_MCP_APPLE_ID}",
+        "APP_STORE_ENVIRONMENT": "${APPLE_ASC_MCP_STORE_ENVIRONMENT}",
+        "LOG_LEVEL": "${APPLE_ASC_MCP_LOG_LEVEL}"
         // Optional:
         // "APPLE_ROOT_CERT_PATH": "./keys/AppleRootCA-G3.cer",
         // "WEBHOOK_PORT": "3000",
@@ -114,7 +110,7 @@
     // * [Atlassian: Manage API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
     //
     // # Installation
-    // None required. Remote HTTP server hosted by Atlassian. Accessed via mcp-remote wrapper (stdio → HTTP proxy).
+    // None required. Remote HTTP server hosted by Atlassian.
     //
     // # Authorization
     // 1) Create a (Scoped) Atlassian User API Token for the `Rovo MCP Server` app
@@ -124,13 +120,13 @@
     // 2) Create a Basic Authorization hash
     //   * Combine `user.email:api_token` and base64-encode:
     //   * `echo -n "${ATLASSIAN_USER_EMAIL}:${ATLASSIAN_AUTH_TOKEN}" | base64 | pbcopy`
-    // 3) Set as `ATLASSIAN_MCP_CLASSIC_BASIC_AUTH` env var (exported in zsh/mcp.env)
+    // 3) Paste the hash as the `Authorization: Basic <hash>` header value
     "atlassian-rovo-mcp": {
-      "command": "/bin/zsh",
-      "args": [
-        "-lc",
-        "exec npx -y mcp-remote https://mcp.atlassian.com/v1/mcp --header \"Authorization: Basic ${env:ATLASSIAN_MCP_CLASSIC_BASIC_AUTH}\""
-      ]
+      "url": "https://mcp.atlassian.com/v1/mcp",
+      "headers": {
+        // Env var is set in ~/.zshrc or .env file
+        "Authorization": "Basic ${ATLASSIAN_MCP_CLASSIC_BASIC_AUTH}"
+      }
     },
 
     // # About
@@ -154,11 +150,8 @@
     // 2) Create an env file at `~/.hatch/config/vscode/mcp-atlassian.env`
     //   * Contents: `JIRA_URL`, `JIRA_USERNAME` (email), `JIRA_API_TOKEN`
     "mcp-atlassian": {
-      "command": "/bin/zsh",
-      "args": [
-        "-lc",
-        "exec /opt/homebrew/bin/uvx mcp-atlassian --env-file \"${HOME}/.hatch/config/vscode/mcp-atlassian.env\" --transport stdio"
-      ]
+      "command": "${HOME}/.hatch/scripts/mcp_atlassian_wrapper.zsh",
+      "args": []
     },
 
     // # About
@@ -169,19 +162,15 @@
     // * [Bugsee: User Integrations / Auth Tokens](https://app.bugsee.com/#/settings/user/integrations)
     //
     // # Installation
-    // None required. Remote HTTP server hosted by Bugsee. Accessed via mcp-remote wrapper (stdio → HTTP proxy).
+    // None required. Remote HTTP server hosted by Bugsee.
     //
     // # Authorization
     // 1) Generate a Bugsee MCP Auth Token
     //   * [Bugsee: User Integrations](https://app.bugsee.com/#/settings/user/integrations)
     //   * Click `Generate Token` and copy the UUID
-    // 2) Set as `BUGSEE_MCP_TOKEN` env var
+    // 2) Replace `<YOUR_BUGSEE_MCP_TOKEN>` in the URL with your token UUID
     "bugsee": {
-      "command": "/bin/zsh",
-      "args": [
-        "-lc",
-        "exec npx -y mcp-remote \"https://api.bugsee.com/mcp/${env:BUGSEE_MCP_TOKEN}\""
-      ]
+      "url": "https://api.bugsee.com/mcp/${BUGSEE_MCP_TOKEN}"
     },
 
     // # About
@@ -202,11 +191,11 @@
     //   * Required scopes: `repo`, `read:org`, `read:user`
     // 2) Set as `GITHUB_PERSONAL_ACCESS_TOKEN` env var
     "github": {
-      "command": "/bin/zsh",
-      "args": ["-lc", "exec npx -y @modelcontextprotocol/server-github"],
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
       "env": {
         // Env var is set in ~/.zshrc or .env file
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${env:GITHUB_PERSONAL_ACCESS_TOKEN}"
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
       }
     },
 
@@ -224,17 +213,79 @@
     //
     // # Authorization
     // 1) Obtain a Slack XOXP User OAuth Token
-    //   * Visit your Slack app's OAuth & Permissions page
-    //   * Copy the `xoxp-...` token from the OAuth Tokens section
-    // 2) Set as `HATCH_SLACK_MPC_OAUTH_TOKEN` env var
+    //   * LastPass: `Shared-iOS-devs` → `MCP` → `SLACK_MCP_XOXP_TOKEN` (shared team token)
+    //   * Or: visit your Slack app's OAuth & Permissions page and copy the `xoxp-...` token
+    // 2) Set as `SLACK_MCP_XOXP_TOKEN` env var
     "slack": {
-      "command": "/bin/zsh",
-      "args": ["-lc", "exec npx -y slack-mcp-server@latest --transport stdio"],
+      "command": "npx",
+      "args": ["-y", "slack-mcp-server@latest", "--transport", "stdio"],
       "env": {
         // Env var is set in ~/.zshrc or .env file
-        "SLACK_MCP_XOXP_TOKEN": "${env:HATCH_SLACK_MPC_OAUTH_TOKEN}"
+        "SLACK_MCP_XOXP_TOKEN": "${HATCH_SLACK_MPC_OAUTH_TOKEN}"
       }
+    },
+
+    // # About
+    // google-workspace - Google Workspace MCP server. Access Docs, Drive, Gmail, Calendar, Sheets, Forms, Tasks, and Contacts.
+    //
+    // # References
+    // * [GitHub: taylorwilsdon/google_workspace_mcp](https://github.com/taylorwilsdon/google_workspace_mcp)
+    // * [Google Cloud Console: OAuth Credentials](https://console.cloud.google.com/apis/credentials)
+    //
+    // # Installation
+    // Installed automatically via `uvx` on first run. Requires `uv`:
+    //
+    // ```zsh
+    // brew install uv
+    // ```
+    //
+    // # Authorization
+    // 1) Obtain the shared Google OAuth client JSON
+    //   * LastPass: `Shared-iOS-devs` → `MCP` → `GOOGLE_WORKSPACE` (shared team token)
+    //   * Copy JSON to a local path, e.g. ~/.zsh_home/tokens/mcp/google/google_mcp_client.json
+    //   * Do NOT commit this file
+    // 2) Set GOOGLE_CLIENT_SECRET_PATH to the local JSON file path
+    // 3) Set USER_GOOGLE_EMAIL to your @hatch.co Google email
+    // 4) On first use a browser OAuth prompt appears — sign in once; tokens cache locally
+    "google-workspace": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["workspace-mcp", "--single-user"],
+      "env": {
+        "GOOGLE_CLIENT_SECRET_PATH": "${GOOGLE_MCP_CLIENT_SECRET_PATH}",
+        "USER_GOOGLE_EMAIL": "${GOOGLE_MCP_USER_EMAIL}"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SourceKit-LSP — NOT an MCP server; configured separately in .claude/.lsp.json
+    //
+    // # About
+    // sourcekit-lsp - Apple's official LSP server for Swift. Provides code
+    // completion, go-to-definition, hover documentation, cross-module references,
+    // and diagnostics across the full Hatch iOS codebase. Ships bundled with
+    // Xcode; no installation required.
+    //
+    // # References
+    // * [GitHub: swiftlang/sourcekit-lsp](https://github.com/swiftlang/sourcekit-lsp)
+    // * [Claude Code: LSP docs](https://docs.anthropic.com/en/docs/claude-code/lsp)
+    // * [Docs: ios-sourcekit-lsp.md](docs/mcp/servers/ios-sourcekit-lsp.md)
+    //
+    // # Config location
+    // .claude/.lsp.json at the repo root (see docs/mcp/configs/templates/claude_code_lsp.json)
+    // This entry is NOT placed in this MCP config file — LSP and MCP use separate
+    // protocols and separate config files.
+    //
+    "sourcekit-lsp": {
+      "command": "sourcekit-lsp",
+      "args": ["--scratch-path", ".build/sourcekit-lsp"],
+      "extensionToLanguage": { ".swift": "swift" },
+      "workspaceFolder": "iOS/hatch-sleep-app",
+      "startupTimeout": 15000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
     }
+    // ─────────────────────────────────────────────────────────────────────────
 
   }
 }

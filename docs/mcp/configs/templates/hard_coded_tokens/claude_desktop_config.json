@@ -1,13 +1,14 @@
-// Claude Desktop — User-scope MCP configuration (env var variant)
+// Claude Desktop — User-scope MCP configuration
 // Location: ~/Library/Application Support/Claude/claude_desktop_config.json
 //
-// This variant references environment variables instead of inline tokens.
-// Claude Desktop inherits env vars from the shell that launched it IF launched
-// from terminal. If launched from Dock/Launchpad, env vars from ~/.zshrc may
-// not be available. In that case, use the wrapper script approach or the
-// tokens/ variant.
+// Docs: https://modelcontextprotocol.io/docs/quickstart/user
 //
-// See configs/env_vars/.env.example for required variables.
+// NOTE: Claude Desktop uses "mcpServers" as the top-level key.
+// Auth tokens are NOT included here. See:
+//   configs/env_vars/claude_desktop_config.json  — uses env var references
+//   configs/tokens/claude_desktop_config.json    — has real tokens (gitignore!)
+//
+// After editing, restart Claude Desktop for changes to take effect.
 
 {
   "mcpServers": {
@@ -70,8 +71,8 @@
     // Must be cloned and built locally. No npm package available.
     //
     // ```zsh
-    // git clone https://github.com/cristianoaredes/mcp-apple-store
-    // cd mcp-apple-store
+    // git clone https://github.com/cristianoaredes/mcp-apple-store ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
+    // cd ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
     // npm install && npm run build
     // ```
     //
@@ -84,15 +85,15 @@
     // 3) Set the env vars pointing to your `.p8` file and app identifiers
     "apple-store": {
       "command": "node",
-      "args": ["${HOME}/code/other/mcp/mcp-apple-store/dist/index.js"],
+      "args": ["/Users/<YOUR_USERNAME>/.hatch/config/mpc/apple-store/code/mcp-apple-store/dist/index.js"],
       "env": {
-        "APP_STORE_ISSUER_ID": "${APPLE_ASC_MCP_ISSUER_ID}",
-        "APP_STORE_KEY_ID": "${APPLE_ASC_MCP_KEY_ID}",
-        "APP_STORE_PRIVATE_KEY_PATH": "${APPLE_ASC_MCP_AUTH_KEY_PATH}",
-        "APP_BUNDLE_ID": "${APPLE_ASC_MCP_BUNDLE_ID}",
-        "APP_APPLE_ID": "${APPLE_ASC_MCP_APPLE_ID}",
-        "APP_STORE_ENVIRONMENT": "${APPLE_ASC_MCP_STORE_ENVIRONMENT}",
-        "LOG_LEVEL": "${APPLE_ASC_MCP_LOG_LEVEL}"
+        "APP_STORE_ISSUER_ID": "<YOUR_ASC_ISSUER_ID>",
+        "APP_STORE_KEY_ID": "<YOUR_ASC_KEY_ID>",
+        "APP_STORE_PRIVATE_KEY_PATH": "<PATH_TO_AUTHKEY.P8>",
+        "APP_BUNDLE_ID": "<YOUR_BUNDLE_ID>",
+        "APP_APPLE_ID": "<YOUR_APP_APPLE_ID>",
+        "APP_STORE_ENVIRONMENT": "Sandbox",
+        "LOG_LEVEL": "info"
         // Optional:
         // "APPLE_ROOT_CERT_PATH": "./keys/AppleRootCA-G3.cer",
         // "WEBHOOK_PORT": "3000",
@@ -123,8 +124,9 @@
     "atlassian-rovo-mcp": {
       "url": "https://mcp.atlassian.com/v1/mcp",
       "headers": {
-        // Env var is set in ~/.zshrc or .env file
-        "Authorization": "Basic ${ATLASSIAN_MCP_CLASSIC_BASIC_AUTH}"
+        // Replace with your base64-encoded "email:api_token":
+        // echo -n "you@example.com:YOUR_API_TOKEN" | base64
+        "Authorization": "Basic <BASE64_EMAIL_COLON_API_TOKEN>"
       }
     },
 
@@ -149,8 +151,12 @@
     // 2) Create an env file at `~/.hatch/config/vscode/mcp-atlassian.env`
     //   * Contents: `JIRA_URL`, `JIRA_USERNAME` (email), `JIRA_API_TOKEN`
     "mcp-atlassian": {
-      "command": "${HOME}/.hatch/scripts/mcp_atlassian_wrapper.zsh",
-      "args": []
+      "command": "uvx",
+      "args": [
+        "mcp-atlassian",
+        "--env-file", "<PATH_TO_MCP_ATLASSIAN_ENV_FILE>",
+        "--transport", "stdio"
+      ]
     },
 
     // # About
@@ -169,7 +175,7 @@
     //   * Click `Generate Token` and copy the UUID
     // 2) Replace `<YOUR_BUGSEE_MCP_TOKEN>` in the URL with your token UUID
     "bugsee": {
-      "url": "https://api.bugsee.com/mcp/${BUGSEE_MCP_TOKEN}"
+      "url": "https://api.bugsee.com/mcp/<YOUR_BUGSEE_MCP_TOKEN>"
     },
 
     // # About
@@ -193,8 +199,7 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"],
       "env": {
-        // Env var is set in ~/.zshrc or .env file
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_GITHUB_PAT>"
       }
     },
 
@@ -212,17 +217,83 @@
     //
     // # Authorization
     // 1) Obtain a Slack XOXP User OAuth Token
-    //   * Visit your Slack app's OAuth & Permissions page
-    //   * Copy the `xoxp-...` token from the OAuth Tokens section
+    //   * LastPass: `Shared-iOS-devs` → `MCP` → `SLACK_MCP_XOXP_TOKEN` (shared team token)
+    //   * Or: visit your Slack app's OAuth & Permissions page and copy the `xoxp-...` token
     // 2) Set as `SLACK_MCP_XOXP_TOKEN` env var
     "slack": {
       "command": "npx",
       "args": ["-y", "slack-mcp-server@latest", "--transport", "stdio"],
       "env": {
-        // Env var is set in ~/.zshrc or .env file
-        "SLACK_MCP_XOXP_TOKEN": "${HATCH_SLACK_MPC_OAUTH_TOKEN}"
+        // To use env var substitution instead (see env_vars/ tier):
+        // "SLACK_MCP_XOXP_TOKEN": "${HATCH_SLACK_MPC_OAUTH_TOKEN}"
+        "SLACK_MCP_XOXP_TOKEN": "<YOUR_SLACK_XOXP_TOKEN>"
       }
+    },
+
+    // # About
+    // google-workspace - Google Workspace MCP server. Access Docs, Drive, Gmail, Calendar, Sheets, Forms, Tasks, and Contacts.
+    //
+    // # References
+    // * [GitHub: taylorwilsdon/google_workspace_mcp](https://github.com/taylorwilsdon/google_workspace_mcp)
+    // * [Google Cloud Console: OAuth Credentials](https://console.cloud.google.com/apis/credentials)
+    //
+    // # Installation
+    // Installed automatically via `uvx` on first run. Requires `uv`:
+    //
+    // ```zsh
+    // brew install uv
+    // ```
+    //
+    // # Authorization
+    // 1) Obtain the shared Google OAuth client JSON
+    //   * LastPass: `Shared-iOS-devs` → `MCP` → `GOOGLE_WORKSPACE` (shared team token)
+    //   * Copy JSON to a local path, e.g. ~/.zsh_home/tokens/mcp/google/google_mcp_client.json
+    //   * Do NOT commit this file
+    // 2) Set GOOGLE_CLIENT_SECRET_PATH to the local JSON file path
+    // 3) Set USER_GOOGLE_EMAIL to your @hatch.co Google email
+    // 4) On first use a browser OAuth prompt appears — sign in once; tokens cache locally
+    "google-workspace": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["workspace-mcp", "--single-user"],
+      "env": {
+        // To use env var substitution instead (see env_var_tokens/ tier):
+        // "GOOGLE_CLIENT_SECRET_PATH": "${GOOGLE_MCP_CLIENT_SECRET_PATH}",
+        // "USER_GOOGLE_EMAIL": "${GOOGLE_MCP_USER_EMAIL}"
+        "GOOGLE_CLIENT_SECRET_PATH": "<PATH_TO_GOOGLE_MCP_CLIENT_JSON>",
+        "USER_GOOGLE_EMAIL": "<YOUR_HATCH_GOOGLE_EMAIL>"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SourceKit-LSP — NOT an MCP server; configured separately in .claude/.lsp.json
+    //
+    // # About
+    // sourcekit-lsp - Apple's official LSP server for Swift. Provides code
+    // completion, go-to-definition, hover documentation, cross-module references,
+    // and diagnostics across the full Hatch iOS codebase. Ships bundled with
+    // Xcode; no installation required.
+    //
+    // # References
+    // * [GitHub: swiftlang/sourcekit-lsp](https://github.com/swiftlang/sourcekit-lsp)
+    // * [Claude Code: LSP docs](https://docs.anthropic.com/en/docs/claude-code/lsp)
+    // * [Docs: ios-sourcekit-lsp.md](docs/mcp/servers/ios-sourcekit-lsp.md)
+    //
+    // # Config location
+    // .claude/.lsp.json at the repo root (see docs/mcp/configs/templates/claude_code_lsp.json)
+    // This entry is NOT placed in this MCP config file — LSP and MCP use separate
+    // protocols and separate config files.
+    //
+    "sourcekit-lsp": {
+      "command": "sourcekit-lsp",
+      "args": ["--scratch-path", ".build/sourcekit-lsp"],
+      "extensionToLanguage": { ".swift": "swift" },
+      "workspaceFolder": "iOS/hatch-sleep-app",
+      "startupTimeout": 15000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
     }
+    // ─────────────────────────────────────────────────────────────────────────
 
   }
 }

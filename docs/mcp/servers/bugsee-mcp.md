@@ -236,7 +236,7 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 Global: `~/.cursor/mcp.json` — or project: `.cursor/mcp.json`
 
-Cursor supports HTTP MCP natively:
+This example uses the `mcp-remote` stdio proxy, which allows the shell to expand `${BUGSEE_MCP_TOKEN}` before passing the URL:
 
 ```jsonc
 {

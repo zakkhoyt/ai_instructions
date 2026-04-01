@@ -302,12 +302,14 @@ Global: `~/.cursor/mcp.json` — or project: `.cursor/mcp.json`
   // 1) Create a GitHub PAT at [github.com/settings/tokens](https://github.com/settings/tokens)
   //   * Grant repo read/write permissions appropriate for your use
   // 2) Set `GITHUB_PERSONAL_ACCESS_TOKEN` in `~/.zshrc`
+  // ⚠ ${workspaceFolder} is only valid in project-scope .cursor/mcp.json.
+  // For the global ~/.cursor/mcp.json, remove the cd and use a login shell directly:
   "mcpServers": {
     "github": {
       "command": "/bin/zsh",
       "args": [
         "-lc",
-        "cd \"${workspaceFolder}\" && exec npx -y @modelcontextprotocol/server-github"
+        "exec npx -y @modelcontextprotocol/server-github"
       ],
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"

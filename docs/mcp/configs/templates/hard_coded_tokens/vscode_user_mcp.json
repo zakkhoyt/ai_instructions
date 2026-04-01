@@ -1,17 +1,16 @@
-// Claude Desktop — User-scope MCP configuration
-// Location: ~/Library/Application Support/Claude/claude_desktop_config.json
+// VSCode / GitHub Copilot — User-scope MCP configuration
+// Location: ~/Library/Application Support/Code/User/mcp.json
+// Open via: Command Palette → "MCP: Open User Configuration"
 //
-// Docs: https://modelcontextprotocol.io/docs/quickstart/user
+// Docs: https://code.visualstudio.com/docs/copilot/chat/mcp-servers
 //
-// NOTE: Claude Desktop uses "mcpServers" as the top-level key.
+// NOTE: VSCode uses "servers" (not "mcpServers") as the top-level key.
 // Auth tokens are NOT included here. See:
-//   configs/env_vars/claude_desktop_config.json  — uses env var references
-//   configs/tokens/claude_desktop_config.json    — has real tokens (gitignore!)
-//
-// After editing, restart Claude Desktop for changes to take effect.
+//   configs/env_vars/vscode_user_mcp.json  — uses ${ENV_VAR} references
+//   configs/tokens/vscode_user_mcp.json    — has real tokens (gitignore!)
 
 {
-  "mcpServers": {
+  "servers": {
 
     // # About
     // XcodeBuildMCP - MCP server providing 61+ tools for Xcode and Swift development automation (build, test, simulator control, device interaction, UI automation, project scaffolding)
@@ -55,6 +54,7 @@
     // # Authorization
     // None required.
     "apple-docs": {
+      "type": "stdio",
       "command": "npx",
       "args": ["-y", "@kimsungwhee/apple-docs-mcp"]
     },
@@ -71,8 +71,8 @@
     // Must be cloned and built locally. No npm package available.
     //
     // ```zsh
-    // git clone https://github.com/cristianoaredes/mcp-apple-store
-    // cd mcp-apple-store
+    // git clone https://github.com/cristianoaredes/mcp-apple-store ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
+    // cd ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
     // npm install && npm run build
     // ```
     //
@@ -84,8 +84,9 @@
     // 2) Note the Issuer ID and Key ID shown on the API Keys page
     // 3) Set the env vars pointing to your `.p8` file and app identifiers
     "apple-store": {
+      "type": "stdio",
       "command": "node",
-      "args": ["/Users/<YOUR_USERNAME>/code/other/mcp/mcp-apple-store/dist/index.js"],
+      "args": ["/Users/<YOUR_USERNAME>/.hatch/config/mpc/apple-store/code/mcp-apple-store/dist/index.js"],
       "env": {
         "APP_STORE_ISSUER_ID": "<YOUR_ASC_ISSUER_ID>",
         "APP_STORE_KEY_ID": "<YOUR_ASC_KEY_ID>",
@@ -122,6 +123,7 @@
     //   * `echo -n "${ATLASSIAN_USER_EMAIL}:${ATLASSIAN_AUTH_TOKEN}" | base64 | pbcopy`
     // 3) Paste the hash as the `Authorization: Basic <hash>` header value
     "atlassian-rovo-mcp": {
+      "type": "http",
       "url": "https://mcp.atlassian.com/v1/mcp",
       "headers": {
         // Replace with your base64-encoded "email:api_token":
@@ -151,12 +153,34 @@
     // 2) Create an env file at `~/.hatch/config/vscode/mcp-atlassian.env`
     //   * Contents: `JIRA_URL`, `JIRA_USERNAME` (email), `JIRA_API_TOKEN`
     "mcp-atlassian": {
-      "command": "/opt/homebrew/bin/uvx",
+      "command": "uvx",
       "args": [
         "mcp-atlassian",
         "--env-file", "<PATH_TO_MCP_ATLASSIAN_ENV_FILE>",
         "--transport", "stdio"
-      ]
+      ],
+      "type": "stdio"
+    },
+
+    // # About
+    // io.github.github/github-mcp-server - Official GitHub MCP server for repositories, PRs, issues, code search, and GitHub Actions. Installed via VSCode's Copilot MCP gallery.
+    //
+    // # References
+    // * [GitHub: github/github-mcp-server](https://github.com/github/github-mcp-server)
+    // * [GitHub: MCP Server - Authentication](https://github.com/github/github-mcp-server#authentication)
+    // * [GitHub: MCP Server - Configuration / Environment Variables](https://github.com/github/github-mcp-server#configuration)
+    //
+    // # Installation
+    // Install via VSCode → Command Palette → `MCP: Browse MCP Servers` (Copilot gallery). The server ID `io.github.github/github-mcp-server` is assigned automatically by VSCode.
+    //
+    // # Authorization
+    // 1) Authenticate via GitHub Copilot (OAuth — recommended for VSCode). VSCode/Copilot handles OAuth automatically; no manual token setup needed.
+    // 2) Alternatively, use a GitHub Personal Access Token (PAT). [GitHub: Create a PAT](https://github.com/settings/tokens). Add as `Authorization: Bearer <token>` in headers if needed.
+    "io.github.github/github-mcp-server": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "gallery": "https://api.mcp.github.com",
+      "version": "0.33.0"
     },
 
     // # About
@@ -175,32 +199,8 @@
     //   * Click `Generate Token` and copy the UUID
     // 2) Replace `<YOUR_BUGSEE_MCP_TOKEN>` in the URL with your token UUID
     "bugsee": {
+      "type": "http",
       "url": "https://api.bugsee.com/mcp/<YOUR_BUGSEE_MCP_TOKEN>"
-    },
-
-    // # About
-    // github - Official GitHub MCP server for repositories, PRs, issues, code search, and GitHub Actions. Runs locally via npx for non-VSCode clients.
-    //
-    // # References
-    // * [GitHub: github/github-mcp-server](https://github.com/github/github-mcp-server)
-    // * [GitHub: MCP Server - Authentication](https://github.com/github/github-mcp-server#authentication)
-    // * [GitHub: Create a Personal Access Token](https://github.com/settings/tokens)
-    // * [GitHub: MCP Server - Configuration / Environment Variables](https://github.com/github/github-mcp-server#configuration)
-    //
-    // # Installation
-    // Installed automatically via `npx` on first run.
-    //
-    // # Authorization
-    // 1) Create a GitHub Personal Access Token (PAT)
-    //   * [GitHub: Create a PAT](https://github.com/settings/tokens)
-    //   * Required scopes: `repo`, `read:org`, `read:user`
-    // 2) Set as `GITHUB_PERSONAL_ACCESS_TOKEN` env var
-    "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_GITHUB_PAT>"
-      }
     },
 
     // # About
@@ -217,10 +217,11 @@
     //
     // # Authorization
     // 1) Obtain a Slack XOXP User OAuth Token
-    //   * Visit your Slack app's OAuth & Permissions page
-    //   * Copy the `xoxp-...` token from the OAuth Tokens section
+    //   * LastPass: `Shared-iOS-devs` → `MCP` → `SLACK_MCP_XOXP_TOKEN` (shared team token)
+    //   * Or: visit your Slack app's OAuth & Permissions page and copy the `xoxp-...` token
     // 2) Set as `SLACK_MCP_XOXP_TOKEN` env var
     "slack": {
+      "type": "stdio",
       "command": "npx",
       "args": ["-y", "slack-mcp-server@latest", "--transport", "stdio"],
       "env": {
@@ -228,7 +229,95 @@
         // "SLACK_MCP_XOXP_TOKEN": "${HATCH_SLACK_MPC_OAUTH_TOKEN}"
         "SLACK_MCP_XOXP_TOKEN": "<YOUR_SLACK_XOXP_TOKEN>"
       }
-    }
+    },
 
-  }
+    // # About
+    // figma - Design inspection, components, assets, and variables from Figma files via MCP.
+    //
+    // # References
+    // * [Figma: MCP Server Documentation](https://www.figma.com/developers/mcp)
+    // * [Figma: Create Personal Access Token](https://www.figma.com/developers/api#access-tokens)
+    //
+    // # Installation
+    // None required. Remote HTTP server hosted by Figma.
+    //
+    // # Authorization
+    // 1) Create a Figma Personal Access Token
+    //   * [Figma: Create Personal Access Token](https://www.figma.com/developers/api#access-tokens)
+    // 2) Set as `Authorization: Bearer <token>` header
+    // "figma": {
+    //   "type": "http",
+    //   "url": "https://mcp.figma.com/mcp",
+    //   "headers": {
+    //     "Authorization": "Bearer <YOUR_FIGMA_PERSONAL_ACCESS_TOKEN>"
+    //   }
+    // },
+
+    // # About
+    // google-workspace - Google Workspace MCP server. Access Docs, Drive, Gmail, Calendar, Sheets, Forms, Tasks, and Contacts.
+    //
+    // # References
+    // * [GitHub: taylorwilsdon/google_workspace_mcp](https://github.com/taylorwilsdon/google_workspace_mcp)
+    // * [Google Cloud Console: OAuth Credentials](https://console.cloud.google.com/apis/credentials)
+    //
+    // # Installation
+    // Installed automatically via `uvx` on first run. Requires `uv`:
+    //
+    // ```zsh
+    // brew install uv
+    // ```
+    //
+    // # Authorization
+    // 1) Obtain the shared Google OAuth client JSON
+    //   * LastPass: `Shared-iOS-devs` → `MCP` → `GOOGLE_WORKSPACE` (shared team token)
+    //   * Copy JSON to a local path, e.g. ~/.zsh_home/tokens/mcp/google/google_mcp_client.json
+    //   * Do NOT commit this file
+    // 2) Set GOOGLE_CLIENT_SECRET_PATH to the local JSON file path
+    // 3) Set USER_GOOGLE_EMAIL to your @hatch.co Google email
+    // 4) On first use a browser OAuth prompt appears — sign in once; tokens cache locally
+    "google-workspace": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["workspace-mcp", "--single-user"],
+      "env": {
+        // To use env var substitution instead (see env_var_tokens/ tier):
+        // "GOOGLE_CLIENT_SECRET_PATH": "${GOOGLE_MCP_CLIENT_SECRET_PATH}",
+        // "USER_GOOGLE_EMAIL": "${GOOGLE_MCP_USER_EMAIL}"
+        "GOOGLE_CLIENT_SECRET_PATH": "<PATH_TO_GOOGLE_MCP_CLIENT_JSON>",
+        "USER_GOOGLE_EMAIL": "<YOUR_HATCH_GOOGLE_EMAIL>"
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SourceKit-LSP — NOT an MCP server; configured separately in .claude/.lsp.json
+    //
+    // # About
+    // sourcekit-lsp - Apple's official LSP server for Swift. Provides code
+    // completion, go-to-definition, hover documentation, cross-module references,
+    // and diagnostics across the full Hatch iOS codebase. Ships bundled with
+    // Xcode; no installation required.
+    //
+    // # References
+    // * [GitHub: swiftlang/sourcekit-lsp](https://github.com/swiftlang/sourcekit-lsp)
+    // * [Claude Code: LSP docs](https://docs.anthropic.com/en/docs/claude-code/lsp)
+    // * [Docs: ios-sourcekit-lsp.md](docs/mcp/servers/ios-sourcekit-lsp.md)
+    //
+    // # Config location
+    // .claude/.lsp.json at the repo root (see docs/mcp/configs/templates/claude_code_lsp.json)
+    // This entry is NOT placed in this MCP config file — LSP and MCP use separate
+    // protocols and separate config files.
+    //
+    "sourcekit-lsp": {
+      "command": "sourcekit-lsp",
+      "args": ["--scratch-path", ".build/sourcekit-lsp"],
+      "extensionToLanguage": { ".swift": "swift" },
+      "workspaceFolder": "iOS/hatch-sleep-app",
+      "startupTimeout": 15000,
+      "restartOnCrash": true,
+      "maxRestarts": 3
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+  },
+  "inputs": []
 }

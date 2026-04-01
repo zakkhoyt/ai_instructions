@@ -61,9 +61,9 @@ This server runs as a **local node process** — it must be cloned and built bef
 ```zsh
 # Clone to a stable local path
 git clone https://github.com/cristianoaredes/mcp-apple-store.git \
-  ~/code/other/mcp/mcp-apple-store
+  ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
 
-cd ~/code/other/mcp/mcp-apple-store
+cd ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
 
 # Install dependencies and build
 npm install
@@ -163,8 +163,8 @@ File: `~/Library/Application Support/Code/User/mcp.json`
     // Must be cloned and built locally. No npm package is available.
     //
     // ```zsh
-    // git clone https://github.com/cristianoaredes/mcp-apple-store
-    // cd mcp-apple-store
+    // git clone https://github.com/cristianoaredes/mcp-apple-store ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
+    // cd ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
     // npm install && npm run build
     // ```
     //
@@ -179,7 +179,7 @@ File: `~/Library/Application Support/Code/User/mcp.json`
       "type": "stdio",
       "command": "node",
       // Path is relative to $HOME
-      "args": ["code/other/mcp/mcp-apple-store/dist/index.js"],
+      "args": ["${userHome}/.hatch/config/mpc/apple-store/code/mcp-apple-store/dist/index.js"],
       "env": {
         "APP_STORE_ISSUER_ID": "${APPLE_ASC_MCP_ISSUER_ID}",
         "APP_STORE_KEY_ID": "${APPLE_ASC_MCP_KEY_ID}",
@@ -219,8 +219,8 @@ File: `.vscode/mcp.json`
   // Must be cloned and built locally. No npm package is available.
   //
   // ```zsh
-  // git clone https://github.com/cristianoaredes/mcp-apple-store
-  // cd mcp-apple-store
+  // git clone https://github.com/cristianoaredes/mcp-apple-store ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
+  // cd ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
   // npm install && npm run build
   // ```
   //
@@ -235,7 +235,7 @@ File: `.vscode/mcp.json`
     "apple-store": {
       "type": "stdio",
       "command": "node",
-      "args": ["${env:HOME}/code/other/mcp/mcp-apple-store/dist/index.js"],
+      "args": ["${env:HOME}/.hatch/config/mpc/apple-store/code/mcp-apple-store/dist/index.js"],
       "env": {
         "APP_STORE_ISSUER_ID": "${APPLE_ASC_MCP_ISSUER_ID}",
         "APP_STORE_KEY_ID": "${APPLE_ASC_MCP_KEY_ID}",
@@ -253,7 +253,7 @@ File: `.vscode/mcp.json`
 
 ```shell
 claude mcp add --scope user --transport stdio apple-store -- \
-  node "$HOME/code/other/mcp/mcp-apple-store/dist/index.js"
+  node "$HOME/.hatch/config/mpc/apple-store/code/mcp-apple-store/dist/index.js"
 ```
 
 Resulting entry in `~/.claude.json`:
@@ -273,8 +273,8 @@ Resulting entry in `~/.claude.json`:
   // Must be cloned and built locally. No npm package is available.
   //
   // ```zsh
-  // git clone https://github.com/cristianoaredes/mcp-apple-store
-  // cd mcp-apple-store
+  // git clone https://github.com/cristianoaredes/mcp-apple-store ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
+  // cd ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
   // npm install && npm run build
   // ```
   //
@@ -289,7 +289,7 @@ Resulting entry in `~/.claude.json`:
     "apple-store": {
       "type": "stdio",
       "command": "/bin/zsh",
-      "args": ["-lc", "node \"$HOME/code/other/mcp/mcp-apple-store/dist/index.js\""],
+      "args": ["-lc", "node \"$HOME/.hatch/config/mpc/apple-store/code/mcp-apple-store/dist/index.js\""],
       "env": {
         "APP_STORE_ISSUER_ID": "${APPLE_ASC_MCP_ISSUER_ID}",
         "APP_STORE_KEY_ID": "${APPLE_ASC_MCP_KEY_ID}",
@@ -323,8 +323,8 @@ File: `.mcp.json` in repo root
   // Must be cloned and built locally. No npm package is available.
   //
   // ```zsh
-  // git clone https://github.com/cristianoaredes/mcp-apple-store
-  // cd mcp-apple-store
+  // git clone https://github.com/cristianoaredes/mcp-apple-store ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
+  // cd ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
   // npm install && npm run build
   // ```
   //
@@ -339,7 +339,7 @@ File: `.mcp.json` in repo root
     "apple-store": {
       "type": "stdio",
       "command": "/bin/zsh",
-      "args": ["-lc", "node \"$HOME/code/other/mcp/mcp-apple-store/dist/index.js\""],
+      "args": ["-lc", "node \"$HOME/.hatch/config/mpc/apple-store/code/mcp-apple-store/dist/index.js\""],
       "env": {
         "APP_STORE_ISSUER_ID": "${APPLE_ASC_MCP_ISSUER_ID}",
         "APP_STORE_KEY_ID": "${APPLE_ASC_MCP_KEY_ID}",
@@ -373,8 +373,8 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
   // Must be cloned and built locally. No npm package is available.
   //
   // ```zsh
-  // git clone https://github.com/cristianoaredes/mcp-apple-store
-  // cd mcp-apple-store
+  // git clone https://github.com/cristianoaredes/mcp-apple-store ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
+  // cd ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
   // npm install && npm run build
   // ```
   //
@@ -389,7 +389,7 @@ File: `~/Library/Application Support/Claude/claude_desktop_config.json`
   "mcpServers": {
     "apple-store": {
       "command": "node",
-      "args": ["/Users/zakkhoyt/code/other/mcp/mcp-apple-store/dist/index.js"],
+      "args": ["/Users/yourname/.hatch/config/mpc/apple-store/code/mcp-apple-store/dist/index.js"],
       "env": {
         "APP_STORE_ISSUER_ID": "${APPLE_ASC_MCP_ISSUER_ID}",
         "APP_STORE_KEY_ID": "${APPLE_ASC_MCP_KEY_ID}",
@@ -423,8 +423,8 @@ Global: `~/.cursor/mcp.json` — or project: `.cursor/mcp.json`
   // Must be cloned and built locally. No npm package is available.
   //
   // ```zsh
-  // git clone https://github.com/cristianoaredes/mcp-apple-store
-  // cd mcp-apple-store
+  // git clone https://github.com/cristianoaredes/mcp-apple-store ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
+  // cd ~/.hatch/config/mpc/apple-store/code/mcp-apple-store
   // npm install && npm run build
   // ```
   //
@@ -440,7 +440,7 @@ Global: `~/.cursor/mcp.json` — or project: `.cursor/mcp.json`
       "command": "/bin/zsh",
       "args": [
         "-lc",
-        "node \"$HOME/code/other/mcp/mcp-apple-store/dist/index.js\""
+        "node \"$HOME/.hatch/config/mpc/apple-store/code/mcp-apple-store/dist/index.js\""
       ],
       "env": {
         "APP_STORE_ISSUER_ID": "${APPLE_ASC_MCP_ISSUER_ID}",

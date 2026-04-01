@@ -26,13 +26,13 @@
 
 ## Key Differences Between Platforms
 
-| Aspect                 | Claude Code / Desktop / Cursor / Windsurf | VSCode Copilot                 |
-| ---------------------- | ----------------------------------------- | ------------------------------ |
-| Root JSON key          | `"mcpServers"`                            | `"servers"`                    |
-| stdio server support   | Yes (default transport)                   | `"type": "stdio"` field        |
-| HTTP server support    | No — use `npx mcp-remote` proxy           | `"type": "http"` field         |
-| SSE server support     | No — use `npx mcp-remote` proxy           | `"type": "sse"` field          |
-| Comments in JSON       | Not supported (plain JSON)                | Supported (JSONC format)       |
+| Aspect               | Claude Code                                                                                  | Claude Desktop                           | Cursor                                                                          | Windsurf                                 | VSCode Copilot                 |
+| -------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------- | ------------------------------ |
+| Root JSON key        | `"mcpServers"`                                                                               | `"mcpServers"`                           | `"mcpServers"`                                                                  | `"mcpServers"`                           | `"servers"`                    |
+| stdio support        | Yes (default)                                                                                | Yes (default)                            | Yes (default)                                                                   | Yes (default)                            | `"type": "stdio"` field        |
+| HTTP support         | Yes — `claude mcp add --transport http <url>` (recommended; SSE deprecated per 2026 docs)   | No — use `npx mcp-remote` proxy          | Yes — `{ "url": "http://server/sse" }` or Streamable HTTP via standard config  | No — use `npx mcp-remote` proxy          | `"type": "http"` field         |
+| SSE support          | Deprecated (use HTTP instead)                                                                | No — use `npx mcp-remote` proxy          | Yes — `{ "url": "http://server/sse" }` via standard config                     | No — use `npx mcp-remote` proxy          | `"type": "sse"` field          |
+| Comments in JSON     | Not supported (plain JSON)                                                                   | Not supported (plain JSON)               | Not supported (plain JSON)                                                      | Not supported (plain JSON)               | Supported (JSONC format)       |
 
 ---
 
@@ -43,8 +43,9 @@
 - **User scope** (`~/.claude.json`): applies to all projects for the logged-in user
 - **Project scope** (`.mcp.json`): committed to repo root, shared with all teammates
 - **Local scope** (`.mcp.json.local`): gitignored personal overrides for project scope config
-- HTTP and SSE transports are not natively supported — use `npx mcp-remote <url>` as a stdio proxy
-- Add servers with: `claude mcp add --scope <user|project|local> --transport stdio <name> -- <command> [args]`
+- HTTP transport is natively supported (recommended): `claude mcp add --scope <user|project|local> --transport http <name> --url <url>`
+- SSE is deprecated as of 2026 — use HTTP instead, or `npx mcp-remote` as a stdio proxy for legacy SSE servers
+- stdio is the default for self-hosted servers: `claude mcp add --scope <user|project|local> --transport stdio <name> -- <command> [args]`
 
 ### Claude Desktop
 
@@ -65,7 +66,7 @@
 
 - Both user (`~/.cursor/mcp.json`) and project (`.cursor/mcp.json`) scopes supported
 - Uses `mcpServers` root key (same as Claude Code/Desktop)
-- HTTP transport not natively supported — use stdio with `npx mcp-remote` or wrapper script
+- HTTP and SSE transports are natively supported via standard config: `{ "url": "http://server/sse" }` or Streamable HTTP
 - For env var inheritance, use the `/bin/zsh -lc` wrapper pattern: `"command": "/bin/zsh", "args": ["-lc", "..."]`
 
 ### Windsurf (Codeium)
@@ -73,6 +74,27 @@
 - User scope path: `~/.codeium/windsurf/mcp_config.json`
 - Uses `mcpServers` root key
 - Workspace-scope path not confirmed in official documentation — marked `[unverified]` in table above
+
+---
+
+## Config Templates
+
+Ready-to-use config files for each platform are in `docs/mcp/configs/templates/`.
+
+| Directory                               | Style                                          | Committed? |
+| --------------------------------------- | ---------------------------------------------- | ---------- |
+| `configs/templates/hard_coded_tokens/`  | Fill in literal token values directly in JSON  | Yes (no real tokens) |
+| `configs/templates/env_var_tokens/`     | Reference `${ENV_VAR}` — define vars in shell  | Yes        |
+| `configs/templates/env_var_tokens/zsh/` | Same as above, but with `mcp.env` for `~/.zshrc` sourcing | Yes |
+
+Each directory contains one file per platform: `claude_code_mcp.json`, `claude_desktop_config.json`, `cursor_mcp.json`, `vscode_user_mcp.json`, `vscode_workspace_mcp.json`.
+
+### LSP Config Template (Claude Code only)
+
+`configs/templates/claude_code_lsp.json` — copy to `.claude/.lsp.json` in the repo root to enable [SourceKit-LSP](ios-mcp-servers.md#11-sourcekit-lsp--swift-code-intelligence-claude-code-only) Swift code intelligence in Claude Code. This is separate from the MCP config.
+
+For full server details, see [ios-mcp-servers.md](ios-mcp-servers.md).
+
 
 ---
 
