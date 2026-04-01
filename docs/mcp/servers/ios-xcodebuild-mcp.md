@@ -82,6 +82,27 @@ swift-package,simulator,project-discovery,doctor
 
 ---
 
+## Installation
+
+### Homebrew (recommended)
+
+```zsh
+brew tap getsentry/xcodebuildmcp
+brew install xcodebuildmcp
+```
+
+### npx (no install needed)
+
+```zsh
+npx -y xcodebuildmcp@latest mcp
+```
+
+### Project-Level Defaults
+
+XcodeBuildMCP supports a `.xcodebuildmcp/config.yaml` file for project-level defaults (workspace, scheme, simulator). This avoids repeating paths in every prompt. See [CONFIGURATION.md](https://github.com/getsentry/XcodeBuildMCP/blob/main/docs/CONFIGURATION.md) for details.
+
+---
+
 ## Setup
 
 > No API token is needed. All configs below invoke `xcodebuildmcp` via `npx`, which downloads and caches the package on first run. Set `INCREMENTAL_BUILDS_ENABLED` to `"false"` if you experience stale-artifact issues during iterative development.
@@ -380,6 +401,63 @@ Global: `~/.cursor/mcp.json` — or project: `.cursor/mcp.json`
 # Stream live app logs from simulator
 /#mcp_xcodebuildmcp_stream_app_logs --bundleId "co.hatch.nightlight"
 ```
+
+---
+
+## Scoping
+
+XcodeBuildMCP should be scoped to **iOS-focused agents only**, not enabled globally. This keeps non-iOS conversations (Android, docs, etc.) free of irrelevant tool noise.
+
+### Claude Code
+
+Use `mcpServers` in agent YAML frontmatter to scope to specific agents:
+
+```yaml
+---
+mcpServers:
+  - XcodeBuildMCP
+---
+```
+
+The server definition (command, args) must exist in `.mcp.json` (project-level) or `~/.claude/mcp.json` (user-level).
+
+### GitHub Copilot
+
+Use `mcp-servers` in agent YAML frontmatter (per-agent scoping):
+
+```yaml
+---
+mcp-servers:
+  XcodeBuildMCP:
+    type: 'local'
+    command: 'xcodebuildmcp'
+    args: ['mcp']
+    tools: ["*"]
+---
+```
+
+No separate `.mcp.json` needed — Copilot reads the server definition directly from the agent frontmatter.
+
+### OpenAI Codex
+
+Codex CLI supports MCP servers via `codex mcp add` or a `config.toml` file.
+
+**Add via CLI:**
+
+```zsh
+codex mcp add xcodebuildmcp -- xcodebuildmcp mcp
+```
+
+**Or add to `~/.codex/config.toml`:**
+
+```toml
+[mcp_servers.xcodebuildmcp]
+command = "xcodebuildmcp"
+args = ["mcp"]
+```
+
+See the [Codex CLI docs](https://github.com/openai/codex) for full MCP configuration details.
+
 
 ---
 

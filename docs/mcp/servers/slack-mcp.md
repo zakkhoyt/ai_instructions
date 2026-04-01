@@ -26,7 +26,11 @@
 
 A Slack `xoxp-` token grants access to the Slack workspace on behalf of your user account. Unlike OAuth app flows that may require periodic reauthorization, XOXP tokens remain valid until explicitly revoked.
 
-**How to obtain a token:**
+**How to obtain a token (via LastPass)**
+* Lastpass: `Shared-iOS-devs` -> `MCP` -> `SLACK_MCP_XOXP_TOKEN`
+
+
+**How to obtain a token (via Slack Dev Portal)**
 1. Open the Slack app settings for the MCP integration:
    - [app.slack.com → App Settings → OAuth & Permissions](https://app.slack.com/app-settings/T03TR3R94/A0AMLQF741Y/oauth)
 2. Copy the **User OAuth Token** (starts with `xoxp-`)
@@ -74,14 +78,14 @@ File: `~/Library/Application Support/Code/User/mcp.json`
     // 1) Obtain a Slack XOXP User OAuth Token
     //   * Visit your Slack app's OAuth & Permissions page
     //   * Copy the `xoxp-...` token from the OAuth Tokens section
-    // 2) Set the token as the `SLACK_MCP_XOXP_TOKEN` env var below
-    //   * Prefer setting via shell env rather than inline to avoid committing the token
+    // 2) Set the token in your shell profile so VSCode can read it via ${env:SLACK_MCP_XOXP_TOKEN}:
+    //   * Add to ~/.zshrc: export SLACK_MCP_XOXP_TOKEN="xoxp-..."
     "slack": {
       "type": "stdio",
       "command": "npx",
       "args": ["-y", "slack-mcp-server@latest", "--transport", "stdio"],
       "env": {
-        "SLACK_MCP_XOXP_TOKEN": "${SLACK_MCP_XOXP_TOKEN}"
+        "SLACK_MCP_XOXP_TOKEN": "${env:SLACK_MCP_XOXP_TOKEN}"
       }
     }
   }
@@ -118,7 +122,7 @@ File: `.vscode/mcp.json`
       "command": "npx",
       "args": ["-y", "slack-mcp-server@latest", "--transport", "stdio"],
       "env": {
-        "SLACK_MCP_XOXP_TOKEN": "${SLACK_MCP_XOXP_TOKEN}"
+        "SLACK_MCP_XOXP_TOKEN": "${env:SLACK_MCP_XOXP_TOKEN}"
       }
     }
   }

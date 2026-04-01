@@ -44,7 +44,7 @@ The official Figma MCP server provides tools for reading design files, inspectin
       "type": "http",
       "url": "https://mcp.figma.com/mcp",
       "headers": {
-        "X-Figma-Token": "${FIGMA_PERSONAL_ACCESS_TOKEN}"
+        "X-Figma-Token": "${env:FIGMA_PERSONAL_ACCESS_TOKEN}"
       }
     }
   }
