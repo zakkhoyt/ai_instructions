@@ -28,9 +28,10 @@ This repository provides:
 │   └── zsh/
 │       └── zsh-conventions.instructions.md
 ├── scripts/
-│   ├── configure_ai_instructions.zsh  # Main installation script
-│   ├── configure_ai_instructions.md   # Script documentation
-│   └── install_git_hooks.zsh          # Git hooks installer
+│   ├── configure_ai_instructions.zsh          # Legacy installation script
+│   ├── configure_ai_instructions_overhaul.zsh # New action-based architecture
+│   ├── configure_ai_instructions.md           # Script documentation
+│   └── install_git_hooks.zsh                  # Git hooks installer
 └── docs/                     # Additional documentation
 ```
 
@@ -44,9 +45,17 @@ This repository provides:
    ```
 
 2. **Configure your current project** with AI instructions:
+   
+   **Legacy script (original):**
    ```zsh
    cd /path/to/your/project
    ~/.ai/scripts/configure_ai_instructions.zsh
+   ```
+   
+   **Overhaul script (new architecture):**
+   ```zsh
+   cd /path/to/your/project
+   ~/.ai/scripts/configure_ai_instructions_overhaul.zsh --prompt instructions
    ```
 
 3. **Select instructions** from the interactive menu
@@ -196,6 +205,182 @@ File names may start with an optional `<topic>__` prefix (for example, `xcode__m
 - Creates independent copies of instruction files
 - Allows per-project customization
 - The script tracks checksums to detect when source files are updated
+
+## 🆕 Overhaul Script (New Architecture)
+
+### Overview
+
+The `scripts/configure_ai_instructions_overhaul.zsh` script is a complete rewrite with an **action-based architecture** that supports repeatable flags, hierarchical config selectors, and batch operations. It provides all the functionality of the legacy script plus powerful new features.
+
+### Key Improvements
+
+1. **Repeatable Actions** - Execute multiple operations in one command
+2. **Hierarchical Config Selectors** - Fine-grained control over template application
+3. **Prompt/Auto Modes** - Interactive or automatic operation per action
+4. **Better Testing** - 17 comprehensive tests with isolated temp repos
+
+### Action-Based Syntax
+
+The overhaul script uses explicit action flags instead of positional arguments:
+
+```zsh
+# Action: instructions (legacy behavior)
+~/.ai/scripts/configure_ai_instructions_overhaul.zsh --prompt instructions
+
+# Action: dev-link (create symlink to ~/.ai)
+~/.ai/scripts/configure_ai_instructions_overhaul.zsh --no-prompt dev-link
+
+# Action: regenerate-main (rebuild README_INSTRUCTIONS.md)
+~/.ai/scripts/configure_ai_instructions_overhaul.zsh --no-prompt regenerate-main
+
+# Multiple actions in one command
+~/.ai/scripts/configure_ai_instructions_overhaul.zsh \
+  --prompt instructions \
+  --no-prompt dev-link \
+  --no-prompt regenerate-main
+```
+
+### Config Selector Engine
+
+The overhaul introduces a powerful hierarchical config selector syntax for applying VS Code/MCP templates:
+
+#### Syntax Levels
+
+**Level 1 - Scope (Broadest):**
+```zsh
+# All user configs (all categories, all themes)
+--no-prompt config-user
+
+# All workspace configs
+--no-prompt config-workspace
+
+# All folder configs
+--no-prompt config-folder
+```
+
+**Level 2 - Scope + Category:**
+```zsh
+# All user settings templates (any theme)
+--prompt config-user:settings
+
+# All workspace MCP configs (any theme)
+--no-prompt config-workspace:mcp
+
+# All folder tasks templates
+--prompt config-folder:tasks
+```
+
+**Level 3 - Scope + Category + Theme (Most Specific):**
+```zsh
+# Only swift settings for user scope
+--prompt config-user:settings:swift
+
+# Only xcode-mcpserver MCP config for workspace
+--no-prompt config-workspace:mcp:xcode-mcpserver
+
+# Only debugging launch config for folder scope
+--prompt config-folder:launch:debugging
+```
+
+#### Valid Scopes
+
+- **`user`** - Global VS Code settings (`~/Library/Application Support/Code/User/`)
+- **`workspace`** - Workspace-level configs (`.vscode/` in repo root)
+- **`folder`** - Folder-level configs (`.vscode/` in workspace folders)
+
+#### Valid Categories
+
+- **`settings`** - VS Code settings.json templates
+- **`mcp`** - MCP server configurations
+- **`tasks`** - Task runner configs (tasks.json)
+- **`launch`** - Debug launch configs (launch.json)
+
+#### Theme Detection
+
+Themes are auto-detected from template filenames and directories:
+- Directory name: `xcode/settings.json` → theme: `xcode`
+- Filename prefix: `swift-settings.json` → theme: `swift`
+- MCP pattern: `xcode-mcpserver__mcp.json` → theme: `xcode-mcpserver`
+
+### Legacy Aliases
+
+For backward compatibility, the overhaul script supports legacy flag names:
+
+```zsh
+# Legacy: --workspace-settings
+~/.ai/scripts/configure_ai_instructions_overhaul.zsh --prompt workspace-settings
+
+# New equivalent: config-workspace:settings
+~/.ai/scripts/configure_ai_instructions_overhaul.zsh --prompt config-workspace:settings
+
+# Legacy: --user-settings
+~/.ai/scripts/configure_ai_instructions_overhaul.zsh --prompt user-settings
+
+# New equivalent: config-user:settings
+~/.ai/scripts/configure_ai_instructions_overhaul.zsh --prompt config-user:settings
+```
+
+### Migration Guide
+
+**Old Script:**
+```zsh
+~/.ai/scripts/configure_ai_instructions.zsh
+```
+
+**Overhaul Equivalent:**
+```zsh
+~/.ai/scripts/configure_ai_instructions_overhaul.zsh --prompt instructions
+```
+
+**Old: Multiple Operations**
+```zsh
+~/.ai/scripts/configure_ai_instructions.zsh --dev-link
+~/.ai/scripts/configure_ai_instructions.zsh --workspace-settings
+~/.ai/scripts/configure_ai_instructions.zsh --user-settings
+```
+
+**Overhaul: Single Command**
+```zsh
+~/.ai/scripts/configure_ai_instructions_overhaul.zsh \
+  --no-prompt dev-link \
+  --prompt workspace-settings \
+  --prompt user-settings
+```
+
+### Complex Examples
+
+**Apply all user Swift settings automatically:**
+```zsh
+~/.ai/scripts/configure_ai_instructions_overhaul.zsh --no-prompt config-user:settings:swift
+```
+
+**Interactive selection of all MCP configs across all scopes:**
+```zsh
+~/.ai/scripts/configure_ai_instructions_overhaul.zsh \
+  --prompt config-user:mcp \
+  --prompt config-workspace:mcp \
+  --prompt config-folder:mcp
+```
+
+**Full project setup in one command:**
+```zsh
+~/.ai/scripts/configure_ai_instructions_overhaul.zsh \
+  --no-prompt instructions \
+  --no-prompt dev-link \
+  --no-prompt regenerate-main \
+  --prompt config-workspace:settings \
+  --no-prompt config-workspace:mcp \
+  --no-prompt mcp-xcode
+```
+
+### Getting Help
+
+View all available actions and syntax:
+```zsh
+~/.ai/scripts/configure_ai_instructions_overhaul.zsh --help
+```
+
+---
 
 ## 🔧 Advanced Workflows
 
