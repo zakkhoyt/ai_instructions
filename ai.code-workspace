@@ -2,10 +2,6 @@
   "folders": [
     {
       "path": "."
-    },
-    {
-      "path": "../Library/Application Support/Code/User",
-      "name": "VSCode User Dir"
     }
   ],
   "settings": {

@@ -1,3 +1,32 @@
+
+
+# Decide on a "Done" convention
+
+As a software developer I use AI quite heavily. As I write up the initial AI prompt, I use a markdown file to organize my thoughts. 
+I'll jot down lots of things: ticket number, problem/causes, context, insight, references, goals, implementaiton phases, action items, execution order, etc...`
+
+## Goals
+* come up with naming convention for:
+  * the scratchpad prompt file - a markdown doc containing the thoughts in my head that I plan to feed to AI
+  * the plan file - I always have AI print out a `plan` file that includes phases, action items per phase, etc...
+
+brainstorm ideas, 
+
+# Heading Sections Convention
+
+* TODO: Table of Contents at top
+  * See: VSCode tool: Create Table Of Contents
+* TODO: Internal References Section - URLs within this page
+  * GitHub Footnotes
+* TODO: Document References Section  - URLs to other related *.md docs in `~/Documents/notes/**/*.md`
+  * GitHub Footnotes
+* TODO: Asset References Section  - Relative path links to image, audio, and video files, usually nested under an `images` directory
+  
+
+---
+
+
+
  When you are creating new markdown/*.md files, I expect that the content within will be backed by HARD FACTS, not "what you think". 
  "Hard Facts" meaning it must originate from official documentation or user manuals, not other local *.md files. And not "What the AI agent assumes to be true".
  

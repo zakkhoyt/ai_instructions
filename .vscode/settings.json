@@ -17,12 +17,35 @@
   //     // "[A-Z0-9]+*.md": "[A-Z0-9]+_*.md",
   // },
 
-  // Exclude from the dir tree in VSCode's explorer panel
+  // // Exclude from the dir tree in VSCode's explorer panel
+  // "files.exclude": {
+  //   // "symlinks/vscode_user_settings": true,
+  // },
+  // // Exclude from find/search results in VSCode's find/search panel
+  // "search.exclude": {
+  //   "symlinks/vscode_user_settings/**": true,
+  // }
+
   "files.exclude": {
-    // "symlinks/vscode_user_settings": true,
+    "**/workspaceStorage/**": true,
+    "**/globalStorage/**": true,
+    "**/History/**": true,
+    "**/sync/**": true,
+    // "symlinks/vscode_user_settings/**": true,
   },
-  // Exclude from find/search results in VSCode's find/search panel
+  "files.watcherExclude": {
+    "**/workspaceStorage/**": true,
+    "**/globalStorage/**": true,
+    "**/History/**": true,
+    "**/sync/**": true,
+    "symlinks/vscode_user_settings/**": true,
+  },
   "search.exclude": {
-    "symlinks/vscode_user_settings": true,
+    "**/workspaceStorage/**": true,
+    "**/globalStorage/**": true,
+    "**/History/**": true,
+    "**/sync/**": true,
+    "symlinks/vscode_user_settings/**": true,
   }
+
 }
