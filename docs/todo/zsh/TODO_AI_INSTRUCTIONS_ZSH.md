@@ -1,5 +1,13 @@
 Let's add more changes to those zsh AI instruction files
 
+# shellcheck
+Every script should include `shellcheck` instructions/data. This can be found in many places:
+* 2nd line (after the shebang)
+* likely a few more contiguous lines after 2
+* shellcheck rules might be disable for the whole file, or per line
+
+
+
 
 # print_usage
 

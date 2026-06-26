@@ -1,6 +1,5 @@
 ---
-applyTo:
-  - "**/*.md"
+applyTo: "**/*.md"
 ---
 
 # Markdown Documentation Conventions

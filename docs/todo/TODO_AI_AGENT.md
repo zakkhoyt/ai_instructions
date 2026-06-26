@@ -1,4 +1,31 @@
 
+# on prompt start
+Ever since starting to us AI, I've been struggling with VSCode becoming bogged down with huge dirs and hige files. These are expensive to figure out, so I'd like the agent to look for these when a new prompt is started
+* crawl the workspace directory looking for 
+  * dirs that contain > 1000 files
+  * dirs that are > 500 MB
+* Agents should still consult these files even when running outside of vscode IDE. EXample: claude cli, copilot cli, etc...
+* Agnent shoudl be smart about how the tree is traversed. optimize for speed. We want to detect violations as quickly as possible. 
+   * Use a top down traversal approach (rather then diving as far up the treee as possible)
+   * or maybe limit to the top 5 dir levels?
+   * Or, maybe take a temperature check first. 
+      * Is the project dir > some reasonable value (100MB). 
+         * `du -hs .`
+
+* Of the violations found, the agent should consider if the need action taken or not using vscode's settings:
+   * Compare to those expressed by: `files.watcherExclude` and `search.exclude` 
+     * consider the user's `settings.json` and/or user's current profile `settings.json`
+     * consider the vscode workspace settings (if applicable) `*.code-workspace`
+     * Also consider folder level settings. These can exist in any dir: `.vscode/settings.json`
+   * if vscode settings contain the violations, do notify the user, but no action needed. 
+   * else, the user should be consulted with about what action needs to be taken
+   * Agent should report findings in two sections:
+     * `FYI: Found .build/* dir of 3.1 GB (expected)`
+       * No need to prompt or worry about the expected (excluded in VSCode settings)
+     * `Alert! Found unexpectely large file: logs/ac.log (23 GB). What do you want to do aboout it? (delete, exclude from vscode settings (which scope?), diagnose how it got there, ignore, other))`
+       * I would like if the agent could present this with picker form / style rather than plain text.
+
+
 
 # VSCode setttings files
 
