@@ -37,3 +37,5 @@ agent behavior standards, and workflow guidelines from the centralized instructi
 @~/.ai/instructions/git/git-branching.instructions.md
 
 @~/.ai/instructions/markdown/markdown-conventions.instructions.md
+
+@~/.claude/CLAUDE-Hatch.md

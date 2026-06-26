@@ -4,7 +4,7 @@
   * [ ] What each of these mean
 * [ ] Write up a new document at <path> (basename derived from <format>)
 
-* [ ] References:
+* [ ] Citing References:
   * [ ] Use only official product documentation (man pages, pdf manuals, online documentation, `man` pages, `-h/--help` args)
   * [ ] About `~/Documents/notes/**`
     * If you are writing a new document somwhere under `~/Documents/notes/**`, it's likely because you are filling in a gap in those documents and won't find relevant information in those existing files.  
@@ -13,8 +13,11 @@
     * BAD: Treating files under `~/Documents/notes/**` as a source of truth. These are largely hand written by a human and are likely to contains errors and mistakes
       * Additionaly, if you are being asked to supplement these files, then you will need to find that data elsewhere then import it via new documentatiopn
     * BAD: Modeling new documents after existing documents under `~/Documents/notes/**`. Only use the formatting described in AI instructions and descriptions above
-
-Be sure to document references according to AI instructions
+* [ ] Only include information from official sources. 
+  * DO NOT: Assume you know the answers, research like you are writing a collage paper. No reference to cite? No include :)
+  * DO NOT: Make up answers
+  * DO NOT: Use references/facts from a "similar" product
+* [ ] Be sure to cite references according to AI instructions
 
 
 Include at least these sections and topics
